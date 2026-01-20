@@ -588,7 +588,25 @@ if (!empty($_GET)) {
                 '<div style="font-size: 1.3rem; margin-bottom: 25px; display: flex; align-items: center; gap: 12px;"><i class="fas fa-check-circle" style="font-size: 2rem; color: var(--success-color);"></i> <strong>Hash Verification SUCCESSFUL!</strong></div>' : 
                 '<div style="font-size: 1.3rem; margin-bottom: 25px; display: flex; align-items: center; gap: 12px;"><i class="fas fa-times-circle" style="font-size: 2rem; color: var(--error-color);"></i> <strong>Hash Verification FAILED!</strong></div>';
 
+            // Build hash formula display based on type
+            let hashFormula = '';
+            switch(hashType) {
+                case 'normal':
+                    hashFormula = 'SALT|status||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key';
+                    break;
+                case 'additional_charges':
+                    hashFormula = 'additional_charges|SALT|status||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key';
+                    break;
+                case 'split':
+                    hashFormula = 'SALT|status|splitInfo||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key';
+                    break;
+                case 'combined':
+                    hashFormula = 'additional_charges|SALT|status|splitInfo||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key';
+                    break;
+            }
+
             resultHtml += '<div class="verification-details">' +
+                '<div style="margin-bottom: 20px;"><strong style="font-size: 1.1rem; color: var(--primary-color); display: block; margin-bottom: 10px;">📐 Hash Verification Formula:</strong><div class="hash-display-box" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05)); border-color: rgba(59, 130, 246, 0.3); font-weight: 500;">SHA512(' + hashFormula + ')</div></div>' +
                 '<div style="margin-bottom: 20px;"><strong style="font-size: 1.1rem; color: var(--primary-color); display: block; margin-bottom: 10px;">📝 Hash String:</strong><div class="hash-display-box">' + hashString + '</div></div>' +
                 '<div style="margin-bottom: 20px;"><strong style="font-size: 1.1rem; color: var(--primary-color); display: block; margin-bottom: 10px;">🔐 Calculated Hash:</strong><div class="hash-display-box hash-highlight">' + calculatedHash + '</div></div>' +
                 '<div style="margin-bottom: 20px;"><strong style="font-size: 1.1rem; color: var(--primary-color); display: block; margin-bottom: 10px;">📥 Response Hash:</strong><div class="hash-display-box hash-highlight">' + responseHash + '</div></div>' +
