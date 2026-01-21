@@ -837,7 +837,7 @@ $isHashValid = !empty($hash) && (strtolower($calculatedHash) === strtolower($has
 
                 <!-- Callback Data Section (Same Style as Debug Info) -->
                 <div id="callbackDataSection" class="debug-info" style="display: none; margin-top: 15px;">
-                    <h4 style="margin: 0 0 4px 0; color: #bb07f9; background-color: #652f506b;"><i class="fas fa-file-code"></i> PayU will provide the data in URL encoded format. The below callback data has been modified in the Json format for better readability.</h4>
+                    <h4 style="margin: 0 0 4px 0; padding: 12px 15px; background: linear-gradient(135deg, #10846D 0%, #024538 100%); color: #ffffff; font-weight: 700; font-size: 0.9rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(16, 132, 109, 0.4); letter-spacing: 0.3px; line-height: 1.5;"><i class="fas fa-exclamation-circle" style="color: #ffffff;"></i> <strong style="color: #ffffff;">IMPORTANT:</strong> PayU will provide the data in URL encoded format. The below callback data has been modified in the Json format for better readability.</h4>
                     <div id="callbackDataContent" style="background: rgba(0, 0, 0, 0.2); padding: 15px; border-radius: 8px; overflow-x: auto; position: relative;">
                         <button onclick="copyCallbackPayload()" class="copy-icon" title="Copy callback payload" id="copyCallbackIcon" style="position: absolute; top: 10px; right: 10px;">
                             <i class="fas fa-copy"></i>
