@@ -2467,7 +2467,7 @@
             }
             
             // Common required fields
-            let requiredFields = ['amount', 'productinfo', 'firstname', 'email', 'phone'];
+            let requiredFields = ['amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl'];
             
             // Flow-specific required fields
             if (flow === 'split') {
