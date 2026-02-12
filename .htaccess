@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# Health check endpoint - clean URL /health -> health.php
+RewriteRule ^health$ health.php [L]
+
+# Route all non-file/non-directory requests to index.php for SPA-style routing
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [L]
