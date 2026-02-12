@@ -1,0 +1,12 @@
+# Render.com Blueprint Configuration
+# This file tells Render how to deploy your PHP application
+
+services:
+  - type: web
+    name: payu-codegen
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PHP_DISPLAY_ERRORS
+        value: "Off"
