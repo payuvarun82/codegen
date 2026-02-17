@@ -61,7 +61,12 @@
         const getBaseUrl = () => {
             const protocol = window.location.protocol;
             const host = window.location.host;
-            return `${protocol}//${host}`;
+            const pathname = window.location.pathname.replace(/\/$/, '') || '';
+            const segments = pathname.split('/').filter(Boolean);
+            const lastSegment = segments.length ? segments[segments.length - 1] : '';
+            const isFile = lastSegment.indexOf('.') !== -1;
+            const basePath = segments.length === 0 ? '' : (isFile ? '/' + segments.slice(0, -1).join('/') : pathname);
+            return `${protocol}//${host}${basePath}`;
         };
         const DEFAULT_SURL = getBaseUrl() + '/callback.php';
         const DEFAULT_FURL = getBaseUrl() + '/callback.php';
