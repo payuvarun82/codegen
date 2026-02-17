@@ -64,9 +64,14 @@
         const getBasePath = () => {
             const pathname = window.location.pathname.replace(/\/$/, '') || '';
             const segments = pathname.split('/').filter(Boolean);
-            const lastSegment = segments.length ? segments[segments.length - 1] : '';
+            if (segments.length === 0) return '';
+            const lastSegment = segments[segments.length - 1].toLowerCase();
+            // If we're on a flow route (e.g. /integrationlab/payu-hosted), app base is parent path so back goes to /integrationlab/
+            if (validRoutes.includes(lastSegment)) {
+                return segments.length === 1 ? '' : '/' + segments.slice(0, -1).join('/');
+            }
             const isFile = lastSegment.indexOf('.') !== -1;
-            return segments.length === 0 ? '' : (isFile ? '/' + segments.slice(0, -1).join('/') : pathname);
+            return isFile ? '/' + segments.slice(0, -1).join('/') : pathname;
         };
         const getBaseUrl = () => {
             const protocol = window.location.protocol;
@@ -3969,7 +3974,7 @@
             const res = BOLT.response;
             
             // Build callback URL with response data as GET parameters
-            const callbackUrl = document.getElementById('cp_surl').value || 'callback.php';
+            const callbackUrl = document.getElementById('cp_surl').value || (getBaseUrl() + '/callback.php');
             const params = new URLSearchParams();
             
             // Add all response fields to GET parameters
@@ -4031,7 +4036,7 @@
             console.log('Exception Message:', BOLT.message);
             
             // Build callback URL with error data
-            const callbackUrl = document.getElementById('cp_furl').value || 'callback.php';
+            const callbackUrl = document.getElementById('cp_furl').value || (getBaseUrl() + '/callback.php');
             const params = new URLSearchParams();
             const credentials = getCredentials('checkoutplus');
             
