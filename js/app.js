@@ -31,6 +31,9 @@
         
         const validRoutes = ['crossborder', 'payu-hosted', 'subscription', 'tpv', 'upiotm', 'preauth', 'checkoutplus', 'split', 'bankoffer'];
         
+        // When set, opening the app from domain root (e.g. payu.in) redirects here so URL shows payu.in/integrationlab
+        const CANONICAL_APP_BASE_PATH = '/integrationlab';
+        
         // Flow display names for analytics
         const flowDisplayNames = {
             'crossborder': 'Cross Border Payment',
@@ -56,17 +59,19 @@
             }
         }
         
-        // Default Callback URLs - Dynamically generated based on current domain
-        // Works on localhost, Render.com, or any other hosting platform
-        const getBaseUrl = () => {
-            const protocol = window.location.protocol;
-            const host = window.location.host;
+        // Default Callback URLs - Dynamically generated based on current domain and path
+        // Works on localhost, Render.com, or when app is under a subpath (e.g. payu.in/integrationlab)
+        const getBasePath = () => {
             const pathname = window.location.pathname.replace(/\/$/, '') || '';
             const segments = pathname.split('/').filter(Boolean);
             const lastSegment = segments.length ? segments[segments.length - 1] : '';
             const isFile = lastSegment.indexOf('.') !== -1;
-            const basePath = segments.length === 0 ? '' : (isFile ? '/' + segments.slice(0, -1).join('/') : pathname);
-            return `${protocol}//${host}${basePath}`;
+            return segments.length === 0 ? '' : (isFile ? '/' + segments.slice(0, -1).join('/') : pathname);
+        };
+        const getBaseUrl = () => {
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            return `${protocol}//${host}${getBasePath()}`;
         };
         const DEFAULT_SURL = getBaseUrl() + '/callback.php';
         const DEFAULT_FURL = getBaseUrl() + '/callback.php';
@@ -100,6 +105,20 @@
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
+            // If app should live under a subpath (e.g. /integrationlab), redirect root to it so URL shows payu.in/integrationlab
+            if (CANONICAL_APP_BASE_PATH) {
+                const pathname = window.location.pathname.replace(/\/$/, '') || '';
+                const isRoot = pathname === '' || pathname === '/' || pathname === '/index.php' || pathname === '/index.html';
+                if (isRoot) {
+                    const origin = window.location.origin;
+                    const target = origin + CANONICAL_APP_BASE_PATH + '/';
+                    if (window.location.href !== target) {
+                        window.location.replace(target);
+                        return;
+                    }
+                }
+            }
+            
             console.log('🔄 Page Loaded - Generating fresh transaction IDs for all flows');
             
             // Initialize default callback URLs for all flows
@@ -271,7 +290,8 @@
             } else {
                 console.log('📍 No flow in URL - showing home page');
                 goHome(true);
-                window.history.replaceState({ flow: null }, '', '/');
+                const homeUrl = getBasePath() ? getBasePath() + '/' : '/';
+                window.history.replaceState({ flow: null }, '', homeUrl);
             }
             
             // Initialize character counters for all fields with maxlength
@@ -1515,7 +1535,8 @@
             currentFlow = '';
             
             if (!skipPushState) {
-                window.history.pushState({ flow: null }, '', '/');
+                const homeUrl = getBasePath() ? getBasePath() + '/' : '/';
+                window.history.pushState({ flow: null }, '', homeUrl);
             }
             
             // Hide debug sections
@@ -1684,7 +1705,8 @@
             // Update URL with route (unless triggered by popstate)
             if (!skipPushState) {
                 const route = flowToRouteMap[selectedFlow] || selectedFlow;
-                const newUrl = '/' + route;
+                const base = getBasePath();
+                const newUrl = base ? base + '/' + route : '/' + route;
                 window.history.pushState({ flow: selectedFlow }, '', newUrl);
             }
             
