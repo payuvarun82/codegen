@@ -1902,8 +1902,8 @@
                 udf1: 'Testing UDF 1',
                 udf2: 'Testing UDF2',
                 udf5: 'Sample_Invoice_11',
-                surl: 'https://test.payu.in/admin/test_response',
-                furl: 'https://test.payu.in/admin/test_response',
+                surl: 'https://codegen-xdhb.onrender.com/callback.php',
+                furl: 'https://codegen-xdhb.onrender.com/callback.php',
                 user_token: '1234567890'  // Default user_token for bank offers
             };
             
