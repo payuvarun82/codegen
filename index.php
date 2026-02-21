@@ -43,6 +43,11 @@ if (defined('APP_BASE_PATH')) {
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
     <link rel="stylesheet" href="<?php echo htmlspecialchars($basePath); ?>/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Stub so inline onchange never throws; app.js replaces these when it loads -->
+    <script>
+        window.toggleLrsParams = function(flow) { if (window._toggleLrsParams) window._toggleLrsParams(flow); };
+        window.toggleUdfParams = function(flow, type) { if (window._toggleUdfParams) window._toggleUdfParams(flow, type); };
+    </script>
 </head>
 <body>
     <div class="container">
@@ -503,7 +508,7 @@ if (defined('APP_BASE_PATH')) {
                     <!-- UDF Params Section (UDF7 & UDF8) for Cross-Border Compliance -->
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label class="cb-enable-params-label">
-                            <input type="checkbox" id="cb_enable_udf_params" style="width: 18px; height: 18px; cursor: pointer;">
+                            <input type="checkbox" id="cb_enable_udf_params" onchange="toggleUdfParams('crossborder', 'onetime')" style="width: 18px; height: 18px; cursor: pointer;">
                             Enable UDF Params (UDF7 & UDF8) for Import/Export Compliance
                         </label>
                         <small style="color: var(--text-tertiary); display: block; margin-top: 0.5rem; margin-left: 26px;">
@@ -537,7 +542,7 @@ if (defined('APP_BASE_PATH')) {
                     <!-- LRS Params Section (lrs_service_type & tcs_amount) for Cross-Border One-Time -->
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label class="cb-enable-params-label">
-                            <input type="checkbox" id="cb_enable_lrs_params" style="width: 18px; height: 18px; cursor: pointer;">
+                            <input type="checkbox" id="cb_enable_lrs_params" onchange="toggleLrsParams('crossborder')" style="width: 18px; height: 18px; cursor: pointer;">
                             Enable LRS Params (lrs_service_type & tcs_amount) for Cross-Border One-Time
                         </label>
                         <small style="color: var(--text-tertiary); display: block; margin-top: 0.5rem; margin-left: 26px;">
@@ -619,7 +624,7 @@ if (defined('APP_BASE_PATH')) {
                     <!-- UDF Params Section (UDF7 & UDF8) for Cross-Border Subscription Compliance -->
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label class="cb-enable-params-label">
-                            <input type="checkbox" id="cb_sub_enable_udf_params" style="width: 18px; height: 18px; cursor: pointer;">
+                            <input type="checkbox" id="cb_sub_enable_udf_params" onchange="toggleUdfParams('crossborder', 'subscription')" style="width: 18px; height: 18px; cursor: pointer;">
                             Enable UDF Params (UDF7 & UDF8) for Import/Export Compliance
                         </label>
                         <small style="color: var(--text-tertiary); display: block; margin-top: 0.5rem; margin-left: 26px;">
@@ -1374,8 +1379,8 @@ if (defined('APP_BASE_PATH')) {
         <input type="hidden" id="sub_furl_hidden" name="furl">
         <input type="hidden" id="sub_hash" name="hash">
         <input type="hidden" id="sub_enforce_paymethod" name="enforce_paymethod">
-        <input type="hidden" id="sub_si" name="si">
-        <input type="hidden" id="sub_api_version" name="api_version">
+        <input type="hidden" id="sub_si_hidden" name="si">
+        <input type="hidden" id="sub_api_version_hidden" name="api_version">
         <input type="hidden" id="sub_si_details" name="si_details">
     </form>
     
