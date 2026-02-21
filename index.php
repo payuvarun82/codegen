@@ -11,6 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header("Location: callback.php?" . $queryString);
     exit;
 }
+
+// Base path for assets so js/app.js and css load correctly on any URL (e.g. /integrationlab/crossborder)
+$basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -28,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($basePath); ?>/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -489,7 +492,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <!-- UDF Params Section (UDF7 & UDF8) for Cross-Border Compliance -->
                     <div class="form-group" style="margin-top: 1.5rem;">
-                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2d3748;">
+                        <label class="cb-enable-params-label">
                             <input type="checkbox" id="cb_enable_udf_params" onchange="toggleUdfParams('crossborder', 'onetime')" style="width: 18px; height: 18px; cursor: pointer;">
                             Enable UDF Params (UDF7 & UDF8) for Import/Export Compliance
                         </label>
@@ -518,6 +521,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         <div class="alert alert-info" style="margin-top: 1rem; margin-bottom: 0;">
                             <strong>UDF Params Format:</strong> When enabled, these values will be sent as JSON in the <code>udf_params</code> parameter: <code>{"udf7":"value", "udf8":"value"}</code>
+                        </div>
+                    </div>
+                    
+                    <!-- LRS Params Section (lrs_service_type & tcs_amount) for Cross-Border One-Time -->
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label class="cb-enable-params-label">
+                            <input type="checkbox" id="cb_enable_lrs_params" onchange="toggleLrsParams('crossborder')" style="width: 18px; height: 18px; cursor: pointer;">
+                            Enable LRS Params (lrs_service_type & tcs_amount) for Cross-Border One-Time
+                        </label>
+                        <small style="color: var(--text-tertiary); display: block; margin-top: 0.5rem; margin-left: 26px;">
+                            Check this to include LRS (Liberalised Remittance Scheme) parameters for cross-border one-time payments. Uncheck for backward compatibility.
+                        </small>
+                    </div>
+                    
+                    <div id="cb-lrs-params-fields" class="cb-lrs-params-fields" style="display: none;">
+                        <h4 class="cb-lrs-params-title">LRS Parameters (Cross-Border One-Time Only)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="cb_lrs_service_type">lrs_service_type <span class="optional">(Conditional)</span></label>
+                                <select id="cb_lrs_service_type" name="lrs_service_type">
+                                    <option value="">-- Select LRS service type --</option>
+                                    <option value="travel">travel</option>
+                                </select>
+                                <small style="color: var(--text-tertiary); display: block; margin-top: 0.25rem;">LRS service type decides tax amount based on nature of business. Refer to PayU docs for full values table.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="cb_tcs_amount">tcs_amount <span class="optional">(Optional)</span></label>
+                                <input type="text" id="cb_tcs_amount" name="tcs_amount" placeholder="e.g., 2.00" maxlength="20">
+                                <small style="color: var(--text-tertiary); display: block; margin-top: 0.25rem;">Amount of TCS to be charged. For travel payments, 2% TCS is typically charged (e.g. 2.00).</small>
+                            </div>
+                        </div>
+                        <div class="alert alert-info" style="margin-top: 1rem; margin-bottom: 0;">
+                            <strong>buyer_type_business</strong>: Identifies B2B transaction when set to 1. Use the <strong>Buyer Type</strong> field above (Individual = 0, Business = 1).
                         </div>
                     </div>
                 </div>
@@ -572,7 +608,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <!-- UDF Params Section (UDF7 & UDF8) for Cross-Border Subscription Compliance -->
                     <div class="form-group" style="margin-top: 1.5rem;">
-                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2d3748;">
+                        <label class="cb-enable-params-label">
                             <input type="checkbox" id="cb_sub_enable_udf_params" onchange="toggleUdfParams('crossborder', 'subscription')" style="width: 18px; height: 18px; cursor: pointer;">
                             Enable UDF Params (UDF7 & UDF8) for Import/Export Compliance
                         </label>
@@ -3244,6 +3280,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </div>
-    <script src="js/app.js"></script>
+    <script src="<?php echo htmlspecialchars($basePath); ?>/js/app.js"></script>
 </body>
 </html>
