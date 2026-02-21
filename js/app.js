@@ -2443,6 +2443,9 @@
                 updateButtonStates('crossborder');
             }
         }
+        // Expose toggles on window immediately so inline onchange works (e.g. when app is under subpath or script loads async)
+        window.toggleUdfParams = toggleUdfParams;
+        window.toggleLrsParams = toggleLrsParams;
         
         // TPV Payment Type Selection
         // Reset Form Fields - Refresh page for new transaction ID
