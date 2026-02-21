@@ -3107,8 +3107,12 @@
                 // Only include tcs_amount in hash when it has a value; otherwise use udf_params/buyer_type_business formula
                 const enableLrsParams = document.getElementById('cb_enable_lrs_params')?.checked;
                 const tcsAmountRaw = document.getElementById('cb_tcs_amount')?.value?.trim() || '';
-                if (enableLrsParams && tcsAmountRaw) {
-                    // Hash with tcs_amount only when tcs_amount is passed
+                if (enableLrsParams && tcsAmountRaw && udfParamsJson) {
+                    // Hash when BOTH UDF Params AND LRS (tcs_amount) are passed: SALT|udf_params|buyer_type_business|tcs_amount
+                    hashString = credentials.key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + credentials.salt + '|' + udfParamsJson + '|' + (buyerTypeBusiness !== '' ? buyerTypeBusiness : '') + '|' + tcsAmountRaw;
+                    hashFormula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT|udf_params|buyer_type_business|tcs_amount)';
+                } else if (enableLrsParams && tcsAmountRaw) {
+                    // Hash with tcs_amount only (no udf_params): SALT|buyer_type_business|tcs_amount
                     hashString = credentials.key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + credentials.salt + '|' + (buyerTypeBusiness !== '' ? buyerTypeBusiness : '') + '|' + tcsAmountRaw;
                     hashFormula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT|buyer_type_business|tcs_amount)';
                 } else if (udfParamsJson && buyerTypeBusiness !== '') {
@@ -4789,8 +4793,13 @@
                     }
                 } else {
                     metadata.hashType = 'crossborder';
-                    if (hasTcsAmount) {
-                        // Cross Border One-Time: When tcs_amount is passed - Hash: key|...|udf5||||||SALT|buyer_type_business|tcs_amount
+                    if (hasTcsAmount && hasUdfParams) {
+                        // Cross Border One-Time: When BOTH udf_params AND tcs_amount are passed - Hash: key|...|udf5||||||SALT|udf_params|buyer_type_business|tcs_amount
+                        metadata.hashType = 'crossborder_tcs_udf';
+                        metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'salt', 'udf_params', 'buyer_type_business', 'tcs_amount'];
+                        metadata.additionalComponents.udf_params = params.udf_params;
+                    } else if (hasTcsAmount) {
+                        // Cross Border One-Time: When tcs_amount is passed (no udf_params) - Hash: key|...|udf5||||||SALT|buyer_type_business|tcs_amount
                         metadata.hashType = 'crossborder_tcs';
                         metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'salt', 'buyer_type_business', 'tcs_amount'];
                     } else if (hasUdfParams && hasBuyerType) {
@@ -5297,8 +5306,25 @@ ${skuArrayCode}
                            '                           params.getOrDefault("udf5", "") + "||||||" +\n' +
                            '                           MERCHANT_SALT + "|" +\n' +
                            '                           params.get("splitRequest");';
+            } else if (hashMetadata.hashType === 'crossborder_tcs_udf') {
+                // Cross Border One-Time with BOTH udf_params AND tcs_amount: Hash = key|...|udf5||||||SALT|udf_params|buyer_type_business|tcs_amount
+                hashStringCode = '        String hashString = MERCHANT_KEY + "|" +\n' +
+                           '                           params.get("txnid") + "|" +\n' +
+                           '                           params.get("amount") + "|" +\n' +
+                           '                           params.get("productinfo") + "|" +\n' +
+                           '                           params.get("firstname") + "|" +\n' +
+                           '                           params.get("email") + "|" +\n' +
+                           '                           params.getOrDefault("udf1", "") + "|" +\n' +
+                           '                           params.getOrDefault("udf2", "") + "|" +\n' +
+                           '                           params.getOrDefault("udf3", "") + "|" +\n' +
+                           '                           params.getOrDefault("udf4", "") + "|" +\n' +
+                           '                           params.getOrDefault("udf5", "") + "||||||" +\n' +
+                           '                           MERCHANT_SALT + "|" +\n' +
+                           '                           params.get("udf_params") + "|" +\n' +
+                           '                           params.getOrDefault("buyer_type_business", "") + "|" +\n' +
+                           '                           params.getOrDefault("tcs_amount", "");';
             } else if (hashMetadata.hashType === 'crossborder_tcs') {
-                // Cross Border One-Time with tcs_amount: Hash = key|...|udf5||||||SALT|buyer_type_business|tcs_amount (tcs_amount can be empty)
+                // Cross Border One-Time with tcs_amount (no udf_params): Hash = key|...|udf5||||||SALT|buyer_type_business|tcs_amount (tcs_amount can be empty)
                 hashStringCode = '        String hashString = MERCHANT_KEY + "|" +\n' +
                            '                           params.get("txnid") + "|" +\n' +
                            '                           params.get("amount") + "|" +\n' +
@@ -5757,8 +5783,25 @@ jsonParamCode + '\n' +
                                "                  ($params['udf5'] ?? '') . '||||||' .\n" +
                                "                  MERCHANT_SALT . '|' .\n" +
                                "                  $params['splitRequest'];";
+            } else if (hashMetadata.hashType === 'crossborder_tcs_udf') {
+                // Cross Border One-Time with BOTH udf_params AND tcs_amount: Hash = key|...|udf5||||||SALT|udf_params|buyer_type_business|tcs_amount
+                hashStringCode = "    $hashString = MERCHANT_KEY . '|' .\n" +
+                               "                  $params['txnid'] . '|' .\n" +
+                               "                  $params['amount'] . '|' .\n" +
+                               "                  $params['productinfo'] . '|' .\n" +
+                               "                  $params['firstname'] . '|' .\n" +
+                               "                  $params['email'] . '|' .\n" +
+                               "                  ($params['udf1'] ?? '') . '|' .\n" +
+                               "                  ($params['udf2'] ?? '') . '|' .\n" +
+                               "                  ($params['udf3'] ?? '') . '|' .\n" +
+                               "                  ($params['udf4'] ?? '') . '|' .\n" +
+                               "                  ($params['udf5'] ?? '') . '||||||' .\n" +
+                               "                  MERCHANT_SALT . '|' .\n" +
+                               "                  $params['udf_params'] . '|' .\n" +
+                               "                  ($params['buyer_type_business'] ?? '') . '|' .\n" +
+                               "                  ($params['tcs_amount'] ?? '');";
             } else if (hashMetadata.hashType === 'crossborder_tcs') {
-                // Cross Border One-Time with tcs_amount: Hash = key|...|udf5||||||SALT|buyer_type_business|tcs_amount (tcs_amount can be empty)
+                // Cross Border One-Time with tcs_amount (no udf_params): Hash = key|...|udf5||||||SALT|buyer_type_business|tcs_amount (tcs_amount can be empty)
                 hashStringCode = "    $hashString = MERCHANT_KEY . '|' .\n" +
                                "                  $params['txnid'] . '|' .\n" +
                                "                  $params['amount'] . '|' .\n" +
@@ -6262,8 +6305,27 @@ phpCartDetailsUsage +
                                "        f\"{MERCHANT_SALT}|\"\n" +
                                "        f\"{params['splitRequest']}\"\n" +
                                "    )";
+            } else if (hashMetadata.hashType === 'crossborder_tcs_udf') {
+                // Cross Border One-Time with BOTH udf_params AND tcs_amount: Hash = key|...|udf5||||||SALT|udf_params|buyer_type_business|tcs_amount
+                hashStringCode = "    hash_string = (\n" +
+                               "        f\"{MERCHANT_KEY}|\"\n" +
+                               "        f\"{params['txnid']}|\"\n" +
+                               "        f\"{params['amount']}|\"\n" +
+                               "        f\"{params['productinfo']}|\"\n" +
+                               "        f\"{params['firstname']}|\"\n" +
+                               "        f\"{params['email']}|\"\n" +
+                               "        f\"{params.get('udf1', '')}|\"\n" +
+                               "        f\"{params.get('udf2', '')}|\"\n" +
+                               "        f\"{params.get('udf3', '')}|\"\n" +
+                               "        f\"{params.get('udf4', '')}|\"\n" +
+                               "        f\"{params.get('udf5', '')}||||||\"\n" +
+                               "        f\"{MERCHANT_SALT}|\"\n" +
+                               "        f\"{params['udf_params']}|\"\n" +
+                               "        f\"{params.get('buyer_type_business', '')}|\"\n" +
+                               "        f\"{params.get('tcs_amount', '')}\"\n" +
+                               "    )";
             } else if (hashMetadata.hashType === 'crossborder_tcs') {
-                // Cross Border One-Time with tcs_amount: Hash = key|...|udf5||||||SALT|buyer_type_business|tcs_amount (tcs_amount can be empty)
+                // Cross Border One-Time with tcs_amount (no udf_params): Hash = key|...|udf5||||||SALT|buyer_type_business|tcs_amount (tcs_amount can be empty)
                 hashStringCode = "    hash_string = (\n" +
                                "        f\"{MERCHANT_KEY}|\"\n" +
                                "        f\"{params['txnid']}|\"\n" +
@@ -6801,8 +6863,28 @@ pythonCartDetailsUsage +
                                "        MERCHANT_SALT,\n" +
                                "        params.splitRequest\n" +
                                "    ].join('|');";
+            } else if (hashMetadata.hashType === 'crossborder_tcs_udf') {
+                // Cross Border One-Time with BOTH udf_params AND tcs_amount: Hash = key|...|udf5||||||SALT|udf_params|buyer_type_business|tcs_amount
+                hashStringCode = "    const hashString = [\n" +
+                               "        MERCHANT_KEY,\n" +
+                               "        params.txnid,\n" +
+                               "        params.amount,\n" +
+                               "        params.productinfo,\n" +
+                               "        params.firstname,\n" +
+                               "        params.email,\n" +
+                               "        (params.udf1 || ''),\n" +
+                               "        (params.udf2 || ''),\n" +
+                               "        (params.udf3 || ''),\n" +
+                               "        (params.udf4 || ''),\n" +
+                               "        (params.udf5 || ''),\n" +
+                               "        '', '', '', '', '',\n" +
+                               "        MERCHANT_SALT,\n" +
+                               "        params.udf_params,\n" +
+                               "        (params.buyer_type_business || ''),\n" +
+                               "        (params.tcs_amount || '')\n" +
+                               "    ].join('|');";
             } else if (hashMetadata.hashType === 'crossborder_tcs') {
-                // Cross Border One-Time with tcs_amount: Hash = key|...|udf5||||||SALT|buyer_type_business|tcs_amount (tcs_amount can be empty)
+                // Cross Border One-Time with tcs_amount (no udf_params): Hash = key|...|udf5||||||SALT|buyer_type_business|tcs_amount (tcs_amount can be empty)
                 hashStringCode = "    const hashString = [\n" +
                                "        MERCHANT_KEY,\n" +
                                "        params.txnid,\n" +
