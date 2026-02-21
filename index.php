@@ -24,6 +24,10 @@ if (defined('APP_BASE_PATH')) {
         $basePath = '/' . $m[1];
     }
 }
+// Never use root for assets: avoid 404/MIME errors when script runs at domain root
+if ($basePath === '') {
+    $basePath = '/integrationlab';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -43,10 +47,29 @@ if (defined('APP_BASE_PATH')) {
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
     <link rel="stylesheet" href="<?php echo htmlspecialchars($basePath); ?>/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Stub so inline onchange never throws; app.js replaces these when it loads -->
+    <!-- Stub: toggles work before app.js loads; app.js replaces with full impl when it loads -->
     <script>
-        window.toggleLrsParams = function(flow) { if (window._toggleLrsParams) window._toggleLrsParams(flow); };
-        window.toggleUdfParams = function(flow, type) { if (window._toggleUdfParams) window._toggleUdfParams(flow, type); };
+        window.toggleLrsParams = function(flow) {
+            if (window._toggleLrsParams) { window._toggleLrsParams(flow); return; }
+            if (flow !== 'crossborder') return;
+            var cb = document.getElementById('cb_enable_lrs_params');
+            var el = document.getElementById('cb-lrs-params-fields');
+            if (cb && el) { el.style.display = cb.checked ? 'block' : 'none'; if (!cb.checked) { var s = document.getElementById('cb_lrs_service_type'); var t = document.getElementById('cb_tcs_amount'); if (s) s.value = ''; if (t) t.value = ''; } }
+        };
+        window.toggleUdfParams = function(flow, type) {
+            if (window._toggleUdfParams) { window._toggleUdfParams(flow, type); return; }
+            if (flow !== 'crossborder' || (type !== 'onetime' && type !== 'subscription')) return;
+            var checkboxId = type === 'onetime' ? 'cb_enable_udf_params' : 'cb_sub_enable_udf_params';
+            var fieldsId = type === 'onetime' ? 'cb-udf-params-fields' : 'cb-sub-udf-params-fields';
+            var cb = document.getElementById(checkboxId);
+            var el = document.getElementById(fieldsId);
+            if (!cb || !el) return;
+            el.style.display = cb.checked ? 'block' : 'none';
+            if (!cb.checked) {
+                if (type === 'onetime') { var u7 = document.getElementById('cb_udf7_input'); var u8 = document.getElementById('cb_udf8_input'); if (u7) u7.value = ''; if (u8) u8.value = ''; }
+                else { var u7 = document.getElementById('cb_sub_udf7_input'); var u8 = document.getElementById('cb_sub_udf8_input'); if (u7) u7.value = ''; if (u8) u8.value = ''; }
+            }
+        };
     </script>
 </head>
 <body>
