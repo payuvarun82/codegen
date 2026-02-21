@@ -3104,10 +3104,11 @@
                 // Check if buyer_type_business has a value (0 or 1)
                 const buyerTypeBusiness = document.getElementById('cb_buyer_type').value;
                 
-                // When LRS params are enabled: hash = key|...|udf5||||||salt|buyer_type_business|tcs_amount (tcs_amount can be empty)
+                // Only include tcs_amount in hash when it has a value; otherwise use udf_params/buyer_type_business formula
                 const enableLrsParams = document.getElementById('cb_enable_lrs_params')?.checked;
                 const tcsAmountRaw = document.getElementById('cb_tcs_amount')?.value?.trim() || '';
-                if (enableLrsParams) {
+                if (enableLrsParams && tcsAmountRaw) {
+                    // Hash with tcs_amount only when tcs_amount is passed
                     hashString = credentials.key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + credentials.salt + '|' + (buyerTypeBusiness !== '' ? buyerTypeBusiness : '') + '|' + tcsAmountRaw;
                     hashFormula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT|buyer_type_business|tcs_amount)';
                 } else if (udfParamsJson && buyerTypeBusiness !== '') {
@@ -3702,14 +3703,14 @@
                 debugHtml += '<tr><td>udf_params' + addFieldLabel('udf_params') + '</td><td>' + hashData.udfParams + '</td></tr>';
             }
             
-            // Add LRS params (lrs_service_type & tcs_amount) for cross border one-time when enabled
+            // Add LRS params for cross border one-time when enabled; only show tcs_amount when it has a value (omit from debug/request body when not passed)
             if (flow === 'crossborder' && currentPaymentType === 'onetime') {
                 const enableLrsParams = document.getElementById('cb_enable_lrs_params')?.checked;
                 if (enableLrsParams) {
                     const lrsServiceType = document.getElementById('cb_lrs_service_type')?.value?.trim() || '';
                     const tcsAmount = document.getElementById('cb_tcs_amount')?.value?.trim() || '';
                     debugHtml += '<tr><td>lrs_service_type' + addFieldLabel('lrs_service_type') + '</td><td>' + (lrsServiceType || '(not set)') + '</td></tr>';
-                    debugHtml += '<tr><td>tcs_amount' + addFieldLabel('tcs_amount') + '</td><td>' + (tcsAmount || '(optional - not set)') + '</td></tr>';
+                    if (tcsAmount) debugHtml += '<tr><td>tcs_amount' + addFieldLabel('tcs_amount') + '</td><td>' + tcsAmount + '</td></tr>';
                 }
             }
             
@@ -4486,12 +4487,13 @@
                 if (buyerType !== '') {
                     flowSpecific.buyerTypeBusiness = buyerType;
                 }
-                // LRS params (lrs_service_type & tcs_amount) for cross-border one-time only when enabled
+                // LRS params (lrs_service_type & tcs_amount) for cross-border one-time only when enabled; only set tcsAmount when value is passed (omit from params/code when not passed)
                 if (currentPaymentType === 'onetime') {
                     const enableLrsParams = document.getElementById('cb_enable_lrs_params')?.checked;
                     if (enableLrsParams) {
                         flowSpecific.lrsServiceType = document.getElementById('cb_lrs_service_type')?.value?.trim() || '';
-                        flowSpecific.tcsAmount = document.getElementById('cb_tcs_amount')?.value?.trim() || '';
+                        const tcsVal = document.getElementById('cb_tcs_amount')?.value?.trim() || '';
+                        if (tcsVal) flowSpecific.tcsAmount = tcsVal;
                     }
                 }
             }
@@ -4594,11 +4596,11 @@
                     console.log('✓ Cross Border udf_params collected for code generation:', udfParamsJson);
                 }
                 
-                // Add LRS params (lrs_service_type & tcs_amount) for cross-border one-time when enabled (include in params for code gen and form)
+                // Add LRS params for cross-border one-time when enabled; tcs_amount only when value is passed (omit from params/code/curl when not passed)
                 if (currentPaymentType === 'onetime' && flowSpecific.lrsServiceType !== undefined) {
                     params.lrs_service_type = flowSpecific.lrsServiceType;
                 }
-                if (currentPaymentType === 'onetime' && flowSpecific.tcsAmount !== undefined) {
+                if (currentPaymentType === 'onetime' && flowSpecific.tcsAmount) {
                     params.tcs_amount = flowSpecific.tcsAmount;
                 }
             }
@@ -4760,11 +4762,12 @@
             
             // Cross Border with buyer_type_business and/or udf_params and/or tcs_amount (LRS)
             // This overrides the 'subscription' hashType set above to 'crossborder_subscription'
-            // When tcs_amount is in params (including '' when LRS enabled), use crossborder_tcs for code gen
-            if (flowSpec.buyerTypeBusiness !== undefined || params.udf_params || params.tcs_amount !== undefined) {
+            // Only use crossborder_tcs when tcs_amount is passed (has value); otherwise udf_params/buyer_type_business formulas
+            // udf_params hash is included in generated code for all languages (Java, PHP, Python, Node) when present
+            if (flowSpec.buyerTypeBusiness !== undefined || params.udf_params || (params.tcs_amount !== undefined && params.tcs_amount !== '')) {
                 const hasUdfParams = !!params.udf_params;
                 const hasBuyerType = flowSpec.buyerTypeBusiness !== undefined;
-                const hasTcsAmount = params.tcs_amount !== undefined;
+                const hasTcsAmount = params.tcs_amount !== undefined && params.tcs_amount !== '';
                 
                 // Determine hash type based on what parameters are present
                 if (flowSpec.hasSubscription) {
@@ -5311,8 +5314,8 @@ ${skuArrayCode}
                            '                           params.getOrDefault("buyer_type_business", "") + "|" +\n' +
                            '                           params.getOrDefault("tcs_amount", "");';
             } else if (hashMetadata.hashType === 'crossborder') {
-                // Cross Border One-Time - Check for udf_params and buyer_type_business
-                const hasUdfParams = params.udf_params !== undefined;
+                // Cross Border One-Time - udf_params hash included for all languages when present (metadata is source of truth)
+                const hasUdfParams = !!(hashMetadata.additionalComponents && hashMetadata.additionalComponents.udf_params !== undefined) || params.udf_params !== undefined;
                 const hasBuyerType = params.buyer_type_business !== undefined;
                 
                 if (hasUdfParams && hasBuyerType) {
@@ -5363,8 +5366,8 @@ ${skuArrayCode}
                                '                           params.get("buyer_type_business");';
                 }
             } else if (hashMetadata.hashType === 'crossborder_subscription') {
-                // Cross Border Subscription - Check for udf_params and buyer_type_business
-                const hasUdfParams = params.udf_params !== undefined;
+                // Cross Border Subscription - udf_params hash included for all languages when present (metadata is source of truth)
+                const hasUdfParams = !!(hashMetadata.additionalComponents && hashMetadata.additionalComponents.udf_params !== undefined) || params.udf_params !== undefined;
                 const hasBuyerType = params.buyer_type_business !== undefined;
                 
                 if (hasUdfParams && hasBuyerType) {
@@ -5771,8 +5774,8 @@ jsonParamCode + '\n' +
                                "                  ($params['buyer_type_business'] ?? '') . '|' .\n" +
                                "                  ($params['tcs_amount'] ?? '');";
             } else if (hashMetadata.hashType === 'crossborder') {
-                // Cross Border One-Time - Check for udf_params and buyer_type_business
-                const hasUdfParams = params.udf_params !== undefined;
+                // Cross Border One-Time - udf_params hash included for all languages when present (metadata is source of truth)
+                const hasUdfParams = !!(hashMetadata.additionalComponents && hashMetadata.additionalComponents.udf_params !== undefined) || params.udf_params !== undefined;
                 const hasBuyerType = params.buyer_type_business !== undefined;
                 
                 if (hasUdfParams && hasBuyerType) {
@@ -5823,8 +5826,8 @@ jsonParamCode + '\n' +
                                    "                  $params['buyer_type_business'];";
                 }
             } else if (hashMetadata.hashType === 'crossborder_subscription') {
-                // Cross Border Subscription - Check for udf_params and buyer_type_business
-                const hasUdfParams = params.udf_params !== undefined;
+                // Cross Border Subscription - udf_params hash included for all languages when present (metadata is source of truth)
+                const hasUdfParams = !!(hashMetadata.additionalComponents && hashMetadata.additionalComponents.udf_params !== undefined) || params.udf_params !== undefined;
                 const hasBuyerType = params.buyer_type_business !== undefined;
                 
                 if (hasUdfParams && hasBuyerType) {
@@ -6278,28 +6281,28 @@ phpCartDetailsUsage +
                                "        f\"{params.get('tcs_amount', '')}\"\n" +
                                "    )";
             } else if (hashMetadata.hashType === 'crossborder') {
-                // Cross Border One-Time - Check for udf_params and buyer_type_business
-                const hasUdfParams = params.udf_params !== undefined;
+                // Cross Border One-Time - udf_params hash included for all languages when present (metadata is source of truth)
+                const hasUdfParams = !!(hashMetadata.additionalComponents && hashMetadata.additionalComponents.udf_params !== undefined) || params.udf_params !== undefined;
                 const hasBuyerType = params.buyer_type_business !== undefined;
                 
                 if (hasUdfParams && hasBuyerType) {
                     // With both udf_params and buyer_type_business
                 hashStringCode = "    hash_string = (\n" +
-                               "        f\"{MERCHANT_KEY}|\"\n" +
-                               "        f\"{params['txnid']}|\"\n" +
-                               "        f\"{params['amount']}|\"\n" +
-                               "        f\"{params['productinfo']}|\"\n" +
-                               "        f\"{params['firstname']}|\"\n" +
-                               "        f\"{params['email']}|\"\n" +
-                               "        f\"{params.get('udf1', '')}|\"\n" +
-                               "        f\"{params.get('udf2', '')}|\"\n" +
-                               "        f\"{params.get('udf3', '')}|\"\n" +
-                               "        f\"{params.get('udf4', '')}|\"\n" +
-                               "        f\"{params.get('udf5', '')}||||||\"\n" +
-                               "        f\"{MERCHANT_SALT}|\"\n" +
+                                   "        f\"{MERCHANT_KEY}|\"\n" +
+                                   "        f\"{params['txnid']}|\"\n" +
+                                   "        f\"{params['amount']}|\"\n" +
+                                   "        f\"{params['productinfo']}|\"\n" +
+                                   "        f\"{params['firstname']}|\"\n" +
+                                   "        f\"{params['email']}|\"\n" +
+                                   "        f\"{params.get('udf1', '')}|\"\n" +
+                                   "        f\"{params.get('udf2', '')}|\"\n" +
+                                   "        f\"{params.get('udf3', '')}|\"\n" +
+                                   "        f\"{params.get('udf4', '')}|\"\n" +
+                                   "        f\"{params.get('udf5', '')}||||||\"\n" +
+                                   "        f\"{MERCHANT_SALT}|\"\n" +
                                    "        f\"{params['udf_params']}|\"\n" +
-                               "        f\"{params['buyer_type_business']}\"\n" +
-                               "    )";
+                                   "        f\"{params['buyer_type_business']}\"\n" +
+                                   "    )";
                 } else if (hasUdfParams) {
                     // With only udf_params
                     hashStringCode = "    hash_string = (\n" +
@@ -6336,8 +6339,8 @@ phpCartDetailsUsage +
                                    "    )";
                 }
             } else if (hashMetadata.hashType === 'crossborder_subscription') {
-                // Cross Border Subscription - Check for udf_params and buyer_type_business
-                const hasUdfParams = params.udf_params !== undefined;
+                // Cross Border Subscription - udf_params hash included for all languages when present (metadata is source of truth)
+                const hasUdfParams = !!(hashMetadata.additionalComponents && hashMetadata.additionalComponents.udf_params !== undefined) || params.udf_params !== undefined;
                 const hasBuyerType = params.buyer_type_business !== undefined;
                 
                 if (hasUdfParams && hasBuyerType) {
@@ -6818,8 +6821,8 @@ pythonCartDetailsUsage +
                                "        (params.tcs_amount || '')\n" +
                                "    ].join('|');";
             } else if (hashMetadata.hashType === 'crossborder') {
-                // Cross Border One-Time - Check for udf_params and buyer_type_business
-                const hasUdfParams = params.udf_params !== undefined;
+                // Cross Border One-Time - udf_params hash included for all languages when present (metadata is source of truth)
+                const hasUdfParams = !!(hashMetadata.additionalComponents && hashMetadata.additionalComponents.udf_params !== undefined) || params.udf_params !== undefined;
                 const hasBuyerType = params.buyer_type_business !== undefined;
                 
                 if (hasUdfParams && hasBuyerType) {
@@ -6879,8 +6882,8 @@ pythonCartDetailsUsage +
                                    "    ].join('|');";
                 }
             } else if (hashMetadata.hashType === 'crossborder_subscription') {
-                // Cross Border Subscription - Check for udf_params and buyer_type_business
-                const hasUdfParams = params.udf_params !== undefined;
+                // Cross Border Subscription - udf_params hash included for all languages when present (metadata is source of truth)
+                const hasUdfParams = !!(hashMetadata.additionalComponents && hashMetadata.additionalComponents.udf_params !== undefined) || params.udf_params !== undefined;
                 const hasBuyerType = params.buyer_type_business !== undefined;
                 
                 if (hasUdfParams && hasBuyerType) {
