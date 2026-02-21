@@ -24,12 +24,12 @@ if (defined('APP_BASE_PATH')) {
         $basePath = '/' . $m[1];
     }
 }
-// Never use root for assets on server; on local use relative paths so app.js loads (avoids "Unexpected token '<'" from 404 HTML)
-$isLocal = isset($_SERVER['HTTP_HOST']) && (stripos($_SERVER['HTTP_HOST'], 'localhost') !== false || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false);
-if ($basePath === '' && !$isLocal) {
+// Use /integrationlab for assets only on payu.in; relative paths on Render, localhost, etc. (avoids "Unexpected token '<'" from 404)
+if ($basePath === '') {
     $basePath = '/integrationlab';
 }
-$assetBase = $isLocal ? '' : $basePath;
+$isPayuIntegrationLab = isset($_SERVER['HTTP_HOST']) && (stripos($_SERVER['HTTP_HOST'], 'payu.in') !== false);
+$assetBase = $isPayuIntegrationLab ? $basePath : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
