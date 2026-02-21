@@ -12,6 +12,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+// Base path for CSS/JS so they load correctly when app is in a subfolder (e.g. https://payu.in/integrationlab/)
+// Uses script path so: at root → ''; under /integrationlab → '/integrationlab'
+// If your server rewrites all URLs to one index.php at root, set this to your app path (e.g. '/integrationlab')
+$basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+if ($basePath === '' && isset($_SERVER['REQUEST_URI']) && preg_match('#^/(integrationlab)(?:/|$)#', $_SERVER['REQUEST_URI'], $m)) {
+    $basePath = '/' . $m[1];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($basePath); ?>/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -3278,6 +3285,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </div>
-    <script src="js/app.js"></script>
+    <script src="<?php echo htmlspecialchars($basePath); ?>/js/app.js"></script>
 </body>
 </html>
