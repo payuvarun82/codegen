@@ -2451,7 +2451,9 @@
                 updateButtonStates('crossborder');
             }
         }
-        // Expose toggles on window immediately so inline onchange works (e.g. when app is under subpath or script loads async)
+        // Expose toggles on window (stub in HTML head calls _toggle*; we replace global so inline onchange works)
+        window._toggleUdfParams = toggleUdfParams;
+        window._toggleLrsParams = toggleLrsParams;
         window.toggleUdfParams = toggleUdfParams;
         window.toggleLrsParams = toggleLrsParams;
         
