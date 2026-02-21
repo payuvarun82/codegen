@@ -24,10 +24,12 @@ if (defined('APP_BASE_PATH')) {
         $basePath = '/' . $m[1];
     }
 }
-// Never use root for assets: avoid 404/MIME errors when script runs at domain root
-if ($basePath === '') {
+// Never use root for assets on server; on local use relative paths so app.js loads (avoids "Unexpected token '<'" from 404 HTML)
+$isLocal = isset($_SERVER['HTTP_HOST']) && (stripos($_SERVER['HTTP_HOST'], 'localhost') !== false || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false);
+if ($basePath === '' && !$isLocal) {
     $basePath = '/integrationlab';
 }
+$assetBase = $isLocal ? '' : $basePath;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -45,31 +47,46 @@ if ($basePath === '') {
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
-    <link rel="stylesheet" href="<?php echo htmlspecialchars($basePath); ?>/css/styles.css">
+    <link rel="stylesheet" href="<?php echo $assetBase === '' ? 'css/styles.css' : htmlspecialchars($assetBase) . '/css/styles.css'; ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Stub: toggles work before app.js loads; app.js replaces with full impl when it loads -->
+    <!-- LRS/UDF toggles: work before app.js; delegated listener so LRS/UDF always respond to checkbox -->
     <script>
-        window.toggleLrsParams = function(flow) {
-            if (window._toggleLrsParams) { window._toggleLrsParams(flow); return; }
-            if (flow !== 'crossborder') return;
-            var cb = document.getElementById('cb_enable_lrs_params');
-            var el = document.getElementById('cb-lrs-params-fields');
-            if (cb && el) { el.style.display = cb.checked ? 'block' : 'none'; if (!cb.checked) { var s = document.getElementById('cb_lrs_service_type'); var t = document.getElementById('cb_tcs_amount'); if (s) s.value = ''; if (t) t.value = ''; } }
-        };
-        window.toggleUdfParams = function(flow, type) {
-            if (window._toggleUdfParams) { window._toggleUdfParams(flow, type); return; }
-            if (flow !== 'crossborder' || (type !== 'onetime' && type !== 'subscription')) return;
-            var checkboxId = type === 'onetime' ? 'cb_enable_udf_params' : 'cb_sub_enable_udf_params';
-            var fieldsId = type === 'onetime' ? 'cb-udf-params-fields' : 'cb-sub-udf-params-fields';
-            var cb = document.getElementById(checkboxId);
-            var el = document.getElementById(fieldsId);
-            if (!cb || !el) return;
-            el.style.display = cb.checked ? 'block' : 'none';
-            if (!cb.checked) {
-                if (type === 'onetime') { var u7 = document.getElementById('cb_udf7_input'); var u8 = document.getElementById('cb_udf8_input'); if (u7) u7.value = ''; if (u8) u8.value = ''; }
-                else { var u7 = document.getElementById('cb_sub_udf7_input'); var u8 = document.getElementById('cb_sub_udf8_input'); if (u7) u7.value = ''; if (u8) u8.value = ''; }
+        (function() {
+            function doLrs(flow) {
+                if (flow !== 'crossborder') return;
+                var cb = document.getElementById('cb_enable_lrs_params');
+                var el = document.getElementById('cb-lrs-params-fields');
+                if (cb && el) { el.style.display = cb.checked ? 'block' : 'none'; if (!cb.checked) { var s = document.getElementById('cb_lrs_service_type'); var t = document.getElementById('cb_tcs_amount'); if (s) s.value = ''; if (t) t.value = ''; } }
             }
-        };
+            function doUdf(flow, type) {
+                if (flow !== 'crossborder' || (type !== 'onetime' && type !== 'subscription')) return;
+                var checkboxId = type === 'onetime' ? 'cb_enable_udf_params' : 'cb_sub_enable_udf_params';
+                var fieldsId = type === 'onetime' ? 'cb-udf-params-fields' : 'cb-sub-udf-params-fields';
+                var cb = document.getElementById(checkboxId);
+                var el = document.getElementById(fieldsId);
+                if (!cb || !el) return;
+                el.style.display = cb.checked ? 'block' : 'none';
+                if (!cb.checked) {
+                    if (type === 'onetime') { var u7 = document.getElementById('cb_udf7_input'); var u8 = document.getElementById('cb_udf8_input'); if (u7) u7.value = ''; if (u8) u8.value = ''; }
+                    else { var u7 = document.getElementById('cb_sub_udf7_input'); var u8 = document.getElementById('cb_sub_udf8_input'); if (u7) u7.value = ''; if (u8) u8.value = ''; }
+                }
+            }
+            window.toggleLrsParams = function(flow) { if (window._toggleLrsParams) { window._toggleLrsParams(flow); return; } doLrs(flow); };
+            window.toggleUdfParams = function(flow, type) { if (window._toggleUdfParams) { window._toggleUdfParams(flow, type); return; } doUdf(flow, type); };
+            function onChange(e) {
+                var id = e.target && e.target.id;
+                if (id === 'cb_enable_lrs_params') window.toggleLrsParams('crossborder');
+                if (id === 'cb_enable_udf_params') window.toggleUdfParams('crossborder', 'onetime');
+                if (id === 'cb_sub_enable_udf_params') window.toggleUdfParams('crossborder', 'subscription');
+            }
+            function init() {
+                document.body.addEventListener('change', onChange);
+                doLrs('crossborder');
+                doUdf('crossborder', 'onetime');
+                doUdf('crossborder', 'subscription');
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+        })();
     </script>
 </head>
 <body>
@@ -539,8 +556,8 @@ if ($basePath === '') {
                         </small>
                     </div>
                     
-                    <div id="cb-udf-params-fields" style="display: none; margin-top: 1rem; padding: 1rem; background: #f7fafc; border-radius: 8px; border-left: 4px solid #10846D;">
-                        <h4 style="margin: 0 0 1rem 0; color: #10846D; font-size: 1rem;">Cross-Border Compliance Parameters</h4>
+                    <div id="cb-udf-params-fields" class="cb-udf-params-fields cb-params-fields" style="display: none;">
+                        <h4 class="cb-params-title">Cross-Border Compliance Parameters</h4>
                         
                         <div class="form-row">
                             <div class="form-group">
@@ -573,8 +590,8 @@ if ($basePath === '') {
                         </small>
                     </div>
                     
-                    <div id="cb-lrs-params-fields" class="cb-lrs-params-fields" style="display: none;">
-                        <h4 class="cb-lrs-params-title">LRS Parameters (Cross-Border One-Time Only)</h4>
+                    <div id="cb-lrs-params-fields" class="cb-lrs-params-fields cb-params-fields" style="display: none;">
+                        <h4 class="cb-params-title">LRS Parameters (Cross-Border One-Time Only)</h4>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="cb_lrs_service_type">lrs_service_type <span class="optional">(Conditional)</span></label>
@@ -655,8 +672,8 @@ if ($basePath === '') {
                         </small>
                     </div>
                     
-                    <div id="cb-sub-udf-params-fields" style="display: none; margin-top: 1rem; padding: 1rem; background: #f7fafc; border-radius: 8px; border-left: 4px solid #10846D;">
-                        <h4 style="margin: 0 0 1rem 0; color: #10846D; font-size: 1rem;">Cross-Border Compliance Parameters</h4>
+                    <div id="cb-sub-udf-params-fields" class="cb-udf-params-fields cb-params-fields" style="display: none;">
+                        <h4 class="cb-params-title">Cross-Border Compliance Parameters</h4>
                         
                         <div class="form-row">
                             <div class="form-group">
@@ -3318,6 +3335,6 @@ if ($basePath === '') {
             </div>
         </div>
     </div>
-    <script src="<?php echo htmlspecialchars($basePath); ?>/js/app.js"></script>
+    <script src="<?php echo $assetBase === '' ? 'js/app.js' : htmlspecialchars($assetBase) . '/js/app.js'; ?>"></script>
 </body>
 </html>
