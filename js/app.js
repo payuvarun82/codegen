@@ -574,13 +574,21 @@
             setupFormValidation('bankoffer');
             console.log('✓ Button State Validation initialized for all flows');
             
-            // Attach UDF and LRS checkbox handlers in JS (so they work even if script load order or globals differ)
+            // Attach UDF and LRS checkbox handlers; ensure window globals are real impl (inline onchange uses them)
+            window._toggleUdfParams = toggleUdfParams;
+            window._toggleLrsParams = toggleLrsParams;
+            window.toggleUdfParams = toggleUdfParams;
+            window.toggleLrsParams = toggleLrsParams;
             var elUdfOnetime = document.getElementById('cb_enable_udf_params');
             if (elUdfOnetime) elUdfOnetime.addEventListener('change', function() { toggleUdfParams('crossborder', 'onetime'); });
             var elLrs = document.getElementById('cb_enable_lrs_params');
             if (elLrs) elLrs.addEventListener('change', function() { toggleLrsParams('crossborder'); });
             var elUdfSub = document.getElementById('cb_sub_enable_udf_params');
             if (elUdfSub) elUdfSub.addEventListener('change', function() { toggleUdfParams('crossborder', 'subscription'); });
+            // Sync visible state from checkboxes (in case of restored state or stub already ran)
+            if (elUdfOnetime) toggleUdfParams('crossborder', 'onetime');
+            if (elLrs) toggleLrsParams('crossborder');
+            if (elUdfSub) toggleUdfParams('crossborder', 'subscription');
         }
         
         // ============================================
