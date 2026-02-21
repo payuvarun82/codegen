@@ -541,8 +541,10 @@
             margin-bottom: 0.5rem;
         }
         
-        /* LRS Parameters (Cross-Border One-Time) - PayU theme, same feel as UDF / Redirect URLs */
-        .cb-lrs-params-fields {
+        /* Shared design for UDF (UDF7/UDF8) and LRS params - PayU theme, same font and look */
+        .cb-params-fields,
+        .cb-lrs-params-fields,
+        .cb-udf-params-fields {
             margin-top: 1rem;
             padding: 1rem;
             background: var(--debug-bg);
@@ -551,6 +553,7 @@
             font-family: var(--font-family);
             color: var(--color-text-default);
         }
+        .cb-params-title,
         .cb-lrs-params-title {
             margin: 0 0 1rem 0;
             padding-bottom: 0.5rem;
@@ -567,12 +570,20 @@
             font-family: var(--font-family);
             font-size: 0.875rem;
         }
+        .cb-params-fields .form-group label,
+        .cb-params-fields .form-group small,
         .cb-lrs-params-fields .form-group label,
-        .cb-lrs-params-fields .form-group small {
+        .cb-lrs-params-fields .form-group small,
+        .cb-udf-params-fields .form-group label,
+        .cb-udf-params-fields .form-group small {
             font-family: var(--font-family);
         }
+        .cb-params-fields input,
+        .cb-params-fields select,
         .cb-lrs-params-fields input,
-        .cb-lrs-params-fields select {
+        .cb-lrs-params-fields select,
+        .cb-udf-params-fields input,
+        .cb-udf-params-fields select {
             font-family: var(--font-family);
         }
         
