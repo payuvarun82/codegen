@@ -12,12 +12,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Base path for CSS/JS so they load correctly when app is in a subfolder (e.g. https://payu.in/integrationlab/)
-// Uses script path so: at root → ''; under /integrationlab → '/integrationlab'
-// If your server rewrites all URLs to one index.php at root, set this to your app path (e.g. '/integrationlab')
-$basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
-if ($basePath === '' && isset($_SERVER['REQUEST_URI']) && preg_match('#^/(integrationlab)(?:/|$)#', $_SERVER['REQUEST_URI'], $m)) {
-    $basePath = '/' . $m[1];
+// Base path for CSS/JS so they load correctly (e.g. https://payu.in/integrationlab/)
+// Set your app path when deployed under a subfolder. For payu.in use '/integrationlab'. For app at domain root, comment out.
+define('APP_BASE_PATH', '/integrationlab');
+if (defined('APP_BASE_PATH')) {
+    $basePath = rtrim(APP_BASE_PATH, '/');
+} else {
+    $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+    $uri = isset($_SERVER['REQUEST_URI']) ? parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) : '';
+    if ($basePath === '' && $uri !== false && $uri !== null && preg_match('#^/(integrationlab)(?:/|$)#', (string)$uri, $m)) {
+        $basePath = '/' . $m[1];
+    }
 }
 ?>
 <!DOCTYPE html>
