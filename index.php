@@ -503,7 +503,7 @@ if (defined('APP_BASE_PATH')) {
                     <!-- UDF Params Section (UDF7 & UDF8) for Cross-Border Compliance -->
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label class="cb-enable-params-label">
-                            <input type="checkbox" id="cb_enable_udf_params" onchange="toggleUdfParams('crossborder', 'onetime')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <input type="checkbox" id="cb_enable_udf_params" style="width: 18px; height: 18px; cursor: pointer;">
                             Enable UDF Params (UDF7 & UDF8) for Import/Export Compliance
                         </label>
                         <small style="color: var(--text-tertiary); display: block; margin-top: 0.5rem; margin-left: 26px;">
@@ -537,7 +537,7 @@ if (defined('APP_BASE_PATH')) {
                     <!-- LRS Params Section (lrs_service_type & tcs_amount) for Cross-Border One-Time -->
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label class="cb-enable-params-label">
-                            <input type="checkbox" id="cb_enable_lrs_params" onchange="toggleLrsParams('crossborder')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <input type="checkbox" id="cb_enable_lrs_params" style="width: 18px; height: 18px; cursor: pointer;">
                             Enable LRS Params (lrs_service_type & tcs_amount) for Cross-Border One-Time
                         </label>
                         <small style="color: var(--text-tertiary); display: block; margin-top: 0.5rem; margin-left: 26px;">
@@ -619,7 +619,7 @@ if (defined('APP_BASE_PATH')) {
                     <!-- UDF Params Section (UDF7 & UDF8) for Cross-Border Subscription Compliance -->
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label class="cb-enable-params-label">
-                            <input type="checkbox" id="cb_sub_enable_udf_params" onchange="toggleUdfParams('crossborder', 'subscription')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <input type="checkbox" id="cb_sub_enable_udf_params" style="width: 18px; height: 18px; cursor: pointer;">
                             Enable UDF Params (UDF7 & UDF8) for Import/Export Compliance
                         </label>
                         <small style="color: var(--text-tertiary); display: block; margin-top: 0.5rem; margin-left: 26px;">
