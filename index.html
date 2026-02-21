@@ -14,11 +14,11 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
-    <!-- Asset path: /integrationlab/ on server; relative on localhost/file so app.js loads (avoids "Unexpected token '<'" from 404) -->
+    <!-- Asset path: /integrationlab/ only on payu.in; relative elsewhere (Render, localhost, file) to avoid "Unexpected token '<'" from 404 -->
     <script>
         (function() {
-            var h = window.location.hostname, protocol = window.location.protocol;
-            var base = (h === 'localhost' || h === '127.0.0.1' || protocol === 'file:') ? '' : '/integrationlab';
+            var h = window.location.hostname;
+            var base = (h === 'payu.in' || h.endsWith('.payu.in')) ? '/integrationlab' : '';
             window.APP_BASE_PATH = base;
             var link = document.createElement('link');
             link.rel = 'stylesheet';
@@ -3315,7 +3315,8 @@
     </div>
     <script>
         (function() {
-            var base = window.APP_BASE_PATH != null ? window.APP_BASE_PATH : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:' ? '' : '/integrationlab');
+            var h = window.location.hostname;
+            var base = window.APP_BASE_PATH != null ? window.APP_BASE_PATH : ((h === 'payu.in' || h.endsWith('.payu.in')) ? '/integrationlab' : '');
             var s = document.createElement('script');
             s.src = base ? base + '/js/app.js' : 'js/app.js';
             document.body.appendChild(s);
