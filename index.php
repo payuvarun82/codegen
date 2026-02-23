@@ -529,7 +529,7 @@ $assetBase = $isPayuIntegrationLab ? $basePath : '';
                     <div class="form-row">
                         <div class="form-group">
                             <label for="cb_udf3_input">UDF3 - Buyer's DOB <span class="optional">(Recommended)</span></label>
-                            <input type="text" id="cb_udf3_input" name="udf3_input" placeholder="YYYY-MM-DD" maxlength="255">
+                            <input type="text" id="cb_udf3_input" name="udf3_input" placeholder="DD-MM-YYYY for LRS DD/MM/YYYY" maxlength="255">
                             <div id="cb_udf3_input_counter" class="char-counter">0/255</div>
                         </div>
                         <div class="form-group">
