@@ -1530,8 +1530,20 @@
             // Clear localStorage when going back to flow selection
             localStorage.removeItem('currentPaymentFlow');
             localStorage.removeItem('currentPaymentType');
+            
+            // Reset the flow dropdown
+            var flowSelect = document.getElementById('flowSelect');
+            if (flowSelect) flowSelect.value = '';
+            
             console.log('✓ localStorage cleared - returned to home page');
         }
+        
+        function onFlowDropdownChange(value) {
+            if (value) {
+                showFlow(value);
+            }
+        }
+        window.onFlowDropdownChange = onFlowDropdownChange;
         
         function loadSelectedFlow(flowName, skipPushState = false) {
             const flowSelect = document.getElementById('flowSelect');
@@ -1699,13 +1711,15 @@
                 console.log('✓ Split flow initialized with default row');
             }
             
-            // Reset seamless flow to method selector when entering
+            // Initialize seamless flow: show Level 1 (method tiles)
             if (selectedFlow === 'seamless') {
-                var methodSel = document.getElementById('seamlessMethodSelector');
-                var layout = document.getElementById('seamlessLayout');
-                if (methodSel) methodSel.style.display = 'block';
-                if (layout) layout.style.display = 'none';
-                console.log('✓ Seamless flow initialized');
+                var methodSelect = document.getElementById('seamlessMethodSelect');
+                var upiFlows = document.getElementById('seamlessUpiFlows');
+                var flowDetail = document.getElementById('seamlessFlowDetail');
+                if (methodSelect) methodSelect.style.display = 'block';
+                if (upiFlows) upiFlows.style.display = 'none';
+                if (flowDetail) flowDetail.style.display = 'none';
+                console.log('✓ Seamless flow initialized (Level 1: method tiles)');
             }
             
             // Save current flow to localStorage for persistence on refresh
@@ -6951,48 +6965,61 @@ nodeCartDetailsUsage +
         // SEAMLESS INTEGRATION LAB FUNCTIONS
         // ============================================
 
-        function selectSeamlessMethod(method) {
+        // Level 1 -> Level 2: show UPI flow tiles
+        function showSeamlessMethod(method) {
             if (method !== 'upi') return;
-            document.querySelectorAll('.seamless-method-tile').forEach(function(t) { t.classList.remove('active'); });
-            document.querySelector('.seamless-method-tile[onclick*="' + method + '"]').classList.add('active');
-            document.getElementById('seamlessMethodSelector').style.display = 'none';
-            document.getElementById('seamlessLayout').style.display = 'grid';
-            // Generate a txnid for the hash section
+            document.getElementById('seamlessMethodSelect').style.display = 'none';
+            document.getElementById('seamlessUpiFlows').style.display = 'block';
+            document.getElementById('seamlessFlowDetail').style.display = 'none';
+            window.scrollTo(0, 0);
+        }
+
+        // Level 2 -> Level 1: back to payment methods
+        function backToSeamlessMethods() {
+            document.getElementById('seamlessMethodSelect').style.display = 'block';
+            document.getElementById('seamlessUpiFlows').style.display = 'none';
+            document.getElementById('seamlessFlowDetail').style.display = 'none';
+            window.scrollTo(0, 0);
+        }
+
+        // Level 2 -> Level 3: open a specific flow detail page
+        function openSeamlessFlow(sectionId) {
+            document.getElementById('seamlessMethodSelect').style.display = 'none';
+            document.getElementById('seamlessUpiFlows').style.display = 'none';
+            document.getElementById('seamlessFlowDetail').style.display = 'block';
+            // Hide all sections, show the selected one
+            document.querySelectorAll('#seamlessDetailContent .seamless-section').forEach(function(s) {
+                s.classList.remove('active');
+            });
+            var section = document.getElementById(sectionId);
+            if (section) section.classList.add('active');
+            // Auto-fill txnid fields if empty
             var txnField = document.getElementById('sm_hash_txnid');
             if (txnField && !txnField.value) txnField.value = 'SM_' + Date.now();
             var simTxnField = document.getElementById('sm_sim_txnid');
             if (simTxnField && !simTxnField.value) simTxnField.value = 'SIM_' + Date.now();
+            window.scrollTo(0, 0);
         }
 
-        function backToMethodSelector() {
-            document.getElementById('seamlessMethodSelector').style.display = 'block';
-            document.getElementById('seamlessLayout').style.display = 'none';
+        // Level 3 -> Level 2: back to UPI flow tiles
+        function backToUpiFlows() {
+            document.getElementById('seamlessMethodSelect').style.display = 'none';
+            document.getElementById('seamlessUpiFlows').style.display = 'block';
+            document.getElementById('seamlessFlowDetail').style.display = 'none';
+            window.scrollTo(0, 0);
         }
+
+        // Keep for backward compat
+        function selectSeamlessMethod(method) { showSeamlessMethod(method); }
+        function backToMethodSelector() { goHome(); }
 
         var seamlessSections = ['sm-overview','sm-prerequisites','sm-architecture','sm-hash','sm-validate-vpa','sm-payment','sm-upiflow','sm-mandate','sm-otm','sm-capture','sm-response','sm-verify','sm-cancel','sm-otm-status','sm-recurring','sm-troubleshoot','sm-simulate'];
 
         function showSeamlessSection(navItem, sectionId) {
-            document.querySelectorAll('.seamless-nav-item').forEach(function(n) { n.classList.remove('active'); });
-            document.querySelectorAll('.seamless-section').forEach(function(s) { s.classList.remove('active'); });
-            if (navItem && navItem.classList) navItem.classList.add('active');
-            else {
-                var nav = document.querySelector('[data-section="' + sectionId + '"]');
-                if (nav) nav.classList.add('active');
-            }
+            document.querySelectorAll('#seamlessDetailContent .seamless-section').forEach(function(s) { s.classList.remove('active'); });
             var section = document.getElementById(sectionId);
-            if (section) {
-                section.classList.add('active');
-                var contentArea = document.getElementById('seamlessContent');
-                if (contentArea) contentArea.scrollTop = 0;
-            }
-            var idx = seamlessSections.indexOf(sectionId);
-            if (idx >= 0) {
-                var pct = ((idx + 1) / seamlessSections.length * 100);
-                var bar = document.getElementById('seamlessProgressBar');
-                var txt = document.getElementById('seamlessProgressText');
-                if (bar) bar.style.width = pct + '%';
-                if (txt) txt.textContent = (idx + 1) + '/' + seamlessSections.length;
-            }
+            if (section) section.classList.add('active');
+            window.scrollTo(0, 0);
         }
 
         function smCopyCode(btn) {
@@ -7227,86 +7254,515 @@ nodeCartDetailsUsage +
             if (target) target.style.display = 'block';
         }
 
-        function smValidateVPA() {
+        function smBuildVpaPayload() {
             var key = document.getElementById('sm_vpa_key').value.trim();
             var salt = document.getElementById('sm_vpa_salt').value.trim();
             var vpa = document.getElementById('sm_vpa_address').value.trim();
             var autopay = document.getElementById('sm_vpa_autopay').value;
-            if (!key || !salt || !vpa) { alert('Please fill in Key, Salt and VPA.'); return; }
+
+            if (!key || !salt || !vpa) {
+                alert('Please fill in Merchant Key, Salt and VPA Address.');
+                return null;
+            }
 
             var command = 'validateVPA';
             var hashStr = key + '|' + command + '|' + vpa + '|' + salt;
             var hash = smSHA512(hashStr);
 
-            document.getElementById('smVpaHashString').textContent = hashStr;
-            document.getElementById('smVpaHashOutput').innerHTML = '<h4>Generated Hash (SHA-512)</h4><div style="background:var(--primary);color:#fff;padding:1rem;border-radius:8px;word-break:break-all;text-align:center;">' + hash + '</div>';
+            var params = {
+                key: key,
+                command: command,
+                var1: vpa,
+                hash: hash
+            };
+            if (autopay === '1') {
+                params.var2 = JSON.stringify({ validateAutoPayVPA: '1' });
+            }
+
+            return { params: params, hashStr: hashStr, hash: hash, key: key, vpa: vpa };
+        }
+
+        function smPreviewVpaRequest() {
+            var data = smBuildVpaPayload();
+            if (!data) return;
+
+            var panel = document.getElementById('smVpaReqRes');
+            panel.style.display = 'block';
+
+            var requestJson = JSON.stringify({
+                endpoint: 'https://test.payu.in/merchant/postservice.php?form=2',
+                method: 'POST',
+                params: data.params
+            }, null, 2);
+
+            document.getElementById('smVpaRequestView').textContent = requestJson;
+            document.getElementById('smVpaResponseView').textContent = '(Click "Send to PayU" to see live response)';
+
+            var badge = document.getElementById('smVpaStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.textContent = 'Preview Only — Not Sent Yet';
 
             var curl = 'curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \\\n';
             curl += '  -H "Content-Type: application/x-www-form-urlencoded" \\\n';
-            curl += '  --data-urlencode "key=' + key + '" \\\n';
+            curl += '  --data-urlencode "key=' + data.params.key + '" \\\n';
             curl += '  --data-urlencode "command=validateVPA" \\\n';
-            curl += '  --data-urlencode "var1=' + vpa + '" \\\n';
-            if (autopay === '1') {
-                curl += '  --data-urlencode \'var2={"validateAutoPayVPA":"1"}\' \\\n';
+            curl += '  --data-urlencode "var1=' + data.params.var1 + '" \\\n';
+            if (data.params.var2) {
+                curl += '  --data-urlencode \'var2=' + data.params.var2 + '\' \\\n';
             }
-            curl += '  --data-urlencode "hash=' + hash + '"';
-            document.getElementById('smVpaCurl').textContent = curl;
-            document.getElementById('smVpaResult').style.display = 'block';
+            curl += '  --data-urlencode "hash=' + data.params.hash + '"';
+            document.getElementById('smVpaCurlView').textContent = curl;
+
+            var guide = document.getElementById('smVpaResponseGuide');
+            guide.style.display = 'none';
+
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function smGenerateCapture() {
+        function smSendVpaRequest() {
+            var data = smBuildVpaPayload();
+            if (!data) return;
+
+            var panel = document.getElementById('smVpaReqRes');
+            panel.style.display = 'block';
+
+            var requestJson = JSON.stringify({
+                endpoint: 'https://test.payu.in/merchant/postservice.php?form=2',
+                method: 'POST',
+                params: data.params
+            }, null, 2);
+
+            document.getElementById('smVpaRequestView').textContent = requestJson;
+
+            var badge = document.getElementById('smVpaStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending request to PayU...';
+            document.getElementById('smVpaResponseView').textContent = 'Waiting for response...';
+
+            var curl = 'curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \\\n';
+            curl += '  -H "Content-Type: application/x-www-form-urlencoded" \\\n';
+            curl += '  --data-urlencode "key=' + data.params.key + '" \\\n';
+            curl += '  --data-urlencode "command=validateVPA" \\\n';
+            curl += '  --data-urlencode "var1=' + data.params.var1 + '" \\\n';
+            if (data.params.var2) {
+                curl += '  --data-urlencode \'var2=' + data.params.var2 + '\' \\\n';
+            }
+            curl += '  --data-urlencode "hash=' + data.params.hash + '"';
+            document.getElementById('smVpaCurlView').textContent = curl;
+
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            fetch('proxy.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    endpoint: 'postservice',
+                    params: data.params
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(result) {
+                smDisplayVpaResponse(result, data);
+            })
+            .catch(function(err) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'Request Failed';
+                document.getElementById('smVpaResponseView').textContent = 'Error: ' + err.message + '\n\nMake sure the PHP dev server is running:\n  php -S 127.0.0.1:8080';
+                var guide = document.getElementById('smVpaResponseGuide');
+                guide.style.display = 'none';
+            });
+        }
+
+        function smDisplayVpaResponse(result, data) {
+            var badge = document.getElementById('smVpaStatusBadge');
+            var responseView = document.getElementById('smVpaResponseView');
+            var guide = document.getElementById('smVpaResponseGuide');
+            var explain = document.getElementById('smVpaResponseExplain');
+
+            var resp = result.response;
+            responseView.textContent = JSON.stringify(resp, null, 2);
+
+            if (resp && (resp.status === 1 || resp.status === '1') && resp.isVPAValid === 1) {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'HTTP ' + result.http_code + ' — VPA is Valid';
+
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>status</code> <span>= 1 — Request succeeded</span></div>' +
+                    '<div class="sm-response-field"><code>isVPAValid</code> <span>= 1 — VPA exists and is active</span></div>' +
+                    '<div class="sm-response-field"><code>payerAccountName</code> <span>= "' + (resp.payerAccountName || 'N/A') + '" — Show this to user for confirmation</span></div>' +
+                    '<div class="sm-response-field"><code>vpa</code> <span>= "' + (resp.vpa || data.vpa) + '" — Echoed VPA</span></div>' +
+                    (resp.isAutoPayVPAValid !== undefined ?
+                        '<div class="sm-response-field"><code>isAutoPayVPAValid</code> <span>= ' + resp.isAutoPayVPAValid + ' — Mandate support: ' + (resp.isAutoPayVPAValid === 1 ? 'Yes' : 'No') + '</span></div>'
+                        : '') +
+                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Next step: Proceed to collect payment using this validated VPA.</p>';
+            } else if (resp && resp.isVPAValid === 0) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + result.http_code + ' — VPA is Invalid';
+
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>isVPAValid</code> <span>= 0 — VPA does not exist or is inactive</span></div>' +
+                    '<div class="sm-response-field"><code>msg</code> <span>= "' + (resp.msg || 'N/A') + '"</span></div>' +
+                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Ask the customer to re-enter their VPA or try a different one.</p>';
+            } else {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + result.http_code + ' — Error';
+
+                guide.style.display = 'block';
+                var errorMsg = (resp && resp.msg) ? resp.msg : (result.raw || 'Unknown error');
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>error</code> <span>' + errorMsg + '</span></div>' +
+                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Check your merchant key, salt, and VPA format. Ensure the hash is correct.</p>';
+            }
+        }
+
+        window.smPreviewVpaRequest = smPreviewVpaRequest;
+        window.smSendVpaRequest = smSendVpaRequest;
+
+        // --- UPI One-Time Payment (sm-payment) ---
+
+        function smBuildPaymentPayload() {
+            var key = document.getElementById('sm_pay_key').value.trim();
+            var salt = document.getElementById('sm_pay_salt').value.trim();
+            var txnid = document.getElementById('sm_pay_txnid').value.trim();
+            var amount = document.getElementById('sm_pay_amount').value.trim();
+            var productinfo = document.getElementById('sm_pay_productinfo').value.trim();
+            var firstname = document.getElementById('sm_pay_firstname').value.trim();
+            var email = document.getElementById('sm_pay_email').value.trim();
+            var phone = document.getElementById('sm_pay_phone').value.trim();
+            var surl = document.getElementById('sm_pay_surl').value.trim();
+            var furl = document.getElementById('sm_pay_furl').value.trim();
+            var bankcode = document.getElementById('sm_pay_bankcode').value;
+            var clientIp = document.getElementById('sm_pay_client_ip').value.trim();
+            var deviceInfo = document.getElementById('sm_pay_device_info').value.trim();
+
+            if (!key || !salt || !amount || !productinfo || !firstname || !email || !phone || !surl || !furl) {
+                alert('Please fill in all required fields (Key, Salt, Amount, Product Info, First Name, Email, Phone, Success URL, Failure URL).');
+                return null;
+            }
+
+            if (!txnid) {
+                txnid = 'TXN_' + Date.now();
+                document.getElementById('sm_pay_txnid').value = txnid;
+            }
+
+            var udf1 = '', udf2 = '', udf3 = '', udf4 = '', udf5 = '';
+            var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + salt;
+            var hash = smSHA512(hashStr);
+
+            var params = {
+                key: key,
+                txnid: txnid,
+                amount: amount,
+                productinfo: productinfo,
+                firstname: firstname,
+                email: email,
+                phone: phone,
+                surl: surl,
+                furl: furl,
+                hash: hash,
+                pg: 'UPI',
+                bankcode: bankcode,
+                txn_s2s_flow: '4',
+                s2s_client_ip: clientIp,
+                s2s_device_info: deviceInfo
+            };
+
+            return { params: params, hashStr: hashStr, hash: hash, key: key, txnid: txnid };
+        }
+
+        function smPreviewPaymentRequest() {
+            var data = smBuildPaymentPayload();
+            if (!data) return;
+
+            var panel = document.getElementById('smPayReqRes');
+            panel.style.display = 'block';
+
+            var requestJson = JSON.stringify({
+                endpoint: 'https://test.payu.in/_payment',
+                method: 'POST',
+                params: data.params
+            }, null, 2);
+
+            document.getElementById('smPayRequestView').textContent = requestJson;
+            document.getElementById('smPayResponseView').textContent = '(Click "Send to PayU" to see live response)';
+
+            var badge = document.getElementById('smPayStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.textContent = 'Preview Only — Not Sent Yet';
+
+            var curl = 'curl -X POST "https://test.payu.in/_payment" \\\n';
+            curl += '  -H "accept: application/json" \\\n';
+            curl += '  -H "Content-Type: application/x-www-form-urlencoded" \\\n';
+            Object.keys(data.params).forEach(function(k) {
+                curl += '  --data-urlencode "' + k + '=' + data.params[k] + '" \\\n';
+            });
+            curl = curl.replace(/ \\\n$/, '');
+            document.getElementById('smPayCurlView').textContent = curl;
+
+            var guide = document.getElementById('smPayResponseGuide');
+            guide.style.display = 'none';
+
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function smSendPaymentRequest() {
+            var data = smBuildPaymentPayload();
+            if (!data) return;
+
+            var panel = document.getElementById('smPayReqRes');
+            panel.style.display = 'block';
+
+            var requestJson = JSON.stringify({
+                endpoint: 'https://test.payu.in/_payment',
+                method: 'POST',
+                params: data.params
+            }, null, 2);
+
+            document.getElementById('smPayRequestView').textContent = requestJson;
+
+            var badge = document.getElementById('smPayStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending request to PayU...';
+            document.getElementById('smPayResponseView').textContent = 'Waiting for response...';
+
+            var curl = 'curl -X POST "https://test.payu.in/_payment" \\\n';
+            curl += '  -H "accept: application/json" \\\n';
+            curl += '  -H "Content-Type: application/x-www-form-urlencoded" \\\n';
+            Object.keys(data.params).forEach(function(k) {
+                curl += '  --data-urlencode "' + k + '=' + data.params[k] + '" \\\n';
+            });
+            curl = curl.replace(/ \\\n$/, '');
+            document.getElementById('smPayCurlView').textContent = curl;
+
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            fetch('proxy.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    endpoint: 'payment',
+                    params: data.params
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(result) {
+                smDisplayPaymentResponse(result, data);
+            })
+            .catch(function(err) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'Request Failed';
+                document.getElementById('smPayResponseView').textContent = 'Error: ' + err.message + '\n\nMake sure the PHP dev server is running:\n  php -S 127.0.0.1:8080';
+                var guide = document.getElementById('smPayResponseGuide');
+                guide.style.display = 'none';
+            });
+        }
+
+        function smDisplayPaymentResponse(result, data) {
+            var badge = document.getElementById('smPayStatusBadge');
+            var responseView = document.getElementById('smPayResponseView');
+            var guide = document.getElementById('smPayResponseGuide');
+            var explain = document.getElementById('smPayResponseExplain');
+
+            var resp = result.response;
+            responseView.textContent = JSON.stringify(resp, null, 2);
+
+            var meta = resp && resp.metaData ? resp.metaData : {};
+            var unmapped = meta.unmappedStatus || (resp && resp.unmappedStatus) || '';
+
+            if (unmapped === 'pending') {
+                badge.className = 'sm-status-badge pending';
+                badge.textContent = 'HTTP ' + result.http_code + ' — Payment Pending (Awaiting UPI Authorization)';
+
+                var intentData = (resp.result && resp.result.intentURIData) ? resp.result.intentURIData : '';
+                var acsTemplate = (resp.result && resp.result.acsTemplate) ? 'Present (base64)' : 'Not returned';
+
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>unmappedStatus</code> <span>= "pending" — Transaction created, awaiting UPI authorization</span></div>' +
+                    '<div class="sm-response-field"><code>txnId</code> <span>= "' + (meta.txnId || data.txnid) + '"</span></div>' +
+                    (intentData ? '<div class="sm-response-field"><code>intentURIData</code> <span>= Deeplink URL — Generate a QR code from this</span></div>' : '') +
+                    '<div class="sm-response-field"><code>acsTemplate</code> <span>= ' + acsTemplate + '</span></div>' +
+                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Next: Show QR/deeplink to customer and poll check_payment for final status.</p>';
+            } else if (unmapped === 'success') {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'HTTP ' + result.http_code + ' — Payment Successful';
+
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>unmappedStatus</code> <span>= "success" — Payment completed</span></div>' +
+                    '<div class="sm-response-field"><code>mihpayid</code> <span>= "' + (meta.referenceId || 'N/A') + '" — PayU reference ID</span></div>' +
+                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Transaction is complete. Store the mihpayid for future reference.</p>';
+            } else if (unmapped === 'failure') {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + result.http_code + ' — Payment Failed';
+
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>unmappedStatus</code> <span>= "failure" — Transaction failed</span></div>' +
+                    '<div class="sm-response-field"><code>error_Message</code> <span>= "' + ((resp && resp.error_Message) || (meta.message) || 'N/A') + '"</span></div>' +
+                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Check the error message. Common causes: invalid hash, expired VPA, or insufficient balance.</p>';
+            } else {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + result.http_code + ' — Error';
+
+                guide.style.display = 'block';
+                var errorMsg = (resp && resp.message) ? resp.message : (resp && resp.msg) ? resp.msg : (result.raw || 'Unknown error');
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>error</code> <span>' + errorMsg + '</span></div>' +
+                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Check your parameters, hash formula, and ensure all required fields are provided.</p>';
+            }
+        }
+
+        window.smPreviewPaymentRequest = smPreviewPaymentRequest;
+        window.smSendPaymentRequest = smSendPaymentRequest;
+
+        // ========================
+        // Mandate Registration
+        // ========================
+        function smBuildMandatePayload() {
+            var key = document.getElementById('sm_mand_key').value.trim();
+            var salt = document.getElementById('sm_mand_salt').value.trim();
+            var amount = document.getElementById('sm_mand_amount').value.trim();
+            var productinfo = document.getElementById('sm_mand_productinfo').value.trim();
+            var firstname = document.getElementById('sm_mand_firstname').value.trim();
+            var email = document.getElementById('sm_mand_email').value.trim();
+            var phone = document.getElementById('sm_mand_phone').value.trim();
+            if (!key || !salt || !amount || !firstname || !email) { alert('Fill required fields.'); return null; }
+            var txnid = document.getElementById('sm_mand_txnid').value.trim() || ('MAND_' + Date.now());
+            document.getElementById('sm_mand_txnid').value = txnid;
+            var surl = document.getElementById('sm_mand_surl').value.trim();
+            var furl = document.getElementById('sm_mand_furl').value.trim();
+            var freeTrial = document.getElementById('sm_mand_free_trial').value;
+            var udf1 = document.getElementById('sm_mand_udf1').value.trim();
+            var udf3 = document.getElementById('sm_mand_udf3').value.trim();
+            var siDetails = JSON.stringify({
+                billingAmount: document.getElementById('sm_mand_billingAmount').value.trim(),
+                billingCurrency: 'INR',
+                billingCycle: document.getElementById('sm_mand_billingCycle').value,
+                billingInterval: parseInt(document.getElementById('sm_mand_billingInterval').value) || 1,
+                paymentStartDate: document.getElementById('sm_mand_startDate').value,
+                paymentEndDate: document.getElementById('sm_mand_endDate').value
+            });
+            var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '||' + udf3 + '||||||||' + siDetails + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, txnid: txnid, amount: amount, productinfo: productinfo, firstname: firstname, email: email, phone: phone, surl: surl, furl: furl, pg: 'UPI', bankcode: 'INTENT', txn_s2s_flow: '4', api_version: '7', si: '1', free_trial: freeTrial, si_details: siDetails, udf1: udf1, udf3: udf3, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+        function smPreviewMandateRequest() { smGenericPreview('Mand', smBuildMandatePayload, 'payment'); }
+        function smSendMandateRequest() { smGenericSend('Mand', smBuildMandatePayload, 'payment'); }
+        window.smPreviewMandateRequest = smPreviewMandateRequest;
+        window.smSendMandateRequest = smSendMandateRequest;
+
+        // ========================
+        // OTM Pre-Authorize
+        // ========================
+        function smBuildOtmPayload() {
+            var key = document.getElementById('sm_otm_key').value.trim();
+            var salt = document.getElementById('sm_otm_salt').value.trim();
+            var amount = document.getElementById('sm_otm_amount').value.trim();
+            var productinfo = document.getElementById('sm_otm_productinfo').value.trim();
+            var firstname = document.getElementById('sm_otm_firstname').value.trim();
+            var email = document.getElementById('sm_otm_email').value.trim();
+            var phone = document.getElementById('sm_otm_phone').value.trim();
+            if (!key || !salt || !amount || !firstname || !email) { alert('Fill required fields.'); return null; }
+            var txnid = document.getElementById('sm_otm_txnid').value.trim() || ('OTM_' + Date.now());
+            document.getElementById('sm_otm_txnid').value = txnid;
+            var surl = document.getElementById('sm_otm_surl').value.trim();
+            var furl = document.getElementById('sm_otm_furl').value.trim();
+            var captureType = document.getElementById('sm_otm_captureType').value;
+            var siObj = { paymentStartDate: document.getElementById('sm_otm_startDate').value, paymentEndDate: document.getElementById('sm_otm_endDate').value };
+            if (captureType === 'multi') siObj.multiCapture = 'Y';
+            var siDetails = JSON.stringify(siObj);
+            var udf1 = 'udf1', udf2 = 'udf2', udf3 = 'udf3', udf4 = 'udf4', udf5 = 'udf5';
+            var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetails + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var clientIp = document.getElementById('sm_otm_client_ip') ? document.getElementById('sm_otm_client_ip').value.trim() : '127.0.0.1';
+            var deviceInfo = document.getElementById('sm_otm_device_info') ? document.getElementById('sm_otm_device_info').value.trim() : 'Mozilla/5.0';
+            var params = { key: key, txnid: txnid, amount: amount, productinfo: productinfo, firstname: firstname, email: email, phone: phone, surl: surl, furl: furl, pg: 'UPI', bankcode: 'INTENT', txn_s2s_flow: '4', api_version: '7', pre_authorize: '1', si_details: siDetails, s2s_client_ip: clientIp, s2s_device_info: deviceInfo, udf1: udf1, udf2: udf2, udf3: udf3, udf4: udf4, udf5: udf5, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+        function smPreviewOtmRequest() { smGenericPreview('Otm', smBuildOtmPayload, 'payment'); }
+        function smSendOtmRequest() { smGenericSend('Otm', smBuildOtmPayload, 'payment'); }
+        window.smPreviewOtmRequest = smPreviewOtmRequest;
+        window.smSendOtmRequest = smSendOtmRequest;
+
+        // ========================
+        // Capture Transaction
+        // ========================
+        function smBuildCapturePayload() {
             var key = document.getElementById('sm_cap_key').value.trim();
             var salt = document.getElementById('sm_cap_salt').value.trim();
             var mihpayid = document.getElementById('sm_cap_mihpayid').value.trim();
-            var amount = document.getElementById('sm_cap_amount').value.trim();
-            if (!key || !salt || !mihpayid) { alert('Please fill in Key, Salt and mihpayid.'); return; }
-
+            var captureAmount = document.getElementById('sm_cap_captureAmount').value.trim();
+            if (!key || !salt || !mihpayid) { alert('Fill Key, Salt and mihpayid.'); return null; }
+            var captureOrderId = document.getElementById('sm_cap_captureOrderId').value.trim() || (mihpayid + '_cap_' + Date.now());
+            document.getElementById('sm_cap_captureOrderId').value = captureOrderId;
             var command = 'capture_transaction';
             var hashStr = key + '|' + command + '|' + mihpayid + '|' + salt;
             var hash = smSHA512(hashStr);
-            var captureId = mihpayid + '_cap_' + Date.now();
-
-            document.getElementById('smCapHashOutput').innerHTML = '<div style="background:var(--primary);color:#fff;padding:1rem;border-radius:8px;word-break:break-all;text-align:center;">' + hash + '</div>';
-
-            var curl = 'curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \\\n';
-            curl += '  --data-urlencode "key=' + key + '" \\\n';
-            curl += '  --data-urlencode "command=capture_transaction" \\\n';
-            curl += '  --data-urlencode "var1=' + mihpayid + '" \\\n';
-            curl += '  --data-urlencode "var2=' + captureId + '" \\\n';
-            curl += '  --data-urlencode "var3=' + amount + '" \\\n';
-            curl += '  --data-urlencode "hash=' + hash + '"';
-            document.getElementById('smCapCurl').textContent = curl;
-            document.getElementById('smCapResult').style.display = 'block';
+            var params = { key: key, command: command, var1: mihpayid, var2: captureOrderId, var3: captureAmount, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
         }
+        function smPreviewCaptureRequest() { smGenericPreview('Cap', smBuildCapturePayload, 'postservice'); }
+        function smSendCaptureRequest() { smGenericSend('Cap', smBuildCapturePayload, 'postservice'); }
+        window.smPreviewCaptureRequest = smPreviewCaptureRequest;
+        window.smSendCaptureRequest = smSendCaptureRequest;
 
-        function smGenerateVerify() {
+        // ========================
+        // Verify Payment
+        // ========================
+        function smBuildVerifyPayload() {
             var key = document.getElementById('sm_ver_key').value.trim();
             var salt = document.getElementById('sm_ver_salt').value.trim();
             var txnid = document.getElementById('sm_ver_txnid').value.trim();
-            if (!key || !salt || !txnid) { alert('Please fill in Key, Salt and Transaction ID.'); return; }
-
+            if (!key || !salt || !txnid) { alert('Fill Key, Salt and Transaction ID.'); return null; }
             var command = 'verify_payment';
             var hashStr = key + '|' + command + '|' + txnid + '|' + salt;
             var hash = smSHA512(hashStr);
-
-            document.getElementById('smVerHashOutput').innerHTML = '<div style="background:var(--primary);color:#fff;padding:1rem;border-radius:8px;word-break:break-all;text-align:center;">' + hash + '</div>';
-
-            var curl = 'curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \\\n';
-            curl += '  -H "Content-Type: application/x-www-form-urlencoded" \\\n';
-            curl += '  --data-urlencode "key=' + key + '" \\\n';
-            curl += '  --data-urlencode "command=verify_payment" \\\n';
-            curl += '  --data-urlencode "var1=' + txnid + '" \\\n';
-            curl += '  --data-urlencode "hash=' + hash + '"';
-            document.getElementById('smVerCurl').textContent = curl;
-            document.getElementById('smVerResult').style.display = 'block';
+            var params = { key: key, command: command, var1: txnid, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
         }
+        function smPreviewVerifyRequest() { smGenericPreview('Ver', smBuildVerifyPayload, 'postservice'); }
+        function smSendVerifyRequest() { smGenericSend('Ver', smBuildVerifyPayload, 'postservice'); }
+        window.smPreviewVerifyRequest = smPreviewVerifyRequest;
+        window.smSendVerifyRequest = smSendVerifyRequest;
 
-        function smGenerateHMAC() {
+        // ========================
+        // Cancel / Refund
+        // ========================
+        function smBuildCancelPayload() {
+            var key = document.getElementById('sm_cnl_key').value.trim();
+            var salt = document.getElementById('sm_cnl_salt').value.trim();
+            var mihpayid = document.getElementById('sm_cnl_mihpayid').value.trim();
+            var cancelType = document.getElementById('sm_cnl_cancelType').value;
+            if (!key || !salt || !mihpayid) { alert('Fill Key, Salt and mihpayid.'); return null; }
+            var cancelTokenId = document.getElementById('sm_cnl_cancelTokenId').value.trim() || ('cnl_' + Date.now());
+            document.getElementById('sm_cnl_cancelTokenId').value = cancelTokenId;
+            var command = cancelType;
+            var hashStr = key + '|' + command + '|' + mihpayid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: mihpayid, var2: cancelTokenId, hash: hash };
+            if (cancelType === 'cancel_refund_transaction') {
+                var amount = document.getElementById('sm_cnl_cancelAmount').value.trim();
+                params.var3 = amount;
+            }
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+        function smPreviewCancelRequest() { smGenericPreview('Cnl', smBuildCancelPayload, 'postservice'); }
+        function smSendCancelRequest() { smGenericSend('Cnl', smBuildCancelPayload, 'postservice'); }
+        window.smPreviewCancelRequest = smPreviewCancelRequest;
+        window.smSendCancelRequest = smSendCancelRequest;
+
+        // ========================
+        // OTM Status Check (HMAC)
+        // ========================
+        function smBuildOtmStatusPayload() {
             var key = document.getElementById('sm_hmac_key').value.trim();
             var salt = document.getElementById('sm_hmac_salt').value.trim();
             var payuid = document.getElementById('sm_hmac_payuid').value.trim();
-            if (!key || !salt || !payuid) { alert('Please fill in Key, Salt and PayU ID.'); return; }
-
+            if (!key || !salt || !payuid) { alert('Fill Key, Salt and PayU ID.'); return null; }
             var requestBody = '';
             var bodyHash = CryptoJS.SHA256(requestBody);
             var digest = CryptoJS.enc.Base64.stringify(bodyHash);
@@ -7314,26 +7770,230 @@ nodeCartDetailsUsage +
             var signatureString = 'date: ' + date + '\ndigest: ' + digest;
             var signature = CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA256(signatureString, salt));
             var auth = 'hmac username="' + key + '", algorithm="hmac-sha256", headers="date digest", signature="' + signature + '"';
+            return {
+                params: { requestId: payuid },
+                headers: { 'Date': date, 'Digest': digest, 'Authorization': auth },
+                hmacInfo: { date: date, digest: digest, auth: auth, payuid: payuid }
+            };
+        }
+        function smPreviewOtmStatusRequest() {
+            var data = smBuildOtmStatusPayload();
+            if (!data) return;
+            var panel = document.getElementById('smHmacReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smHmacRequestView').textContent = JSON.stringify({
+                method: 'GET',
+                url: 'https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId=' + data.hmacInfo.payuid,
+                headers: { Date: data.hmacInfo.date, Digest: data.hmacInfo.digest, Authorization: data.hmacInfo.auth }
+            }, null, 2);
+            document.getElementById('smHmacResponseView').textContent = '(Click "Send to PayU" to see live response)';
+            var badge = document.getElementById('smHmacStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.textContent = 'Preview Only — Not Sent Yet';
+            var curl = 'curl --location \\\n  "https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId=' + data.hmacInfo.payuid + '" \\\n  --header "date: ' + data.hmacInfo.date + '" \\\n  --header "digest: ' + data.hmacInfo.digest + '" \\\n  --header \'Authorization: ' + data.hmacInfo.auth + '\'';
+            document.getElementById('smHmacCurlView').textContent = curl;
+            var guide = document.getElementById('smHmacResponseGuide');
+            if (guide) guide.style.display = 'none';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        function smSendOtmStatusRequest() {
+            var data = smBuildOtmStatusPayload();
+            if (!data) return;
+            var panel = document.getElementById('smHmacReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smHmacRequestView').textContent = JSON.stringify({
+                method: 'GET', url: 'https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId=' + data.hmacInfo.payuid,
+                headers: { Date: data.hmacInfo.date, Digest: data.hmacInfo.digest, Authorization: data.hmacInfo.auth }
+            }, null, 2);
+            var badge = document.getElementById('smHmacStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('smHmacResponseView').textContent = 'Waiting...';
+            var curl = 'curl --location \\\n  "https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId=' + data.hmacInfo.payuid + '" \\\n  --header "date: ' + data.hmacInfo.date + '" \\\n  --header "digest: ' + data.hmacInfo.digest + '" \\\n  --header \'Authorization: ' + data.hmacInfo.auth + '\'';
+            document.getElementById('smHmacCurlView').textContent = curl;
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('proxy.php', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ endpoint: 'otm_status', method: 'GET', params: data.params, headers: data.headers })
+            }).then(function(r) { return r.json(); }).then(function(result) {
+                smGenericDisplay('Hmac', result);
+            }).catch(function(err) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'Request Failed';
+                document.getElementById('smHmacResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smPreviewOtmStatusRequest = smPreviewOtmStatusRequest;
+        window.smSendOtmStatusRequest = smSendOtmStatusRequest;
 
-            var headers = 'Date: ' + date + '\n';
-            headers += 'Digest: ' + digest + '\n';
-            headers += 'Authorization: ' + auth + '\n';
-            headers += 'Content-Type: application/json\nAccept: application/json';
-            document.getElementById('smHmacOutput').textContent = headers;
+        // ========================
+        // Pre-Debit Notification
+        // ========================
+        function smBuildPreDebitPayload() {
+            var key = document.getElementById('sm_predebit_key').value.trim();
+            var salt = document.getElementById('sm_predebit_salt').value.trim();
+            var authPayuId = document.getElementById('sm_predebit_authPayuId').value.trim();
+            if (!key || !salt || !authPayuId) { alert('Fill Key, Salt and AuthPayuId.'); return null; }
+            var requestId = document.getElementById('sm_predebit_requestId').value.trim() || (authPayuId + '_' + Date.now());
+            document.getElementById('sm_predebit_requestId').value = requestId;
+            var var1 = JSON.stringify({
+                authPayuId: authPayuId,
+                requestId: requestId,
+                debitDate: document.getElementById('sm_predebit_debitDate').value,
+                amount: document.getElementById('sm_predebit_amount').value.trim(),
+                invoiceDisplayNumber: document.getElementById('sm_predebit_invoiceNum').value.trim() || (authPayuId + '_inv1')
+            });
+            var command = 'pre_debit_SI';
+            var hashStr = key + '|' + command + '|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: var1, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+        function smPreviewPreDebitRequest() { smGenericPreview('PreDebit', smBuildPreDebitPayload, 'postservice'); }
+        function smSendPreDebitRequest() { smGenericSend('PreDebit', smBuildPreDebitPayload, 'postservice'); }
+        window.smPreviewPreDebitRequest = smPreviewPreDebitRequest;
+        window.smSendPreDebitRequest = smSendPreDebitRequest;
 
-            var curl = 'curl --location \\\n';
-            curl += '  "https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId=' + payuid + '" \\\n';
-            curl += '  --header "date: ' + date + '" \\\n';
-            curl += '  --header "digest: ' + digest + '" \\\n';
-            curl += '  --header \'Authorization: ' + auth + '\'';
-            document.getElementById('smHmacCurl').textContent = curl;
-            document.getElementById('smHmacResult').style.display = 'block';
+        // ========================
+        // SI Transaction (Recurring)
+        // ========================
+        function smBuildSiTxnPayload() {
+            var key = document.getElementById('sm_si_key').value.trim();
+            var salt = document.getElementById('sm_si_salt').value.trim();
+            var authpayuid = document.getElementById('sm_si_authpayuid').value.trim();
+            if (!key || !salt || !authpayuid) { alert('Fill Key, Salt and authpayuid.'); return null; }
+            var txnid = document.getElementById('sm_si_txnid').value.trim() || ('SI_' + Date.now());
+            document.getElementById('sm_si_txnid').value = txnid;
+            var var1 = JSON.stringify({
+                authpayuid: authpayuid,
+                amount: document.getElementById('sm_si_amount').value.trim(),
+                txnid: txnid,
+                firstname: document.getElementById('sm_si_firstname').value.trim(),
+                email: document.getElementById('sm_si_email').value.trim(),
+                udf1: document.getElementById('sm_si_udf1').value.trim(),
+                udf3: document.getElementById('sm_si_udf3').value.trim()
+            });
+            var command = 'si_transaction';
+            var hashStr = key + '|' + command + '|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: var1, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+        function smPreviewSiTxnRequest() { smGenericPreview('SiTxn', smBuildSiTxnPayload, 'postservice'); }
+        function smSendSiTxnRequest() { smGenericSend('SiTxn', smBuildSiTxnPayload, 'postservice'); }
+        window.smPreviewSiTxnRequest = smPreviewSiTxnRequest;
+        window.smSendSiTxnRequest = smSendSiTxnRequest;
+
+        // ========================
+        // Generic Preview/Send/Display helpers
+        // ========================
+        function smGetEndpointUrl(endpoint) {
+            var urls = {
+                postservice: 'https://test.payu.in/merchant/postservice.php?form=2',
+                payment: 'https://test.payu.in/_payment',
+                otm_status: 'https://apitest.payu.in/v1/transaction/upi_otm_status_check'
+            };
+            return urls[endpoint] || endpoint;
+        }
+
+        function smBuildCurl(params, endpoint) {
+            var url = smGetEndpointUrl(endpoint);
+            var curl = 'curl -X POST "' + url + '" \\\n  -H "Content-Type: application/x-www-form-urlencoded"';
+            for (var k in params) {
+                if (params.hasOwnProperty(k)) {
+                    curl += ' \\\n  --data-urlencode "' + k + '=' + params[k] + '"';
+                }
+            }
+            return curl;
+        }
+
+        function smGenericPreview(prefix, buildFn, endpoint) {
+            var data = buildFn();
+            if (!data) return;
+            var panel = document.getElementById('sm' + prefix + 'ReqRes');
+            panel.style.display = 'block';
+            document.getElementById('sm' + prefix + 'RequestView').textContent = JSON.stringify({
+                endpoint: smGetEndpointUrl(endpoint), method: 'POST', params: data.params
+            }, null, 2);
+            document.getElementById('sm' + prefix + 'ResponseView').textContent = '(Click "Send to PayU" to see live response)';
+            var badge = document.getElementById('sm' + prefix + 'StatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.textContent = 'Preview Only — Not Sent Yet';
+            document.getElementById('sm' + prefix + 'CurlView').textContent = smBuildCurl(data.params, endpoint);
+            var guide = document.getElementById('sm' + prefix + 'ResponseGuide');
+            if (guide) guide.style.display = 'none';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function smGenericSend(prefix, buildFn, endpoint) {
+            var data = buildFn();
+            if (!data) return;
+            var panel = document.getElementById('sm' + prefix + 'ReqRes');
+            panel.style.display = 'block';
+            document.getElementById('sm' + prefix + 'RequestView').textContent = JSON.stringify({
+                endpoint: smGetEndpointUrl(endpoint), method: 'POST', params: data.params
+            }, null, 2);
+            var badge = document.getElementById('sm' + prefix + 'StatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending request to PayU...';
+            document.getElementById('sm' + prefix + 'ResponseView').textContent = 'Waiting for response...';
+            document.getElementById('sm' + prefix + 'CurlView').textContent = smBuildCurl(data.params, endpoint);
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('proxy.php', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ endpoint: endpoint, params: data.params })
+            }).then(function(r) { return r.json(); }).then(function(result) {
+                smGenericDisplay(prefix, result);
+            }).catch(function(err) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'Request Failed';
+                document.getElementById('sm' + prefix + 'ResponseView').textContent = 'Error: ' + err.message + '\n\nMake sure PHP dev server is running:\n  php -S 127.0.0.1:8080';
+            });
+        }
+
+        function smGenericDisplay(prefix, result) {
+            var badge = document.getElementById('sm' + prefix + 'StatusBadge');
+            var responseView = document.getElementById('sm' + prefix + 'ResponseView');
+            var guide = document.getElementById('sm' + prefix + 'ResponseGuide');
+            var explain = document.getElementById('sm' + prefix + 'ResponseExplain');
+            var resp = result.response;
+            responseView.textContent = JSON.stringify(resp, null, 2);
+            var httpCode = result.http_code || 0;
+            var isSuccess = (resp && (resp.status === 1 || resp.status === '1' || resp.status === 'success'));
+            if (httpCode >= 200 && httpCode < 300 && isSuccess) {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'HTTP ' + httpCode + ' — Success';
+            } else if (httpCode >= 200 && httpCode < 300) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + httpCode + ' — ' + (resp && resp.msg ? resp.msg : 'See response');
+            } else {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + httpCode + ' — Error';
+            }
+            if (guide && explain) {
+                guide.style.display = 'block';
+                var html = '';
+                if (resp && typeof resp === 'object') {
+                    for (var k in resp) {
+                        if (resp.hasOwnProperty(k)) {
+                            var val = typeof resp[k] === 'object' ? JSON.stringify(resp[k]) : resp[k];
+                            html += '<div class="sm-response-field"><code>' + k + '</code> <span>= ' + val + '</span></div>';
+                        }
+                    }
+                }
+                if (!html) html = '<p>Response is empty or could not be parsed.</p>';
+                explain.innerHTML = html;
+            }
         }
 
         // Expose seamless functions globally
         window.selectSeamlessMethod = selectSeamlessMethod;
         window.backToMethodSelector = backToMethodSelector;
         window.showSeamlessSection = showSeamlessSection;
+        window.showSeamlessMethod = showSeamlessMethod;
+        window.backToSeamlessMethods = backToSeamlessMethods;
+        window.openSeamlessFlow = openSeamlessFlow;
+        window.backToUpiFlows = backToUpiFlows;
         window.smCopyCode = smCopyCode;
         window.smSwitchCodeTab = smSwitchCodeTab;
         window.smSwitchUPITab = smSwitchUPITab;
@@ -7341,7 +8001,3 @@ nodeCartDetailsUsage +
         window.smGenerateHash = smGenerateHash;
         window.smSimulatePayment = smSimulatePayment;
         window.smSwitchOtmTab = smSwitchOtmTab;
-        window.smValidateVPA = smValidateVPA;
-        window.smGenerateCapture = smGenerateCapture;
-        window.smGenerateVerify = smGenerateVerify;
-        window.smGenerateHMAC = smGenerateHMAC;
