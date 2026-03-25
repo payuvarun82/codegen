@@ -7108,6 +7108,66 @@ nodeCartDetailsUsage +
             document.getElementById('smHashResult').style.display = 'block';
         }
 
+        function smVerifyResponseHash() {
+            var salt = document.getElementById('sm_resp_salt').value.trim();
+            var status = document.getElementById('sm_resp_status').value.trim();
+            var email = document.getElementById('sm_resp_email').value.trim();
+            var firstname = document.getElementById('sm_resp_firstname').value.trim();
+            var productinfo = document.getElementById('sm_resp_productinfo').value.trim();
+            var amount = document.getElementById('sm_resp_amount').value.trim();
+            var txnid = document.getElementById('sm_resp_txnid').value.trim();
+            var key = document.getElementById('sm_resp_key').value.trim();
+            var udf1 = document.getElementById('sm_resp_udf1').value.trim();
+            var udf2 = document.getElementById('sm_resp_udf2').value.trim();
+            var udf3 = document.getElementById('sm_resp_udf3').value.trim();
+            var udf4 = document.getElementById('sm_resp_udf4').value.trim();
+            var udf5 = document.getElementById('sm_resp_udf5').value.trim();
+            var receivedHash = document.getElementById('sm_resp_hash').value.trim();
+
+            var errors = [];
+            if (!salt) errors.push('Salt is required');
+            if (!status) errors.push('Status is required');
+            if (!txnid) errors.push('Transaction ID is required');
+            if (!amount) errors.push('Amount is required');
+            if (!key) errors.push('Merchant Key is required');
+
+            if (errors.length > 0) {
+                alert('Please fix the following:\n\n' + errors.join('\n'));
+                return;
+            }
+
+            var reverseHashString = salt + '||||||' + udf5 + '|' + udf4 + '|' + udf3 + '|' + udf2 + '|' + udf1 + '|' + email + '|' + firstname + '|' + productinfo + '|' + amount + '|' + txnid + '|' + key + '|' + status;
+            var computedHash = smSHA512(reverseHashString);
+
+            var resultDiv = document.getElementById('smRespVerifyResult');
+            resultDiv.style.display = 'block';
+
+            var match = receivedHash && computedHash.toLowerCase() === receivedHash.toLowerCase();
+            var html = '<h4>Reverse Hash String</h4>';
+            html += '<div class="sm-code-block"><div class="sm-code-header"><span>Input</span><button onclick="smCopyCode(this)">Copy</button></div>';
+            html += '<pre><code>' + reverseHashString + '</code></pre></div>';
+            html += '<h4>Computed Hash (SHA-512)</h4>';
+            html += '<div class="hash-output">' + computedHash + '</div>';
+
+            if (receivedHash) {
+                if (match) {
+                    html += '<div class="sm-info-box" style="margin-top:1rem;border-left-color:#22c55e;">';
+                    html += '<strong style="color:#22c55e;">&#10003; MATCH &mdash; Response hash is valid!</strong>';
+                    html += '<p>The computed hash matches the received hash. This response is authentic.</p></div>';
+                } else {
+                    html += '<div class="sm-info-box warning" style="margin-top:1rem;">';
+                    html += '<strong>&#10007; MISMATCH &mdash; Response may be tampered!</strong>';
+                    html += '<p>The computed hash does NOT match the received hash. Do not fulfill this order.</p></div>';
+                }
+            } else {
+                html += '<div class="sm-info-box" style="margin-top:1rem;">';
+                html += '<strong>No received hash provided</strong>';
+                html += '<p>Paste the hash from the PayU response to compare.</p></div>';
+            }
+
+            resultDiv.innerHTML = html;
+        }
+
         function smSimulatePayment() {
             var key = document.getElementById('sm_sim_key').value.trim();
             var salt = document.getElementById('sm_sim_salt').value.trim();
@@ -7999,5 +8059,38 @@ nodeCartDetailsUsage +
         window.smSwitchUPITab = smSwitchUPITab;
         window.smToggleAccordion = smToggleAccordion;
         window.smGenerateHash = smGenerateHash;
+        window.smVerifyResponseHash = smVerifyResponseHash;
+        function smSendSimulation() {
+            var key = document.getElementById('sm_sim_key').value.trim();
+            var salt = document.getElementById('sm_sim_salt').value.trim();
+            var amount = document.getElementById('sm_sim_amount').value.trim();
+            var productinfo = document.getElementById('sm_sim_productinfo').value.trim();
+            var firstname = document.getElementById('sm_sim_firstname').value.trim();
+            var email = document.getElementById('sm_sim_email').value.trim();
+            var phone = document.getElementById('sm_sim_phone').value.trim();
+            var bankcode = document.getElementById('sm_sim_bankcode').value;
+            var surl = document.getElementById('sm_sim_surl').value.trim();
+            if (!key || !salt) { alert('Fill merchant key and salt.'); return; }
+            var txnid = document.getElementById('sm_sim_txnid').value.trim() || ('SIM_' + Date.now());
+            document.getElementById('sm_sim_txnid').value = txnid;
+            var udf1='',udf2='',udf3='',udf4='',udf5='';
+            var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|'+udf1+'|'+udf2+'|'+udf3+'|'+udf4+'|'+udf5+'||||||'+salt;
+            var hash = smSHA512(hashStr);
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'UPI', bankcode:bankcode, txn_s2s_flow:'4', hash:hash };
+            var panel = document.getElementById('smSimReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smSimRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
+            var badge = document.getElementById('smSimStatusBadge');
+            badge.className='sm-status-badge pending';
+            badge.innerHTML='<span class="sm-loading-spinner"></span> Sending to PayU Test...';
+            document.getElementById('smSimResponseView').textContent='Waiting...';
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+            fetch('proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+            .then(function(r){return r.json();})
+            .then(function(result){smGenericDisplay('Sim',result);})
+            .catch(function(err){badge.className='sm-status-badge error';badge.textContent='Failed';document.getElementById('smSimResponseView').textContent='Error: '+err.message;});
+        }
+
+        window.smSendSimulation = smSendSimulation;
         window.smSimulatePayment = smSimulatePayment;
         window.smSwitchOtmTab = smSwitchOtmTab;

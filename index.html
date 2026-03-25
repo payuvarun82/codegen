@@ -3487,15 +3487,112 @@ Callback Test URL:  https://test.payu.in/admin/test_response</code></pre>
                     <!-- Section: Generate Hash -->
                     <div class="seamless-section" id="sm-hash">
                         <h2>Step 1 &ndash; Generate Hash</h2>
-                        <div class="sm-info-box">
-                            <strong>Why is hash required?</strong>
-                            <p>The hash ensures request integrity and authenticity. PayU uses it to verify that the request originated from the merchant and hasn't been tampered with. Without a valid hash, PayU will reject the payment request.</p>
+
+                        <!-- GUIDE: Overview -->
+                        <div class="sm-step-guide">
+                            <div class="sm-guide-overview">
+                                <h3>Overview</h3>
+                                <p>Every PayU API request requires a SHA-512 hash for authentication. The hash proves the request came from you and hasn't been tampered with. Different APIs use different hash formulas.</p>
+                            </div>
+
+                            <!-- Prerequisites -->
+                            <div class="sm-guide-prereqs">
+                                <h3>Prerequisites</h3>
+                                <div class="sm-prereq-list">
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Merchant Key</strong><br>Your PayU merchant key from the dashboard</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Merchant Salt (v1)</strong><br>Salt v1 from your PayU dashboard &mdash; never expose this client-side</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>SHA-512 Library</strong><br>A server-side SHA-512 hashing library (e.g., <code>crypto</code> in Node.js, <code>hashlib</code> in Python)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Flow Diagram -->
+                            <div class="sm-guide-flow">
+                                <h3>How It Works</h3>
+                                <div class="sm-flow-diagram">
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">1</div>
+                                        <div class="sm-flow-label">Parameters<br><small>Gather values</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">2</div>
+                                        <div class="sm-flow-label">Hash Formula<br><small>Pipe-separated</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">3</div>
+                                        <div class="sm-flow-label">SHA-512<br><small>Hash algorithm</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">4</div>
+                                        <div class="sm-flow-label">Hex String<br><small>Lowercase output</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">5</div>
+                                        <div class="sm-flow-label">API Request<br><small>Include hash</small></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step-by-Step -->
+                            <div class="sm-guide-steps">
+                                <h3>Step-by-Step Guide</h3>
+                                <div class="sm-numbered-steps">
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">1</div>
+                                        <div class="sm-step-content">
+                                            <strong>Identify the hash formula for your API</strong>
+                                            <p>Each PayU API uses a different hash formula. Payment APIs, PostService APIs, and response verification all have distinct formulas. See the comparison table below.</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">2</div>
+                                        <div class="sm-step-content">
+                                            <strong>Assemble the hash string with pipes</strong>
+                                            <p>Concatenate the required parameters in exact order, separated by pipe (<code>|</code>) characters. Empty fields must remain as empty strings &mdash; do not skip them.</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">3</div>
+                                        <div class="sm-step-content">
+                                            <strong>Apply SHA-512, output lowercase hex</strong>
+                                            <p>Pass the assembled string through SHA-512 and convert the result to a lowercase hexadecimal string (128 characters).</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">4</div>
+                                        <div class="sm-step-content">
+                                            <strong>Include hash in your API request</strong>
+                                            <p>Add the computed hash as the <code>hash</code> parameter in your API request. PayU will independently compute the same hash and reject the request if they don't match.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <h3>Hash Formula</h3>
-                        <div class="sm-code-block">
-                            <div class="sm-code-header"><span>SHA-512 Hash String</span><button onclick="smCopyCode(this)">Copy</button></div>
-                            <pre><code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)</code></pre>
-                        </div>
+
+                        <!-- Hash Formula Comparison Table -->
+                        <h3>Hash Formulas by API</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>API</th><th>Hash Formula</th></tr></thead>
+                            <tbody>
+                                <tr><td><strong>Payment</strong></td><td><code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt)</code></td></tr>
+                                <tr><td><strong>Payment (api_version=7)</strong></td><td><code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||si_details|salt)</code></td></tr>
+                                <tr><td><strong>PostService APIs</strong></td><td><code>sha512(key|command|var1|salt)</code></td></tr>
+                                <tr><td><strong>Response Verification</strong></td><td><code>sha512(salt||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key|status)</code></td></tr>
+                            </tbody>
+                        </table>
+
                         <div class="sm-info-box warning">
                             <strong>Important Rules</strong>
                             <ul>
@@ -3552,7 +3649,9 @@ Callback Test URL:  https://test.payu.in/admin/test_response</code></pre>
                                     <input type="text" id="sm_hash_udf" placeholder="Leave empty if not used">
                                 </div>
                             </div>
-                            <button class="button" onclick="smGenerateHash()" style="margin-top: 1rem;">Generate Hash</button>
+                            <div class="sm-form-actions">
+                                <button class="button sm-btn-primary" onclick="smGenerateHash()">Generate Hash</button>
+                            </div>
                         </div>
                         <div id="smHashResult" style="display:none; margin-top: 1.5rem;">
                             <h4>Hash String</h4>
@@ -3629,7 +3728,7 @@ public class PayUHash {
 }</code></pre>
                         </div>
                         <div class="sm-next-btn-wrapper">
-                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-validate-vpa]'), 'sm-validate-vpa')">Next: Validate VPA &rarr;</button>
+                            <button class="button" onclick="openSeamlessFlow('sm-validate-vpa')">Next: Validate VPA &rarr;</button>
                         </div>
                     </div>
 
@@ -5098,10 +5197,102 @@ sha512(merchantKey|capture_transaction|mihpayid|merchantSalt)</code></pre>
                     <!-- Section: Handle Response -->
                     <div class="seamless-section" id="sm-response">
                         <h2>Step 4 &ndash; Handle PayU Response</h2>
-                        <div class="sm-info-box">
-                            <strong>What happens here?</strong>
-                            <p>After the customer completes (or fails) the payment, PayU sends a callback to your <code>surl</code> (success) or <code>furl</code> (failure) URL. You must verify the response hash to ensure it hasn't been tampered with.</p>
+
+                        <!-- GUIDE: Overview -->
+                        <div class="sm-step-guide">
+                            <div class="sm-guide-overview">
+                                <h3>Overview</h3>
+                                <p>After payment completion, PayU sends a callback to your surl/furl. You MUST verify the response hash server-side before fulfilling the order.</p>
+                            </div>
+
+                            <!-- Prerequisites -->
+                            <div class="sm-guide-prereqs">
+                                <h3>Prerequisites</h3>
+                                <div class="sm-prereq-list">
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>surl/furl Configured</strong><br>Success and failure callback URLs set in your payment request</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Server-side Hash Verification Logic</strong><br>Backend code to compute and compare the reverse hash</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Payment Hash Salt</strong><br>The same salt (v1) used during payment initiation</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Flow Diagram -->
+                            <div class="sm-guide-flow">
+                                <h3>How It Works</h3>
+                                <div class="sm-flow-diagram">
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">1</div>
+                                        <div class="sm-flow-label">Payment Complete<br><small>Customer pays</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">2</div>
+                                        <div class="sm-flow-label">PayU Callback<br><small>POST to surl/furl</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">3</div>
+                                        <div class="sm-flow-label">Verify Hash<br><small>Reverse hash check</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">4</div>
+                                        <div class="sm-flow-label">Process Order<br><small>Fulfill / reject</small></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step-by-Step -->
+                            <div class="sm-guide-steps">
+                                <h3>Step-by-Step Guide</h3>
+                                <div class="sm-numbered-steps">
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">1</div>
+                                        <div class="sm-step-content">
+                                            <strong>Receive callback at surl/furl</strong>
+                                            <p>PayU sends a POST request to your <code>surl</code> (on success) or <code>furl</code> (on failure) with all transaction parameters.</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">2</div>
+                                        <div class="sm-step-content">
+                                            <strong>Extract response parameters</strong>
+                                            <p>Read <code>status</code>, <code>email</code>, <code>firstname</code>, <code>productinfo</code>, <code>amount</code>, <code>txnid</code>, <code>key</code>, <code>udf1-5</code>, and the received <code>hash</code> from the POST body.</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">3</div>
+                                        <div class="sm-step-content">
+                                            <strong>Compute reverse hash</strong>
+                                            <p>Build the reverse hash string: <code>sha512(salt||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key|status)</code>. Note the reversed order with salt first and status last.</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">4</div>
+                                        <div class="sm-step-content">
+                                            <strong>Compare hashes</strong>
+                                            <p>Compare your computed hash with the <code>hash</code> received in the response. They must match exactly (case-insensitive).</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">5</div>
+                                        <div class="sm-step-content">
+                                            <strong>Fulfill or reject order</strong>
+                                            <p>If hashes match and <code>status=success</code>, fulfill the order. If hashes don't match, treat the response as tampered and reject. Always call <code>verify_payment</code> API as an additional check.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                         <h3>Key Response Parameters</h3>
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Description</th><th>Example</th></tr></thead>
@@ -5147,8 +5338,88 @@ sha512(SALT||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txn
     }
 }</code></pre>
                         </div>
+
+                        <!-- Interactive Response Hash Verifier -->
+                        <h3>Try It &mdash; Response Hash Verifier</h3>
+                        <div class="sm-interactive-form">
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Merchant Key <span class="required">*</span></label>
+                                    <input type="text" id="sm_resp_key" value="a4vGC2" placeholder="Enter merchant key">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Salt <span class="required">*</span></label>
+                                    <input type="password" id="sm_resp_salt" placeholder="Enter your salt (v1)">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Status <span class="required">*</span></label>
+                                    <input type="text" id="sm_resp_status" value="success" placeholder="e.g. success / failure">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Transaction ID <span class="required">*</span></label>
+                                    <input type="text" id="sm_resp_txnid" placeholder="e.g. TXN_1234567890">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Amount <span class="required">*</span></label>
+                                    <input type="text" id="sm_resp_amount" value="10.00" placeholder="e.g. 100.00">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Product Info <span class="required">*</span></label>
+                                    <input type="text" id="sm_resp_productinfo" value="Test Product" placeholder="Product description">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>First Name <span class="required">*</span></label>
+                                    <input type="text" id="sm_resp_firstname" value="Test" placeholder="Customer first name">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Email <span class="required">*</span></label>
+                                    <input type="text" id="sm_resp_email" value="test@example.com" placeholder="Customer email">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>UDF1 <span class="optional">(optional)</span></label>
+                                    <input type="text" id="sm_resp_udf1" placeholder="Leave empty if not used">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>UDF2 <span class="optional">(optional)</span></label>
+                                    <input type="text" id="sm_resp_udf2" placeholder="Leave empty if not used">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>UDF3 <span class="optional">(optional)</span></label>
+                                    <input type="text" id="sm_resp_udf3" placeholder="Leave empty if not used">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>UDF4 <span class="optional">(optional)</span></label>
+                                    <input type="text" id="sm_resp_udf4" placeholder="Leave empty if not used">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>UDF5 <span class="optional">(optional)</span></label>
+                                    <input type="text" id="sm_resp_udf5" placeholder="Leave empty if not used">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Received Hash <span class="required">*</span></label>
+                                    <input type="text" id="sm_resp_hash" placeholder="Paste the hash from PayU response">
+                                </div>
+                            </div>
+                            <div class="sm-form-actions">
+                                <button class="button sm-btn-primary" onclick="smVerifyResponseHash()">Verify Response Hash</button>
+                            </div>
+                        </div>
+                        <div id="smRespVerifyResult" style="display:none; margin-top: 1.5rem;"></div>
+
                         <div class="sm-next-btn-wrapper">
-                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-verify]'), 'sm-verify')">Next: Verify Payment &rarr;</button>
+                            <button class="button" onclick="openSeamlessFlow('sm-verify')">Next: Verify Payment &rarr;</button>
                         </div>
                     </div>
 
@@ -6170,6 +6441,60 @@ sha512(merchantKey|si_transaction|{"authpayuid":"...","amount":"...","txnid":"..
                         <h2>Troubleshooting</h2>
                         <p>Common issues developers face during UPI seamless integration and how to fix them.</p>
 
+                        <div class="sm-step-guide">
+                            <div class="sm-guide-overview">
+                                <h3>Overview</h3>
+                                <p>Common issues developers encounter during PayU UPI seamless integration. Each issue includes causes, detection methods, and step-by-step fixes.</p>
+                            </div>
+
+                            <div class="sm-guide-prereqs">
+                                <h3>Key Concepts</h3>
+                                <div class="sm-prereq-list">
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Hash Validation</strong><br>Ensure correct formula and salt</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>VPA Format</strong><br>Must be user@handle format</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>S2S Flow</strong><br>Always use txn_s2s_flow=4 for Intent</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Polling Strategy</strong><br>verify_payment every 5-10s for pending</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sm-guide-flow">
+                                <h3>Quick Diagnostic</h3>
+                                <div class="sm-flow-diagram">
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">1</div>
+                                        <div class="sm-flow-label">Error Message<br><small>Read the error</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">2</div>
+                                        <div class="sm-flow-label">Identify Category<br><small>Hash / VPA / Flow</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">3</div>
+                                        <div class="sm-flow-label">Follow Fix Steps<br><small>See accordion below</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">4</div>
+                                        <div class="sm-flow-label">Re-test<br><small>Validate the fix</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="sm-accordion">
                             <div class="sm-accordion-item">
                                 <button class="sm-accordion-header" onclick="smToggleAccordion(this)">
@@ -6284,14 +6609,112 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                 </div>
                             </div>
                         </div>
+                        <div class="sm-guide-steps" style="margin-top: 2rem;">
+                            <h3>Quick Reference: Error Codes</h3>
+                            <div class="sm-table-wrapper">
+                                <table class="sm-reference-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Error</th>
+                                            <th>Meaning</th>
+                                            <th>Fix</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>Hash validation failed</code></td>
+                                            <td>Incorrect hash</td>
+                                            <td>Check salt version, parameter order</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>Invalid VPA</code></td>
+                                            <td>VPA doesn't exist</td>
+                                            <td>Validate VPA before payment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>Transaction pending</code></td>
+                                            <td>Awaiting customer action</td>
+                                            <td>Poll verify_payment API</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>txn_s2s_flow missing</code></td>
+                                            <td>Not in S2S mode</td>
+                                            <td>Add txn_s2s_flow=4</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>Invalid amount</code></td>
+                                            <td>Amount format wrong</td>
+                                            <td>Use decimal format (e.g. 10.00)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                         <div class="sm-next-btn-wrapper">
-                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-simulate]'), 'sm-simulate')">Next: Test Simulation &rarr;</button>
+                            <button class="button" onclick="openSeamlessFlow('sm-simulate')">Next: Test Simulation &rarr;</button>
                         </div>
                     </div>
 
                     <!-- Section: Test Simulation -->
                     <div class="seamless-section" id="sm-simulate">
                         <h2>Test Simulation Panel</h2>
+
+                        <div class="sm-step-guide">
+                            <div class="sm-guide-overview">
+                                <h3>Overview</h3>
+                                <p>Generate complete payment payloads with hashes, test with real PayU test API, and generate QR codes from UPI deeplinks. This is your sandbox for validating the full integration flow.</p>
+                            </div>
+
+                            <div class="sm-guide-prereqs">
+                                <h3>Prerequisites</h3>
+                                <div class="sm-prereq-list">
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Test Merchant Key &amp; Salt</strong><br>Available from your PayU test dashboard</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>PHP Server Running</strong><br>Required for proxy requests to PayU API</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Understanding of UPI Payment Flow</strong><br>Hash generation, S2S parameters, and deeplink handling</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sm-guide-flow">
+                                <h3>Simulation Flow</h3>
+                                <div class="sm-flow-diagram">
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">1</div>
+                                        <div class="sm-flow-label">Fill Form<br><small>Enter details</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">2</div>
+                                        <div class="sm-flow-label">Generate Hash<br><small>SHA-512 computed</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">3</div>
+                                        <div class="sm-flow-label">Send to PayU<br><small>Test API call</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">4</div>
+                                        <div class="sm-flow-label">Get Deeplink<br><small>UPI intent URL</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">5</div>
+                                        <div class="sm-flow-label">Generate QR<br><small>Scannable code</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="sm-info-box">
                             <strong>Interactive Testing</strong>
                             <p>Enter test transaction details below to generate a complete payment payload, hash, and simulated QR code. This helps you validate your integration before going live.</p>
@@ -6355,7 +6778,10 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                         <input type="text" id="sm_sim_surl" value="https://example.com/success">
                                     </div>
                                 </div>
-                                <button class="button" onclick="smSimulatePayment()" style="width: 100%; margin-top: 1rem;">Simulate Payment Request</button>
+                                <div class="sm-form-actions">
+                                    <button class="button sm-btn-secondary" onclick="smSimulatePayment()">Generate Payload</button>
+                                    <button class="button sm-btn-primary" onclick="smSendSimulation()">Send Real Request &rarr;</button>
+                                </div>
                             </div>
 
                             <div id="smSimResult" style="display:none; margin-top: 2rem;">
@@ -6397,6 +6823,37 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                 </div>
 
                                 <div id="smSimValidation" style="display:none; margin-top: 1rem;"></div>
+                            </div>
+
+                            <div id="smSimReqRes" class="sm-req-res-panel" style="display:none;">
+                                <div class="sm-req-res-grid">
+                                    <div class="sm-req-panel">
+                                        <div class="sm-panel-header">
+                                            <span>Request Sent</span>
+                                            <button onclick="smCopyCode(this)" class="sm-copy-btn">Copy</button>
+                                        </div>
+                                        <pre><code id="smSimRequestView"></code></pre>
+                                    </div>
+                                    <div class="sm-res-panel">
+                                        <div class="sm-panel-header">
+                                            <span>Response Received</span>
+                                            <button onclick="smCopyCode(this)" class="sm-copy-btn">Copy</button>
+                                        </div>
+                                        <div id="smSimStatusBadge" class="sm-status-badge"></div>
+                                        <pre><code id="smSimResponseView"></code></pre>
+                                    </div>
+                                </div>
+                                <div class="sm-response-guide" id="smSimResponseGuide" style="display:none;">
+                                    <h4>Understanding the Response</h4>
+                                    <div id="smSimResponseExplain"></div>
+                                </div>
+                                <div class="sm-curl-section">
+                                    <div class="sm-panel-header">
+                                        <span>cURL Command</span>
+                                        <button onclick="smCopyCode(this)" class="sm-copy-btn">Copy</button>
+                                    </div>
+                                    <pre><code id="smSimCurlView2"></code></pre>
+                                </div>
                             </div>
                         </div>
                     </div>
