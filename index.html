@@ -13,6 +13,7 @@
         gtag('config', 'G-7CG3P7JYWT');
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -161,6 +162,16 @@
                         </div>
                         <h3>PreAuth Card Flow</h3>
                         <p>Pre-authorization for card payments</p>
+                    </div>
+
+                    <div class="flow-tile" onclick="showFlow('seamless')" style="border: 2px solid var(--accent-primary); background: rgba(16, 132, 109, 0.03);">
+                        <div class="tile-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#404C49"/>
+                            </svg>
+                        </div>
+                        <h3>Seamless Checkout</h3>
+                        <p>Interactive developer learning lab for seamless payment integration</p>
                     </div>
                 </div>
             </div>
@@ -3187,6 +3198,1554 @@
         <input type="hidden" id="tpv_api_version" name="api_version" value="6">
     </form>
     
+    
+    <!-- Seamless Integration Learning Module -->
+    <div class="flow-content" id="seamlessFlow">
+        <div class="flow-title">
+            <h2>Seamless Integration Lab</h2>
+        </div>
+        <div class="seamless-wrapper">
+            <!-- Payment Method Selector -->
+            <div class="seamless-method-selector" id="seamlessMethodSelector">
+                <button class="back-button" onclick="goHome()" style="margin: 0 0 1.5rem 0;">Back to Home</button>
+                <h3 style="color: var(--accent-primary); margin-bottom: 0.5rem;">Select Payment Method</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Choose the payment method you want to integrate</p>
+                <div class="seamless-method-tiles">
+                    <div class="seamless-method-tile active" onclick="selectSeamlessMethod('upi')">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/></svg>
+                        <span>UPI</span>
+                        <small>Intent, Collect, QR</small>
+                    </div>
+                    <div class="seamless-method-tile disabled" title="Coming Soon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z" fill="currentColor"/></svg>
+                        <span>Cards</span>
+                        <small>Coming Soon</small>
+                    </div>
+                    <div class="seamless-method-tile disabled" title="Coming Soon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z" fill="currentColor"/></svg>
+                        <span>Net Banking</span>
+                        <small>Coming Soon</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seamless Layout: Sidebar + Content -->
+            <div class="seamless-layout" id="seamlessLayout" style="display: none;">
+                <!-- Left Sidebar -->
+                <nav class="seamless-sidebar" id="seamlessSidebar">
+                    <div class="seamless-sidebar-header">
+                        <button class="seamless-back-btn" onclick="backToMethodSelector()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/></svg>
+                            Back
+                        </button>
+                        <div class="seamless-sidebar-title">UPI Integration</div>
+                    </div>
+                    <ul class="seamless-nav">
+                        <li class="seamless-nav-item active" data-section="sm-overview" onclick="showSeamlessSection(this, 'sm-overview')">
+                            <span class="nav-icon">1</span> Overview
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-prerequisites" onclick="showSeamlessSection(this, 'sm-prerequisites')">
+                            <span class="nav-icon">2</span> Prerequisites
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-architecture" onclick="showSeamlessSection(this, 'sm-architecture')">
+                            <span class="nav-icon">3</span> UPI Flow Architecture
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-hash" onclick="showSeamlessSection(this, 'sm-hash')">
+                            <span class="nav-icon">4</span> Generate Hash
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-validate-vpa" onclick="showSeamlessSection(this, 'sm-validate-vpa')">
+                            <span class="nav-icon">5</span> Validate VPA
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-payment" onclick="showSeamlessSection(this, 'sm-payment')">
+                            <span class="nav-icon">6</span> UPI One-Time Payment
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-upiflow" onclick="showSeamlessSection(this, 'sm-upiflow')">
+                            <span class="nav-icon">7</span> UPI Intent Flow
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-mandate" onclick="showSeamlessSection(this, 'sm-mandate')">
+                            <span class="nav-icon">8</span> UPI Mandate Registration
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-otm" onclick="showSeamlessSection(this, 'sm-otm')">
+                            <span class="nav-icon">9</span> UPI OTM Pre-Auth
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-capture" onclick="showSeamlessSection(this, 'sm-capture')">
+                            <span class="nav-icon">10</span> Capture Transaction
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-response" onclick="showSeamlessSection(this, 'sm-response')">
+                            <span class="nav-icon">11</span> Handle Response
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-verify" onclick="showSeamlessSection(this, 'sm-verify')">
+                            <span class="nav-icon">12</span> Verify Payment
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-cancel" onclick="showSeamlessSection(this, 'sm-cancel')">
+                            <span class="nav-icon">13</span> Cancel / Refund
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-otm-status" onclick="showSeamlessSection(this, 'sm-otm-status')">
+                            <span class="nav-icon">14</span> OTM Status Check
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-recurring" onclick="showSeamlessSection(this, 'sm-recurring')">
+                            <span class="nav-icon">15</span> Recurring Payments
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-troubleshoot" onclick="showSeamlessSection(this, 'sm-troubleshoot')">
+                            <span class="nav-icon">16</span> Troubleshooting
+                        </li>
+                        <li class="seamless-nav-item" data-section="sm-simulate" onclick="showSeamlessSection(this, 'sm-simulate')">
+                            <span class="nav-icon">17</span> Test Simulation
+                        </li>
+                    </ul>
+                    <div class="seamless-progress">
+                        <div class="seamless-progress-bar" id="seamlessProgressBar" style="width: 5.9%;"></div>
+                    </div>
+                    <div class="seamless-progress-text">Progress: <span id="seamlessProgressText">1/17</span></div>
+                </nav>
+
+                <!-- Right Content Area -->
+                <div class="seamless-content" id="seamlessContent">
+
+                    <!-- Section: Overview -->
+                    <div class="seamless-section active" id="sm-overview">
+                        <h2>UPI Seamless Integration Overview</h2>
+                        <div class="sm-info-box">
+                            <strong>What is Seamless Integration?</strong>
+                            <p>In seamless integration, the payment details are collected on your website and submitted directly to PayU via API. The customer is never redirected to PayU's payment page, giving you full control over the user experience.</p>
+                        </div>
+                        <h3>How it differs from Non-Seamless</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Feature</th><th>Non-Seamless</th><th>Seamless</th></tr></thead>
+                            <tbody>
+                                <tr><td>Payment Page</td><td>PayU Hosted</td><td>Merchant Hosted</td></tr>
+                                <tr><td>User Redirect</td><td>Yes, to PayU</td><td>No redirect</td></tr>
+                                <tr><td>UI Control</td><td>Limited</td><td>Full control</td></tr>
+                                <tr><td>Integration Complexity</td><td>Simple</td><td>Advanced</td></tr>
+                                <tr><td>PCI DSS Required</td><td>No</td><td>No (for UPI)</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>Supported UPI Intent Types</h3>
+                        <div class="sm-card-grid">
+                            <div class="sm-card">
+                                <h4>Generic Intent</h4>
+                                <p>Generates a UPI deeplink/QR code. Any UPI app can scan and pay. <code>bankcode=INTENT</code></p>
+                            </div>
+                            <div class="sm-card">
+                                <h4>Specific Intent</h4>
+                                <p>Targets a specific UPI app (e.g. Google Pay, PhonePe). Uses specific <code>bankcode</code> like <code>TEZ</code>, <code>PHONEPE</code>.</p>
+                            </div>
+                            <div class="sm-card">
+                                <h4>Smart Intent</h4>
+                                <p>PayU auto-detects the best UPI app on the customer's device. Uses <code>bankcode=INTENT</code> with <code>txn_s2s_flow=4</code>.</p>
+                            </div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-prerequisites]'), 'sm-prerequisites')">Next: Prerequisites &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Prerequisites -->
+                    <div class="seamless-section" id="sm-prerequisites">
+                        <h2>Prerequisites</h2>
+                        <div class="sm-info-box warning">
+                            <strong>Before you begin</strong>
+                            <p>Ensure you have the following ready before starting the integration.</p>
+                        </div>
+                        <div class="sm-checklist">
+                            <label class="sm-check-item"><input type="checkbox" id="chk-merchant"> Active PayU Merchant Account (Test/Production)</label>
+                            <label class="sm-check-item"><input type="checkbox" id="chk-key"> Merchant Key (provided by PayU)</label>
+                            <label class="sm-check-item"><input type="checkbox" id="chk-salt"> Merchant Salt v1 (for hash generation)</label>
+                            <label class="sm-check-item"><input type="checkbox" id="chk-server"> Server-side setup (Node.js / PHP / Java / Python)</label>
+                            <label class="sm-check-item"><input type="checkbox" id="chk-urls"> Success &amp; Failure callback URLs configured</label>
+                            <label class="sm-check-item"><input type="checkbox" id="chk-upi"> UPI payment mode enabled on your PayU account</label>
+                        </div>
+                        <h3>Test Environment Details</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>Environment URLs</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>Test Payment URL: https://test.payu.in/_payment
+Production URL:   https://secure.payu.in/_payment
+
+Test Merchant Key:  Your test key from PayU Dashboard
+Test Merchant Salt: Your test salt v1 from PayU Dashboard
+
+Callback Test URL:  https://test.payu.in/admin/test_response</code></pre>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-architecture]'), 'sm-architecture')">Next: UPI Flow Architecture &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: UPI Flow Architecture -->
+                    <div class="seamless-section" id="sm-architecture">
+                        <h2>UPI Flow Architecture</h2>
+                        <p>Understanding the complete UPI payment flow between all parties involved.</p>
+                        <div class="sm-flow-diagram">
+                            <div class="sm-flow-step"><div class="sm-flow-icon">&#128100;</div><div>Customer</div></div>
+                            <div class="sm-flow-arrow">&rarr;</div>
+                            <div class="sm-flow-step"><div class="sm-flow-icon">&#127970;</div><div>Merchant Server</div></div>
+                            <div class="sm-flow-arrow">&rarr;</div>
+                            <div class="sm-flow-step highlight"><div class="sm-flow-icon">&#9889;</div><div>PayU API</div></div>
+                            <div class="sm-flow-arrow">&rarr;</div>
+                            <div class="sm-flow-step"><div class="sm-flow-icon">&#128241;</div><div>UPI App</div></div>
+                            <div class="sm-flow-arrow">&rarr;</div>
+                            <div class="sm-flow-step"><div class="sm-flow-icon">&#9989;</div><div>Response</div></div>
+                        </div>
+                        <h3>Detailed Flow Steps</h3>
+                        <div class="sm-timeline">
+                            <div class="sm-timeline-item">
+                                <div class="sm-timeline-marker">1</div>
+                                <div class="sm-timeline-content">
+                                    <strong>Customer initiates payment</strong>
+                                    <p>Customer selects UPI on merchant's checkout page and optionally enters VPA or selects UPI app.</p>
+                                </div>
+                            </div>
+                            <div class="sm-timeline-item">
+                                <div class="sm-timeline-marker">2</div>
+                                <div class="sm-timeline-content">
+                                    <strong>Merchant server generates hash</strong>
+                                    <p>Server computes SHA-512 hash using <code>key|txnid|amount|productinfo|firstname|email|udf1-5||||||salt</code></p>
+                                </div>
+                            </div>
+                            <div class="sm-timeline-item">
+                                <div class="sm-timeline-marker">3</div>
+                                <div class="sm-timeline-content">
+                                    <strong>POST to PayU _payment API</strong>
+                                    <p>Merchant server sends payment request with <code>pg=UPI</code>, <code>bankcode=INTENT</code>, and <code>txn_s2s_flow=4</code>.</p>
+                                </div>
+                            </div>
+                            <div class="sm-timeline-item">
+                                <div class="sm-timeline-marker">4</div>
+                                <div class="sm-timeline-content">
+                                    <strong>PayU returns deeplink</strong>
+                                    <p>PayU responds with a UPI deeplink URL. Merchant generates QR code from this deeplink or redirects to UPI app.</p>
+                                </div>
+                            </div>
+                            <div class="sm-timeline-item">
+                                <div class="sm-timeline-marker">5</div>
+                                <div class="sm-timeline-content">
+                                    <strong>Customer approves on UPI app</strong>
+                                    <p>Customer scans QR or opens UPI app, enters PIN and approves the payment.</p>
+                                </div>
+                            </div>
+                            <div class="sm-timeline-item">
+                                <div class="sm-timeline-marker">6</div>
+                                <div class="sm-timeline-content">
+                                    <strong>PayU sends callback / Merchant polls status</strong>
+                                    <p>PayU sends S2S callback to surl/furl. Merchant should also poll verify API for confirmation.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-hash]'), 'sm-hash')">Next: Generate Hash &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Generate Hash -->
+                    <div class="seamless-section" id="sm-hash">
+                        <h2>Step 1 &ndash; Generate Hash</h2>
+                        <div class="sm-info-box">
+                            <strong>Why is hash required?</strong>
+                            <p>The hash ensures request integrity and authenticity. PayU uses it to verify that the request originated from the merchant and hasn't been tampered with. Without a valid hash, PayU will reject the payment request.</p>
+                        </div>
+                        <h3>Hash Formula</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>SHA-512 Hash String</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)</code></pre>
+                        </div>
+                        <div class="sm-info-box warning">
+                            <strong>Important Rules</strong>
+                            <ul>
+                                <li>All parameters must be in exact order shown above</li>
+                                <li>Empty UDF fields should be empty strings, not removed</li>
+                                <li>There must be exactly 6 pipe characters (||||||) before the SALT</li>
+                                <li>Hash must be computed server-side &ndash; never expose salt to client</li>
+                                <li>Use SHA-512 algorithm, output in lowercase hex</li>
+                            </ul>
+                        </div>
+                        <h3>Try It &ndash; Generate Hash</h3>
+                        <div class="sm-interactive-form">
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Merchant Key <span class="required">*</span></label>
+                                    <input type="text" id="sm_hash_key" value="a4vGC2" placeholder="Enter merchant key">
+                                    <small class="sm-field-hint">Your PayU merchant key</small>
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Merchant Salt <span class="required">*</span></label>
+                                    <input type="password" id="sm_hash_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter salt">
+                                    <small class="sm-field-hint">Salt v1 from PayU dashboard</small>
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Transaction ID <span class="required">*</span></label>
+                                    <input type="text" id="sm_hash_txnid" placeholder="e.g. TXN_123456">
+                                    <small class="sm-field-hint">Unique transaction reference</small>
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Amount <span class="required">*</span></label>
+                                    <input type="text" id="sm_hash_amount" value="10.00" placeholder="e.g. 100.00">
+                                    <small class="sm-field-hint">Transaction amount</small>
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Product Info <span class="required">*</span></label>
+                                    <input type="text" id="sm_hash_productinfo" value="Test Product" placeholder="Product description">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>First Name <span class="required">*</span></label>
+                                    <input type="text" id="sm_hash_firstname" value="Test" placeholder="Customer first name">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Email <span class="required">*</span></label>
+                                    <input type="text" id="sm_hash_email" value="test@example.com" placeholder="Customer email">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>UDF1-5 <span class="optional">(optional)</span></label>
+                                    <input type="text" id="sm_hash_udf" placeholder="Leave empty if not used">
+                                </div>
+                            </div>
+                            <button class="button" onclick="smGenerateHash()" style="margin-top: 1rem;">Generate Hash</button>
+                        </div>
+                        <div id="smHashResult" style="display:none; margin-top: 1.5rem;">
+                            <h4>Hash String</h4>
+                            <div class="sm-code-block">
+                                <div class="sm-code-header"><span>Input String</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                <pre><code id="smHashString"></code></pre>
+                            </div>
+                            <h4>Generated Hash (SHA-512)</h4>
+                            <div class="hash-output" id="smHashOutput"></div>
+                        </div>
+                        <h3 style="margin-top: 2rem;">Code Examples</h3>
+                        <div class="sm-code-tabs">
+                            <button class="sm-code-tab active" onclick="smSwitchCodeTab(this, 'hash-node')">Node.js</button>
+                            <button class="sm-code-tab" onclick="smSwitchCodeTab(this, 'hash-php')">PHP</button>
+                            <button class="sm-code-tab" onclick="smSwitchCodeTab(this, 'hash-python')">Python</button>
+                            <button class="sm-code-tab" onclick="smSwitchCodeTab(this, 'hash-java')">Java</button>
+                        </div>
+                        <div class="sm-code-block" id="hash-node">
+                            <div class="sm-code-header"><span>Node.js</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>const crypto = require('crypto');
+
+function generatePayUHash(key, txnid, amount, productinfo, firstname, email, salt) {
+    const udf1='', udf2='', udf3='', udf4='', udf5='';
+    const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|${udf3}|${udf4}|${udf5}||||||${salt}`;
+    return crypto.createHash('sha512').update(hashString).digest('hex');
+}
+
+// Example
+const hash = generatePayUHash('a4vGC2', 'TXN_123', '10.00', 'iPhone', 'Ashish', 'test@gmail.com', 'YOUR_SALT');
+console.log('Hash:', hash);</code></pre>
+                        </div>
+                        <div class="sm-code-block" id="hash-php" style="display:none;">
+                            <div class="sm-code-header"><span>PHP</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>&lt;?php
+function generatePayUHash($key, $txnid, $amount, $productinfo, $firstname, $email, $salt) {
+    $udf1=$udf2=$udf3=$udf4=$udf5='';
+    $hashString = "$key|$txnid|$amount|$productinfo|$firstname|$email|$udf1|$udf2|$udf3|$udf4|$udf5||||||$salt";
+    return strtolower(hash('sha512', $hashString));
+}
+
+$hash = generatePayUHash('a4vGC2', 'TXN_123', '10.00', 'iPhone', 'Ashish', 'test@gmail.com', 'YOUR_SALT');
+echo "Hash: " . $hash;
+?&gt;</code></pre>
+                        </div>
+                        <div class="sm-code-block" id="hash-python" style="display:none;">
+                            <div class="sm-code-header"><span>Python</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>import hashlib
+
+def generate_payu_hash(key, txnid, amount, productinfo, firstname, email, salt):
+    udf1=udf2=udf3=udf4=udf5=''
+    hash_string = f"{key}|{txnid}|{amount}|{productinfo}|{firstname}|{email}|{udf1}|{udf2}|{udf3}|{udf4}|{udf5}||||||{salt}"
+    return hashlib.sha512(hash_string.encode('utf-8')).hexdigest().lower()
+
+hash_val = generate_payu_hash('a4vGC2', 'TXN_123', '10.00', 'iPhone', 'Ashish', 'test@gmail.com', 'YOUR_SALT')
+print(f"Hash: {hash_val}")</code></pre>
+                        </div>
+                        <div class="sm-code-block" id="hash-java" style="display:none;">
+                            <div class="sm-code-header"><span>Java</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+
+public class PayUHash {
+    public static String generateHash(String key, String txnid, String amount,
+            String productinfo, String firstname, String email, String salt) {
+        String hashString = key+"|"+txnid+"|"+amount+"|"+productinfo+"|"+firstname+"|"+email+"|||||||||||"+salt;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
+            byte[] hash = md.digest(hashString.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) { throw new RuntimeException(e); }
+    }
+}</code></pre>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-validate-vpa]'), 'sm-validate-vpa')">Next: Validate VPA &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Validate VPA -->
+                    <div class="seamless-section" id="sm-validate-vpa">
+                        <h2>Validate VPA</h2>
+                        <div class="sm-info-box">
+                            <strong>What is VPA Validation?</strong>
+                            <p>Before initiating a UPI Collect payment, you should validate the customer's VPA (Virtual Payment Address) to ensure it is valid and active. This uses the <code>validateVPA</code> command via the PostService API.</p>
+                        </div>
+                        <div class="sm-info-box warning">
+                            <strong>When to use this API</strong>
+                            <ul>
+                                <li>Required only for <strong>UPI Collect</strong> flow (not for Intent)</li>
+                                <li>Validates that the VPA exists and is active</li>
+                                <li>Can also check if VPA supports UPI Mandate (<code>validateAutoPayVPA</code>)</li>
+                            </ul>
+                        </div>
+                        <h3>API Details</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td>String</td><td>Merchant key</td><td>{{merchantKey}}</td></tr>
+                                <tr><td><code>command</code></td><td>String</td><td>API command</td><td><strong>validateVPA</strong></td></tr>
+                                <tr><td><code>var1</code></td><td>String</td><td>VPA to validate</td><td>9999999999@UPI</td></tr>
+                                <tr><td><code>var2</code></td><td>JSON</td><td>Optional: check mandate support</td><td>{"validateAutoPayVPA":"1"}</td></tr>
+                                <tr><td><code>hash</code></td><td>String</td><td>SHA-512 hash</td><td>(computed)</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>Hash Formula</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>Validate VPA Hash</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>sha512(key|command|var1|salt)
+sha512(merchantKey|validateVPA|9999999999@UPI|merchantSalt)</code></pre>
+                        </div>
+                        <h3>Sample cURL</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>cURL</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "key={{merchantKey}}" \
+  -d "command=validateVPA" \
+  -d "var1=9999999999@UPI" \
+  -d "var2={\"validateAutoPayVPA\":\"1\"}" \
+  -d "hash={{hash}}"</code></pre>
+                        </div>
+                        <h3>Try It &ndash; Validate VPA</h3>
+                        <div class="sm-interactive-form">
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Merchant Key <span class="required">*</span></label>
+                                    <input type="text" id="sm_vpa_key" value="a4vGC2">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Merchant Salt <span class="required">*</span></label>
+                                    <input type="password" id="sm_vpa_salt" placeholder="Enter salt">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>VPA Address <span class="required">*</span></label>
+                                    <input type="text" id="sm_vpa_address" value="9999999999@upi" placeholder="e.g. user@upi">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Check Mandate Support</label>
+                                    <select id="sm_vpa_autopay">
+                                        <option value="0">No</option>
+                                        <option value="1">Yes (validateAutoPayVPA)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button class="button" onclick="smValidateVPA()">Generate Validate VPA Request</button>
+                            <div id="smVpaResult" style="display:none; margin-top: 1.5rem;">
+                                <h4>Generated Hash</h4>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>Hash String</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code id="smVpaHashString"></code></pre>
+                                </div>
+                                <div class="sm-hash-output" id="smVpaHashOutput"></div>
+                                <h4>cURL Command</h4>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>cURL</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code id="smVpaCurl"></code></pre>
+                                </div>
+                                <h4>Expected Success Response</h4>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>JSON Response</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code>{
+  "status": 1,
+  "msg": "VPA is valid",
+  "vpa": "9999999999@upi",
+  "isVPAValid": 1,
+  "payerAccountName": "Test User"
+}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-payment]'), 'sm-payment')">Next: UPI One-Time Payment &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Payment Request -->
+                    <div class="seamless-section" id="sm-payment">
+                        <h2>UPI One-Time Payment (S2S)</h2>
+                        <div class="sm-info-box">
+                            <strong>What happens in this step?</strong>
+                            <p>You send a POST request to PayU's <code>_payment</code> endpoint with all payment parameters. For UPI seamless, you must include <code>pg=UPI</code> and the appropriate <code>bankcode</code>.</p>
+                        </div>
+                        <h3>Required Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td>String</td><td>Merchant key from PayU</td><td>a4vGC2</td></tr>
+                                <tr><td><code>txnid</code></td><td>String</td><td>Unique transaction ID (max 25 chars)</td><td>TXN_1234567890</td></tr>
+                                <tr><td><code>amount</code></td><td>String</td><td>Payment amount</td><td>10.00</td></tr>
+                                <tr><td><code>productinfo</code></td><td>String</td><td>Product description</td><td>iPhone</td></tr>
+                                <tr><td><code>firstname</code></td><td>String</td><td>Customer first name</td><td>Ashish</td></tr>
+                                <tr><td><code>email</code></td><td>String</td><td>Customer email</td><td>test@example.com</td></tr>
+                                <tr><td><code>phone</code></td><td>String</td><td>Customer phone</td><td>9876543210</td></tr>
+                                <tr><td><code>surl</code></td><td>String</td><td>Success callback URL</td><td>https://example.com/success</td></tr>
+                                <tr><td><code>furl</code></td><td>String</td><td>Failure callback URL</td><td>https://example.com/failure</td></tr>
+                                <tr><td><code>hash</code></td><td>String</td><td>SHA-512 hash (from Step 1)</td><td>(computed)</td></tr>
+                                <tr><td><code>pg</code></td><td>String</td><td>Payment gateway type</td><td><strong>UPI</strong></td></tr>
+                                <tr><td><code>bankcode</code></td><td>String</td><td>Bank code for UPI type</td><td>INTENT / TEZ / PHONEPE</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td>String</td><td>S2S flow identifier</td><td><strong>4</strong></td></tr>
+                                <tr><td><code>s2s_client_ip</code></td><td>String</td><td>Customer's IP address</td><td>10.200.12.12</td></tr>
+                                <tr><td><code>s2s_device_info</code></td><td>String</td><td>Customer's device/browser UA</td><td>Mozilla/5.0</td></tr>
+                                <tr><td><code>vpa</code></td><td>String</td><td>VPA (for UPI Collect only)</td><td>9999999999@upi</td></tr>
+                                <tr><td><code>upiAppName</code></td><td>String</td><td>Specific UPI app (for smart intent)</td><td>gpay / phonepe</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="sm-info-box warning">
+                            <strong>Bank Codes for UPI Intent</strong>
+                            <ul>
+                                <li><code>INTENT</code> &ndash; Generic Intent (generates QR / deeplink for any UPI app)</li>
+                                <li><code>TEZ</code> &ndash; Google Pay specific intent</li>
+                                <li><code>PHONEPE</code> &ndash; PhonePe specific intent</li>
+                                <li><code>PAYTM</code> &ndash; Paytm specific intent</li>
+                            </ul>
+                        </div>
+                        <h3>Sample POST Request</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>HTML Form POST</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl -X POST "https://test.payu.in/_payment" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "key=a4vGC2" \
+  --data-urlencode "txnid=TXN_1234567890" \
+  --data-urlencode "amount=2.00" \
+  --data-urlencode "productinfo=iPhone" \
+  --data-urlencode "firstname=sudhanshu" \
+  --data-urlencode "email=test@test.com" \
+  --data-urlencode "phone=9999999999" \
+  --data-urlencode "surl=https://test.payu.in/admin/test_response" \
+  --data-urlencode "furl=https://test.payu.in/admin/test_response" \
+  --data-urlencode "hash={{hash}}" \
+  --data-urlencode "pg=UPI" \
+  --data-urlencode "bankcode=INTENT" \
+  --data-urlencode "txn_s2s_flow=4" \
+  --data-urlencode "s2s_client_ip=10.200.12.12" \
+  --data-urlencode "s2s_device_info=Mozilla/5.0" \
+  --data-urlencode "udf1=ABCDE1234F" \
+  --data-urlencode "udf5=INV123456"</code></pre>
+                        </div>
+                        <h3>Sample S2S Response</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>JSON Response (Intent)</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>{
+  "metaData": {
+    "unmappedStatus": "pending",
+    "referenceId": "xxxxxx",
+    "txnId": "TXN_1234567890"
+  },
+  "result": {
+    "acsTemplate": "base64-encoded-html...",
+    "intentURIData": "upi://pay?pa=payu@axisbank&pn=PayU&tr=TXN_123&am=2.00&cu=INR"
+  }
+}</code></pre>
+                        </div>
+                        <div class="sm-info-box">
+                            <strong>Response Handling Logic</strong>
+                            <ul>
+                                <li>If <code>unmappedStatus = "pending"</code> and <code>intentURIData</code> exists &rarr; generate QR from deeplink</li>
+                                <li>If <code>unmappedStatus = "pending"</code> and <code>acsTemplate</code> exists &rarr; decode base64 and render HTML</li>
+                                <li>If <code>unmappedStatus = "success"</code> &rarr; transaction completed</li>
+                                <li>If <code>unmappedStatus = "failure"</code> &rarr; transaction failed</li>
+                            </ul>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-upiflow]'), 'sm-upiflow')">Next: UPI Intent Flow &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: UPI Intent Flow -->
+                    <div class="seamless-section" id="sm-upiflow">
+                        <h2>Step 3 &ndash; UPI Intent Flow</h2>
+                        <p>PayU supports three types of UPI Intent flows. Choose the one that best fits your integration needs.</p>
+
+                        <div class="sm-tab-group">
+                            <button class="sm-tab active" onclick="smSwitchUPITab(this, 'upi-generic')">Generic Intent</button>
+                            <button class="sm-tab" onclick="smSwitchUPITab(this, 'upi-specific')">Specific Intent</button>
+                            <button class="sm-tab" onclick="smSwitchUPITab(this, 'upi-smart')">Smart Intent</button>
+                        </div>
+
+                        <!-- Generic Intent -->
+                        <div class="sm-upi-tab-content active" id="upi-generic">
+                            <h3>Generic UPI Intent</h3>
+                            <div class="sm-info-box">
+                                <strong>How it works</strong>
+                                <p>Generates a UPI deeplink URL. You convert this deeplink into a QR code that any UPI app can scan. Best for desktop web and cross-platform payments.</p>
+                            </div>
+                            <h4>Request Parameters</h4>
+                            <div class="sm-code-block">
+                                <div class="sm-code-header"><span>Generic Intent Parameters</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                <pre><code>pg=UPI
+bankcode=INTENT
+txn_s2s_flow=4
+
+// PayU returns a deeplink URL in the response:
+// "result": "upi://pay?pa=merchant@ybl&pn=MerchantName&tr=TXN123&am=10.00&cu=INR"
+
+// Generate QR code from the deeplink for customer to scan</code></pre>
+                            </div>
+                            <h4>Response Handling</h4>
+                            <div class="sm-code-block">
+                                <div class="sm-code-header"><span>Node.js &ndash; Handle Response</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                <pre><code>// After POST to _payment API, PayU returns:
+const payuResponse = {
+    "status": 1,
+    "result": "upi://pay?pa=payu@axisbank&pn=PayU&tr=12345&am=10.00&cu=INR",
+    "mihpayid": "403993715536330700"
+};
+
+// Generate QR code from the deeplink
+// Use any QR library (qrcode, qr-image, etc.)
+const QRCode = require('qrcode');
+const qrDataURL = await QRCode.toDataURL(payuResponse.result);
+
+// Display QR to customer and start polling for payment status</code></pre>
+                            </div>
+                        </div>
+
+                        <!-- Specific Intent -->
+                        <div class="sm-upi-tab-content" id="upi-specific">
+                            <h3>Specific UPI Intent</h3>
+                            <div class="sm-info-box">
+                                <strong>How it works</strong>
+                                <p>Targets a specific UPI app by using its bank code. The deeplink will only work with that specific UPI app. Best for mobile apps where you know which UPI apps are installed.</p>
+                            </div>
+                            <h4>Supported Bank Codes</h4>
+                            <table class="sm-table">
+                                <thead><tr><th>UPI App</th><th>Bank Code</th></tr></thead>
+                                <tbody>
+                                    <tr><td>Google Pay</td><td><code>TEZ</code></td></tr>
+                                    <tr><td>PhonePe</td><td><code>PHONEPE</code></td></tr>
+                                    <tr><td>Paytm</td><td><code>PAYTM</code></td></tr>
+                                    <tr><td>BHIM</td><td><code>BHIM</code></td></tr>
+                                    <tr><td>Amazon Pay</td><td><code>AMAZONPAY</code></td></tr>
+                                </tbody>
+                            </table>
+                            <div class="sm-code-block">
+                                <div class="sm-code-header"><span>Specific Intent for Google Pay</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                <pre><code>// For Google Pay specific intent:
+pg=UPI
+bankcode=TEZ
+txn_s2s_flow=4
+
+// For PhonePe:
+pg=UPI
+bankcode=PHONEPE
+txn_s2s_flow=4</code></pre>
+                            </div>
+                        </div>
+
+                        <!-- Smart Intent -->
+                        <div class="sm-upi-tab-content" id="upi-smart">
+                            <h3>Smart UPI Intent</h3>
+                            <div class="sm-info-box">
+                                <strong>How it works</strong>
+                                <p>PayU auto-detects the best UPI app on the customer's device and launches it directly. Required for Android apps as per NPCI mandate. Uses <code>bankcode=INTENT</code> with <code>txn_s2s_flow=4</code>.</p>
+                            </div>
+                            <div class="sm-info-box warning">
+                                <strong>NPCI Mandate (2025)</strong>
+                                <ul>
+                                    <li><strong>Web:</strong> Must use UPI Intent S2S to generate QR code from deeplink instead of UPI Collect</li>
+                                    <li><strong>Android:</strong> Must implement Smart Intent or use PayU Android SDKs</li>
+                                    <li><strong>iOS:</strong> Can continue with UPI Collect or implement specific deeplink</li>
+                                </ul>
+                            </div>
+                            <div class="sm-code-block">
+                                <div class="sm-code-header"><span>Smart Intent Flow</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                <pre><code>// Smart Intent uses the same parameters as Generic Intent
+pg=UPI
+bankcode=INTENT
+txn_s2s_flow=4
+
+// The difference is in how you handle the response:
+// 1. On Android: Use the deeplink to trigger app chooser
+// 2. On Web: Generate QR code from deeplink
+// 3. On iOS: Open specific UPI app deeplink
+
+// Android Implementation:
+Intent intent = new Intent(Intent.ACTION_VIEW);
+intent.setData(Uri.parse(deeplinkUrl));
+startActivityForResult(intent, UPI_REQUEST_CODE);</code></pre>
+                            </div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-mandate]'), 'sm-mandate')">Next: UPI Mandate Registration &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: UPI Mandate Registration -->
+                    <div class="seamless-section" id="sm-mandate">
+                        <h2>UPI Mandate Registration (Autopay)</h2>
+                        <div class="sm-info-box">
+                            <strong>What is UPI Mandate?</strong>
+                            <p>UPI Mandate (Standing Instruction / Autopay) allows merchants to register a recurring payment mandate via UPI. The customer approves the mandate once, and subsequent payments can be auto-debited within the approved limits.</p>
+                        </div>
+                        <h3>Key Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Value</th><th>Description</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>api_version</code></td><td><strong>7</strong></td><td>Required for si_details hash inclusion</td></tr>
+                                <tr><td><code>si</code></td><td><strong>1</strong></td><td>Enable Standing Instruction</td></tr>
+                                <tr><td><code>free_trial</code></td><td>1 / 0</td><td>1 = free trial (zero-value auth), 0 = normal</td></tr>
+                                <tr><td><code>pg</code></td><td>UPI</td><td>Payment gateway</td></tr>
+                                <tr><td><code>bankcode</code></td><td>INTENT</td><td>INTENT for deeplink, VPA for collect</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td>4</td><td>S2S flow identifier</td></tr>
+                                <tr><td><code>si_details</code></td><td>JSON</td><td>Mandate billing details</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>si_details JSON Structure</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>si_details JSON</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>{
+  "billingAmount": "200.00",
+  "billingCurrency": "INR",
+  "billingCycle": "MONTHLY",
+  "billingInterval": 1,
+  "paymentStartDate": "2025-12-24",
+  "paymentEndDate": "2026-12-01"
+}</code></pre>
+                        </div>
+                        <div class="sm-info-box warning">
+                            <strong>Hash Calculation for api_version=7</strong>
+                            <p>When <code>api_version=7</code>, the <code>si_details</code> JSON string is appended to the hash string:</p>
+                            <pre style="background:#f5f5f5;padding:8px;border-radius:4px;font-size:0.85rem;overflow-x:auto"><code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||si_details|salt)</code></pre>
+                        </div>
+                        <h3>UDF Fields for UPI Mandate</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Field</th><th>Format</th><th>Description</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>udf1</code></td><td>ABCDE1234F||1990-01-01</td><td>PAN||Date of Birth</td></tr>
+                                <tr><td><code>udf3</code></td><td>INV123456||MerchantName</td><td>Invoice ID||Merchant Name</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>Sample cURL</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>cURL &ndash; UPI Mandate Registration</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl -X POST "https://test.payu.in/_payment" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "key={{merchantKey}}" \
+  --data-urlencode "txnid={{order_id}}" \
+  --data-urlencode "amount=2.00" \
+  --data-urlencode "productinfo={{order_id}}" \
+  --data-urlencode "firstname=sudhanshu" \
+  --data-urlencode "email=test@test.com" \
+  --data-urlencode "phone=9999999999" \
+  --data-urlencode "udf1=ABCDE1234F||1990-01-01" \
+  --data-urlencode "udf3=INV123456||MerchantName" \
+  --data-urlencode "surl=https://test.payu.in/admin/test_response" \
+  --data-urlencode "furl=https://test.payu.in/admin/test_response" \
+  --data-urlencode "pg=UPI" \
+  --data-urlencode "bankcode=INTENT" \
+  --data-urlencode "txn_s2s_flow=4" \
+  --data-urlencode "api_version=7" \
+  --data-urlencode "si=1" \
+  --data-urlencode "free_trial=1" \
+  --data-urlencode 'si_details={"billingAmount":"200.00","billingCurrency":"INR","billingCycle":"MONTHLY","billingInterval":1,"paymentStartDate":"2025-12-24","paymentEndDate":"2026-12-01"}' \
+  --data-urlencode "hash={{hash}}"</code></pre>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-otm]'), 'sm-otm')">Next: UPI OTM Pre-Auth &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: UPI OTM Pre-Authorize -->
+                    <div class="seamless-section" id="sm-otm">
+                        <h2>UPI OTM Pre-Authorize</h2>
+                        <div class="sm-info-box">
+                            <strong>What is UPI OTM?</strong>
+                            <p>UPI One Time Mandate (OTM) allows pre-authorization of a payment. The amount is blocked in the customer's account and can be captured (fully or partially) later. Supports both <strong>Normal Capture</strong> (single capture) and <strong>Multi Capture</strong> (multiple partial captures).</p>
+                        </div>
+                        <h3>Normal Capture vs Multi Capture</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Feature</th><th>Normal Capture</th><th>Multi Capture</th></tr></thead>
+                            <tbody>
+                                <tr><td>Captures allowed</td><td>1 (full or partial)</td><td>Multiple partial captures</td></tr>
+                                <tr><td><code>multiCapture</code> in si_details</td><td>Not required</td><td><strong>"Y"</strong></td></tr>
+                                <tr><td>Cancel remaining</td><td>Yes (cancel_refund_transaction)</td><td>Yes (cancel_transaction)</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>Key Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Value</th><th>Description</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>api_version</code></td><td><strong>7</strong></td><td>Required for si_details in hash</td></tr>
+                                <tr><td><code>pre_authorize</code></td><td><strong>1</strong></td><td>Enable pre-authorization</td></tr>
+                                <tr><td><code>pg</code></td><td>UPI</td><td>Payment gateway</td></tr>
+                                <tr><td><code>bankcode</code></td><td>INTENT / UPI</td><td>INTENT for deeplink, UPI for collect</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td>4</td><td>S2S flow identifier</td></tr>
+                                <tr><td><code>s2s_client_ip</code></td><td>String</td><td>Client IP address</td></tr>
+                                <tr><td><code>s2s_device_info</code></td><td>String</td><td>Device info (e.g. Android)</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>si_details for OTM</h3>
+                        <div class="sm-tab-group">
+                            <button class="sm-tab active" onclick="smSwitchOtmTab(this, 'otm-normal')">Normal Capture</button>
+                            <button class="sm-tab" onclick="smSwitchOtmTab(this, 'otm-multi')">Multi Capture</button>
+                        </div>
+                        <div class="sm-tab-content" id="otm-normal">
+                            <div class="sm-code-block">
+                                <div class="sm-code-header"><span>si_details &ndash; Normal Capture</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                <pre><code>{
+  "paymentStartDate": "2026-01-07",
+  "paymentEndDate": "2026-01-22"
+}</code></pre>
+                            </div>
+                        </div>
+                        <div class="sm-tab-content" id="otm-multi" style="display:none;">
+                            <div class="sm-code-block">
+                                <div class="sm-code-header"><span>si_details &ndash; Multi Capture</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                <pre><code>{
+  "paymentStartDate": "2025-12-05",
+  "paymentEndDate": "2025-12-19",
+  "multiCapture": "Y"
+}</code></pre>
+                            </div>
+                        </div>
+                        <h3>Sample cURL &ndash; OTM Transaction</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>cURL</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl -X POST "https://test.payu.in/_payment" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "key={{merchantKey}}" \
+  --data-urlencode "txnid={{order_id}}" \
+  --data-urlencode "amount=18000" \
+  --data-urlencode "productinfo=iPhone" \
+  --data-urlencode "firstname=Payu-Admin" \
+  --data-urlencode "email=test@example.com" \
+  --data-urlencode "phone=1234567890" \
+  --data-urlencode "api_version=7" \
+  --data-urlencode "pg=UPI" \
+  --data-urlencode "bankcode=INTENT" \
+  --data-urlencode "txn_s2s_flow=4" \
+  --data-urlencode "pre_authorize=1" \
+  --data-urlencode "s2s_client_ip=127.0.0.1" \
+  --data-urlencode "s2s_device_info=Android" \
+  --data-urlencode "udf1=udf1" --data-urlencode "udf2=udf2" \
+  --data-urlencode "udf3=udf3" --data-urlencode "udf4=udf4" --data-urlencode "udf5=udf5" \
+  --data-urlencode 'si_details={"paymentStartDate":"2026-01-07","paymentEndDate":"2026-01-22"}' \
+  --data-urlencode "surl=https://test.payu.in/admin/test_response" \
+  --data-urlencode "furl=https://test.payu.in/admin/test_response" \
+  --data-urlencode "hash={{hash}}"</code></pre>
+                        </div>
+                        <h3>OTM Flow Sequence</h3>
+                        <div class="sm-timeline">
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">1</span><div><strong>Create OTM Transaction</strong> &ndash; POST to <code>_payment</code> with <code>pre_authorize=1</code></div></div>
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">2</span><div><strong>Verify Auth</strong> &ndash; <code>verify_payment</code> to get mihpayid</div></div>
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">3</span><div><strong>Check OTM Status</strong> &ndash; HMAC-authenticated GET to <code>/v1/transaction/upi_otm_status_check</code></div></div>
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">4</span><div><strong>Capture</strong> &ndash; <code>capture_transaction</code> (full or partial amount)</div></div>
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">5</span><div><strong>Verify Capture</strong> &ndash; <code>verify_payment</code> to confirm capture</div></div>
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">6</span><div><strong>Cancel (optional)</strong> &ndash; <code>cancel_refund_transaction</code> / <code>cancel_transaction</code> for remaining amount</div></div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-capture]'), 'sm-capture')">Next: Capture Transaction &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Capture Transaction -->
+                    <div class="seamless-section" id="sm-capture">
+                        <h2>Capture Transaction</h2>
+                        <div class="sm-info-box">
+                            <strong>When to capture?</strong>
+                            <p>After a successful pre-authorized (OTM) transaction, use the <code>capture_transaction</code> command to capture (debit) the blocked amount. You can capture the full amount or a partial amount.</p>
+                        </div>
+                        <h3>API Details</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td>String</td><td>Merchant key</td><td>{{merchantKey}}</td></tr>
+                                <tr><td><code>command</code></td><td>String</td><td>API command</td><td><strong>capture_transaction</strong></td></tr>
+                                <tr><td><code>var1</code></td><td>String</td><td>mihpayid (from auth response)</td><td>403993715536064861</td></tr>
+                                <tr><td><code>var2</code></td><td>String</td><td>Unique capture order ID</td><td>capture_order_12345</td></tr>
+                                <tr><td><code>var3</code></td><td>String</td><td>Capture amount</td><td>15000</td></tr>
+                                <tr><td><code>hash</code></td><td>String</td><td>SHA-512 hash</td><td>(computed)</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>Hash Formula</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>Capture Hash</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>sha512(key|command|var1|salt)
+sha512(merchantKey|capture_transaction|mihpayid|merchantSalt)</code></pre>
+                        </div>
+                        <h3>Sample cURL</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>cURL &ndash; Capture Transaction</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "key={{merchantKey}}" \
+  --data-urlencode "command=capture_transaction" \
+  --data-urlencode "var1={{mihpayid}}" \
+  --data-urlencode "var2=capture_order_12345" \
+  --data-urlencode "var3=15000" \
+  --data-urlencode "hash={{hash}}"</code></pre>
+                        </div>
+                        <h3>Try It &ndash; Generate Capture Request</h3>
+                        <div class="sm-interactive-form">
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Merchant Key <span class="required">*</span></label>
+                                    <input type="text" id="sm_cap_key" value="a4vGC2">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Merchant Salt <span class="required">*</span></label>
+                                    <input type="password" id="sm_cap_salt" placeholder="Enter salt">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>mihpayid (Auth PayU ID) <span class="required">*</span></label>
+                                    <input type="text" id="sm_cap_mihpayid" placeholder="e.g. 403993715536064861">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Capture Amount <span class="required">*</span></label>
+                                    <input type="text" id="sm_cap_amount" value="15000" placeholder="Amount to capture">
+                                </div>
+                            </div>
+                            <button class="button" onclick="smGenerateCapture()">Generate Capture Request</button>
+                            <div id="smCapResult" style="display:none; margin-top: 1.5rem;">
+                                <h4>Generated Hash</h4>
+                                <div class="sm-hash-output" id="smCapHashOutput"></div>
+                                <h4>cURL Command</h4>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>cURL</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code id="smCapCurl"></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-response]'), 'sm-response')">Next: Handle Response &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Handle Response -->
+                    <div class="seamless-section" id="sm-response">
+                        <h2>Step 4 &ndash; Handle PayU Response</h2>
+                        <div class="sm-info-box">
+                            <strong>What happens here?</strong>
+                            <p>After the customer completes (or fails) the payment, PayU sends a callback to your <code>surl</code> (success) or <code>furl</code> (failure) URL. You must verify the response hash to ensure it hasn't been tampered with.</p>
+                        </div>
+                        <h3>Key Response Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>mihpayid</code></td><td>PayU's unique transaction ID</td><td>403993715536330700</td></tr>
+                                <tr><td><code>status</code></td><td>Transaction status</td><td>success / failure / pending</td></tr>
+                                <tr><td><code>txnid</code></td><td>Your transaction ID</td><td>TXN_1234567890</td></tr>
+                                <tr><td><code>amount</code></td><td>Transaction amount</td><td>10.00</td></tr>
+                                <tr><td><code>hash</code></td><td>Response hash for verification</td><td>(SHA-512 hash)</td></tr>
+                                <tr><td><code>mode</code></td><td>Payment mode used</td><td>UPI</td></tr>
+                                <tr><td><code>unmappedstatus</code></td><td>Detailed status from bank</td><td>captured</td></tr>
+                                <tr><td><code>error_Message</code></td><td>Error details if failed</td><td>No Error</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>Response Hash Verification</h3>
+                        <div class="sm-info-box warning">
+                            <strong>Critical: Always verify the response hash!</strong>
+                            <p>The reverse hash formula is the mirror of the payment hash. Never trust a response without verifying the hash.</p>
+                        </div>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>Reverse Hash Formula</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>// Reverse hash formula (for response verification):
+sha512(SALT||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key|status)
+
+// Note: The order is REVERSED compared to payment hash
+// SALT comes first, and status is appended at the end</code></pre>
+                        </div>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>Node.js &ndash; Verify Response</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>function verifyPayUResponse(response, salt) {
+    const { status, email, firstname, productinfo, amount, txnid, key } = response;
+    const udf1='', udf2='', udf3='', udf4='', udf5='';
+    
+    const reverseHashString = `${salt}||||||${udf5}|${udf4}|${udf3}|${udf2}|${udf1}|${email}|${firstname}|${productinfo}|${amount}|${txnid}|${key}|${status}`;
+    const calculatedHash = crypto.createHash('sha512').update(reverseHashString).digest('hex');
+    
+    if (calculatedHash === response.hash) {
+        console.log('Response verified! Payment is authentic.');
+        return true;
+    } else {
+        console.error('HASH MISMATCH! Response may be tampered.');
+        return false;
+    }
+}</code></pre>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-verify]'), 'sm-verify')">Next: Verify Payment &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Verify Payment -->
+                    <div class="seamless-section" id="sm-verify">
+                        <h2>Verify Payment</h2>
+                        <div class="sm-info-box">
+                            <strong>Why verify server-side?</strong>
+                            <p>Callback URLs can be spoofed. Always verify the payment status with PayU's server using the Verify API before fulfilling the order. This is the single source of truth for payment status.</p>
+                        </div>
+                        <h3>API Details</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Value</th><th>Description</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td>{{merchantKey}}</td><td>Merchant key</td></tr>
+                                <tr><td><code>command</code></td><td><strong>verify_payment</strong></td><td>API command</td></tr>
+                                <tr><td><code>var1</code></td><td>txnid or txnId</td><td>Transaction ID to verify</td></tr>
+                                <tr><td><code>hash</code></td><td>(computed)</td><td>SHA-512 hash</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>Hash Formula</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>Verify Hash</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>sha512(key|command|var1|salt)
+sha512(merchantKey|verify_payment|txnId|merchantSalt)</code></pre>
+                        </div>
+                        <h3>Sample cURL</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>cURL &ndash; Verify Payment</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "key={{merchantKey}}" \
+  --data-urlencode "command=verify_payment" \
+  --data-urlencode "var1={{txnId}}" \
+  --data-urlencode "hash={{hash}}"</code></pre>
+                        </div>
+                        <h3>Response Handling Logic</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>Node.js &ndash; Verify + Extract mihpayid</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>const result = await verifyPayment(key, salt, txnId);
+const txnDetails = result.transaction_details;
+
+if (txnDetails) {
+    const txn = Object.values(txnDetails)[0];
+    const mihpayid = txn.mihpayid;
+    const mode = txn.mode;          // "UPI", "CC", "DC", "ENACH"
+    const status = txn.status;       // "success", "failure", "pending"
+    const paymentSource = txn.payment_source; // "sist" for mandate
+
+    if (paymentSource === "sist" &amp;&amp; mode === "UPI" &amp;&amp; status === "success") {
+        // Store mihpayid as authPayuIdforUPI for recurring payments
+        console.log("UPI Mandate verified:", mihpayid);
+    }
+}</code></pre>
+                        </div>
+                        <h3>Try It &ndash; Generate Verify Request</h3>
+                        <div class="sm-interactive-form">
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Merchant Key <span class="required">*</span></label>
+                                    <input type="text" id="sm_ver_key" value="a4vGC2">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Merchant Salt <span class="required">*</span></label>
+                                    <input type="password" id="sm_ver_salt" placeholder="Enter salt">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Transaction ID <span class="required">*</span></label>
+                                    <input type="text" id="sm_ver_txnid" placeholder="e.g. my_order_12345">
+                                </div>
+                            </div>
+                            <button class="button" onclick="smGenerateVerify()">Generate Verify Request</button>
+                            <div id="smVerResult" style="display:none; margin-top: 1.5rem;">
+                                <h4>Generated Hash</h4>
+                                <div class="sm-hash-output" id="smVerHashOutput"></div>
+                                <h4>cURL Command</h4>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>cURL</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code id="smVerCurl"></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-cancel]'), 'sm-cancel')">Next: Cancel / Refund &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Cancel / Refund -->
+                    <div class="seamless-section" id="sm-cancel">
+                        <h2>Cancel / Refund Transaction</h2>
+                        <div class="sm-info-box">
+                            <strong>When to use?</strong>
+                            <p>Use <code>cancel_refund_transaction</code> to cancel or refund a pre-authorized (OTM Normal Capture) transaction. For Multi Capture OTM, use <code>cancel_transaction</code> to release the remaining blocked amount.</p>
+                        </div>
+                        <h3>cancel_refund_transaction (Normal Capture)</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td>String</td><td>Merchant key</td></tr>
+                                <tr><td><code>command</code></td><td>String</td><td><strong>cancel_refund_transaction</strong></td></tr>
+                                <tr><td><code>var1</code></td><td>String</td><td>mihpayid of auth transaction</td></tr>
+                                <tr><td><code>var2</code></td><td>String</td><td>Unique cancel/refund token ID</td></tr>
+                                <tr><td><code>var3</code></td><td>String</td><td>Amount to cancel/refund</td></tr>
+                                <tr><td><code>hash</code></td><td>String</td><td>sha512(key|command|var1|salt)</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>cancel_transaction (Multi Capture)</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td>String</td><td>Merchant key</td></tr>
+                                <tr><td><code>command</code></td><td>String</td><td><strong>cancel_transaction</strong></td></tr>
+                                <tr><td><code>var1</code></td><td>String</td><td>mihpayid of auth transaction</td></tr>
+                                <tr><td><code>var2</code></td><td>String</td><td>Unique cancel token ID</td></tr>
+                                <tr><td><code>hash</code></td><td>String</td><td>sha512(key|command|var1|salt)</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>Sample cURL</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>cURL &ndash; Cancel Refund (Normal Capture)</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \
+  --data-urlencode "key={{merchantKey}}" \
+  --data-urlencode "command=cancel_refund_transaction" \
+  --data-urlencode "var1={{mihpayid}}" \
+  --data-urlencode "var2=cancel_txn_12345" \
+  --data-urlencode "var3=18000" \
+  --data-urlencode "hash={{hash}}"</code></pre>
+                        </div>
+                        <h3>check_action_status (Refund Status)</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>cURL &ndash; Check Refund Status</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \
+  --data-urlencode "key={{merchantKey}}" \
+  --data-urlencode "command=check_action_status" \
+  --data-urlencode "var1={{request_id}}" \
+  --data-urlencode "hash={{hash}}"</code></pre>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-otm-status]'), 'sm-otm-status')">Next: OTM Status Check &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: OTM Status Check -->
+                    <div class="seamless-section" id="sm-otm-status">
+                        <h2>OTM Status Check API</h2>
+                        <div class="sm-info-box">
+                            <strong>HMAC-SHA256 Authenticated API</strong>
+                            <p>This API uses HMAC-SHA256 signature-based authentication (not the standard SHA-512 hash). It checks the status of a UPI OTM (One Time Mandate) transaction.</p>
+                        </div>
+                        <h3>API Details</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Property</th><th>Value</th></tr></thead>
+                            <tbody>
+                                <tr><td>Method</td><td><strong>GET</strong></td></tr>
+                                <tr><td>URL</td><td><code>https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId={{authpayuid}}</code></td></tr>
+                                <tr><td>Auth</td><td>HMAC-SHA256 signature</td></tr>
+                            </tbody>
+                        </table>
+                        <h3>HMAC Authentication Headers</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>Node.js &ndash; HMAC Auth Generation</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>const crypto = require('crypto');
+const merchant_key = "your_merchant_key";
+const merchant_secret = "your_merchant_salt";
+
+const requestBody = "";  // empty for GET
+const bodyHash = crypto.createHash('sha256').update(requestBody).digest('base64');
+const date = new Date().toUTCString();
+const signatureString = `date: ${date}\ndigest: ${bodyHash}`;
+const signature = crypto.createHmac('sha256', merchant_secret)
+    .update(signatureString).digest('base64');
+
+const auth = `hmac username="${merchant_key}", algorithm="hmac-sha256", ` +
+    `headers="date digest", signature="${signature}"`;
+
+// Headers:
+//   Date: &lt;date&gt;
+//   Digest: &lt;bodyHash&gt;
+//   Authorization: &lt;auth&gt;
+//   Content-Type: application/json</code></pre>
+                        </div>
+                        <h3>Sample cURL</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>cURL &ndash; OTM Status Check</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl --location \
+  "https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId={{authpayuid}}" \
+  --header "date: Tue, 23 Sep 2025 06:58:08 GMT" \
+  --header "digest: 47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=" \
+  --header 'Authorization: hmac username="smsplus", algorithm="hmac-sha256", headers="date digest", signature="KGXBHAfXZlsA..."'</code></pre>
+                        </div>
+                        <h3>Try It &ndash; Generate HMAC Headers</h3>
+                        <div class="sm-interactive-form">
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Merchant Key <span class="required">*</span></label>
+                                    <input type="text" id="sm_hmac_key" value="a4vGC2">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Merchant Salt <span class="required">*</span></label>
+                                    <input type="password" id="sm_hmac_salt" placeholder="Enter salt">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>PayU ID (mihpayid) <span class="required">*</span></label>
+                                    <input type="text" id="sm_hmac_payuid" placeholder="e.g. 403993715534830911">
+                                </div>
+                            </div>
+                            <button class="button" onclick="smGenerateHMAC()">Generate HMAC Headers</button>
+                            <div id="smHmacResult" style="display:none; margin-top: 1.5rem;">
+                                <h4>Generated Headers</h4>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>HMAC Headers</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code id="smHmacOutput"></code></pre>
+                                </div>
+                                <h4>Complete cURL</h4>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>cURL</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code id="smHmacCurl"></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-recurring]'), 'sm-recurring')">Next: Recurring Payments &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Recurring Payments -->
+                    <div class="seamless-section" id="sm-recurring">
+                        <h2>Recurring Payments (UPI)</h2>
+                        <div class="sm-info-box">
+                            <strong>How Recurring Payments Work</strong>
+                            <p>After a successful UPI Mandate Registration, you can execute recurring payments using the <code>si_transaction</code> command. For UPI mandates, a pre-debit notification is <strong>mandatory</strong> before executing the recurring charge.</p>
+                        </div>
+                        <h3>Step 1: Pre-Debit Notification</h3>
+                        <div class="sm-info-box warning">
+                            <strong>Mandatory for UPI Recurring</strong>
+                            <p>NPCI mandates sending a pre-debit notification to the customer at least 24 hours before the scheduled debit.</p>
+                        </div>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Value</th><th>Description</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td>{{merchantKey}}</td><td>Merchant key</td></tr>
+                                <tr><td><code>command</code></td><td><strong>pre_debit_SI</strong></td><td>Pre-debit notification command</td></tr>
+                                <tr><td><code>var1</code></td><td>JSON</td><td>Pre-debit details (see below)</td></tr>
+                                <tr><td><code>hash</code></td><td>(computed)</td><td>sha512(key|command|var1|salt)</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>var1 JSON for pre_debit_SI</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>{
+  "authPayuId": "403993715534867054",
+  "requestId": "403993715534867054_1",
+  "debitDate": "2025-09-23",
+  "amount": "20.00",
+  "invoiceDisplayNumber": "403993715534867054_inv1"
+}</code></pre>
+                        </div>
+                        <h3>Step 2: Execute Recurring Payment</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Value</th><th>Description</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td>{{merchantKey}}</td><td>Merchant key</td></tr>
+                                <tr><td><code>command</code></td><td><strong>si_transaction</strong></td><td>Execute SI payment</td></tr>
+                                <tr><td><code>var1</code></td><td>JSON</td><td>Transaction details (see below)</td></tr>
+                                <tr><td><code>hash</code></td><td>(computed)</td><td>sha512(key|command|var1|salt)</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>var1 JSON for si_transaction (UPI)</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>{
+  "authpayuid": "403993715535056931",
+  "amount": "10",
+  "txnid": "recurring_txn_001",
+  "firstname": "Sudhanshu",
+  "lastname": "Kumar",
+  "email": "a@c.com",
+  "udf1": "ABCDE1234F||1990-01-01",
+  "udf2": "",
+  "udf3": "INV123456||MerchantName",
+  "zipcode": "110092",
+  "city": "Delhi",
+  "state": "Delhi",
+  "country": "India",
+  "address1": "Address Line 1",
+  "address2": "Address Line 2"
+}</code></pre>
+                        </div>
+                        <h3>Sample cURL &ndash; Execute Recurring</h3>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>cURL &ndash; si_transaction</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>curl -X POST "https://test.payu.in/merchant/postservice?form=2" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "key={{merchantKey}}" \
+  --data-urlencode "command=si_transaction" \
+  --data-urlencode 'var1={"authpayuid":"403993715535056931","amount":"10","txnid":"recurring_txn_001","firstname":"Sudhanshu","lastname":"Kumar","email":"a@c.com","udf1":"ABCDE1234F||1990-01-01","udf3":"INV123456||MerchantName","zipcode":"110092","city":"Delhi","state":"Delhi","country":"India","address1":"Address Line 1"}' \
+  --data-urlencode "hash={{hash}}"</code></pre>
+                        </div>
+                        <h3>Recurring Payment Flow</h3>
+                        <div class="sm-timeline">
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">1</span><div><strong>Register Mandate</strong> &ndash; UPI Mandate Registration (section 8)</div></div>
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">2</span><div><strong>Verify Mandate</strong> &ndash; verify_payment to get mihpayid (authpayuid)</div></div>
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">3</span><div><strong>Pre-Debit Notification</strong> &ndash; pre_debit_SI (24h before debit)</div></div>
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">4</span><div><strong>Execute Payment</strong> &ndash; si_transaction with authpayuid</div></div>
+                            <div class="sm-timeline-item"><span class="sm-timeline-step">5</span><div><strong>Verify Payment</strong> &ndash; verify_payment for recurring txn</div></div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-troubleshoot]'), 'sm-troubleshoot')">Next: Troubleshooting &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Troubleshooting -->
+                    <div class="seamless-section" id="sm-troubleshoot">
+                        <h2>Troubleshooting</h2>
+                        <p>Common issues developers face during UPI seamless integration and how to fix them.</p>
+
+                        <div class="sm-accordion">
+                            <div class="sm-accordion-item">
+                                <button class="sm-accordion-header" onclick="smToggleAccordion(this)">
+                                    <span class="sm-acc-icon error-icon">&#10060;</span>
+                                    <strong>Hash Mismatch Error</strong>
+                                    <span class="sm-acc-arrow">&#9660;</span>
+                                </button>
+                                <div class="sm-accordion-body">
+                                    <h4>Causes</h4>
+                                    <ul>
+                                        <li>Incorrect salt being used (use Salt v1, not v2)</li>
+                                        <li>Wrong parameter order in hash string</li>
+                                        <li>Extra spaces or encoding issues in parameters</li>
+                                        <li>Missing pipe characters (need exactly 6 pipes before salt: <code>||||||</code>)</li>
+                                        <li>Amount format mismatch (e.g., "10" vs "10.00")</li>
+                                    </ul>
+                                    <h4>How to Detect</h4>
+                                    <p>PayU returns error message <code>"Hash validation failed"</code> or <code>"Sorry, Some Problem Occurred"</code>.</p>
+                                    <h4>How to Fix</h4>
+                                    <div class="sm-code-block">
+                                        <div class="sm-code-header"><span>Debug Hash</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                        <pre><code>// Print the hash string before hashing to verify:
+const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|${udf3}|${udf4}|${udf5}||||||${salt}`;
+console.log('Hash Input:', hashString);  // Verify each component
+console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 17</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sm-accordion-item">
+                                <button class="sm-accordion-header" onclick="smToggleAccordion(this)">
+                                    <span class="sm-acc-icon error-icon">&#10060;</span>
+                                    <strong>Invalid UPI Handle / VPA</strong>
+                                    <span class="sm-acc-arrow">&#9660;</span>
+                                </button>
+                                <div class="sm-accordion-body">
+                                    <h4>Causes</h4>
+                                    <ul>
+                                        <li>Wrong VPA format (must be <code>username@handle</code>)</li>
+                                        <li>Invalid UPI handle (e.g., non-existent bank handle)</li>
+                                        <li>Bank-side rejection or temporarily unavailable handle</li>
+                                    </ul>
+                                    <h4>How to Detect</h4>
+                                    <p>Validate VPA API returns <code>isVPAValid: 0</code>.</p>
+                                    <h4>How to Fix</h4>
+                                    <p>Always call the <code>validateVPA</code> API before initiating payment. Show user-friendly error if VPA is invalid.</p>
+                                </div>
+                            </div>
+
+                            <div class="sm-accordion-item">
+                                <button class="sm-accordion-header" onclick="smToggleAccordion(this)">
+                                    <span class="sm-acc-icon warning-icon">&#9888;</span>
+                                    <strong>Payment Stuck in Pending</strong>
+                                    <span class="sm-acc-arrow">&#9660;</span>
+                                </button>
+                                <div class="sm-accordion-body">
+                                    <h4>Causes</h4>
+                                    <ul>
+                                        <li>UPI collect request timed out (customer didn't approve in time)</li>
+                                        <li>Bank-side processing delay</li>
+                                        <li>Network timeout between UPI switch and bank</li>
+                                    </ul>
+                                    <h4>How to Detect</h4>
+                                    <p>Verify API returns <code>status: "pending"</code> or <code>unmappedstatus: "pending"</code>.</p>
+                                    <h4>How to Fix</h4>
+                                    <ul>
+                                        <li>Implement polling: Check payment status every 5-10 seconds for up to 5 minutes</li>
+                                        <li>Set UPI expiry time in the request using <code>expiryTime</code> parameter</li>
+                                        <li>Show appropriate "Payment Processing" UI to the customer</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="sm-accordion-item">
+                                <button class="sm-accordion-header" onclick="smToggleAccordion(this)">
+                                    <span class="sm-acc-icon warning-icon">&#9888;</span>
+                                    <strong>Deeplink / QR Code Not Working</strong>
+                                    <span class="sm-acc-arrow">&#9660;</span>
+                                </button>
+                                <div class="sm-accordion-body">
+                                    <h4>Causes</h4>
+                                    <ul>
+                                        <li>Deeplink URL expired (usually valid for 5 minutes)</li>
+                                        <li>QR code generated from incorrect deeplink</li>
+                                        <li>UPI app not installed on device (for specific intent)</li>
+                                    </ul>
+                                    <h4>How to Fix</h4>
+                                    <ul>
+                                        <li>Generate fresh deeplink for each attempt</li>
+                                        <li>Use Generic Intent (<code>INTENT</code>) for web to let any UPI app scan</li>
+                                        <li>Show fallback option if specific UPI app is not available</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="sm-accordion-item">
+                                <button class="sm-accordion-header" onclick="smToggleAccordion(this)">
+                                    <span class="sm-acc-icon error-icon">&#10060;</span>
+                                    <strong>txn_s2s_flow Parameter Missing</strong>
+                                    <span class="sm-acc-arrow">&#9660;</span>
+                                </button>
+                                <div class="sm-accordion-body">
+                                    <h4>Causes</h4>
+                                    <ul>
+                                        <li>Forgot to include <code>txn_s2s_flow=4</code> in the request</li>
+                                        <li>Using wrong value (must be <code>4</code> for UPI Intent S2S)</li>
+                                    </ul>
+                                    <h4>How to Detect</h4>
+                                    <p>PayU redirects to its payment page instead of returning a deeplink, or returns an error.</p>
+                                    <h4>How to Fix</h4>
+                                    <p>Always include <code>txn_s2s_flow=4</code> in your payment request for UPI Intent S2S flow.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="showSeamlessSection(document.querySelector('[data-section=sm-simulate]'), 'sm-simulate')">Next: Test Simulation &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Test Simulation -->
+                    <div class="seamless-section" id="sm-simulate">
+                        <h2>Test Simulation Panel</h2>
+                        <div class="sm-info-box">
+                            <strong>Interactive Testing</strong>
+                            <p>Enter test transaction details below to generate a complete payment payload, hash, and simulated QR code. This helps you validate your integration before going live.</p>
+                        </div>
+
+                        <div class="sm-simulator">
+                            <div class="sm-sim-form">
+                                <h3>Transaction Details</h3>
+                                <div class="sm-form-row">
+                                    <div class="sm-form-group">
+                                        <label>Merchant Key <span class="required">*</span></label>
+                                        <input type="text" id="sm_sim_key" value="a4vGC2">
+                                    </div>
+                                    <div class="sm-form-group">
+                                        <label>Merchant Salt <span class="required">*</span></label>
+                                        <input type="password" id="sm_sim_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli">
+                                    </div>
+                                </div>
+                                <div class="sm-form-row">
+                                    <div class="sm-form-group">
+                                        <label>Transaction ID</label>
+                                        <input type="text" id="sm_sim_txnid" placeholder="Auto-generated">
+                                    </div>
+                                    <div class="sm-form-group">
+                                        <label>Amount</label>
+                                        <input type="text" id="sm_sim_amount" value="10.00">
+                                    </div>
+                                </div>
+                                <div class="sm-form-row">
+                                    <div class="sm-form-group">
+                                        <label>Product Info</label>
+                                        <input type="text" id="sm_sim_productinfo" value="Test Product">
+                                    </div>
+                                    <div class="sm-form-group">
+                                        <label>First Name</label>
+                                        <input type="text" id="sm_sim_firstname" value="Test">
+                                    </div>
+                                </div>
+                                <div class="sm-form-row">
+                                    <div class="sm-form-group">
+                                        <label>Email</label>
+                                        <input type="text" id="sm_sim_email" value="test@example.com">
+                                    </div>
+                                    <div class="sm-form-group">
+                                        <label>Phone</label>
+                                        <input type="text" id="sm_sim_phone" value="9876543210">
+                                    </div>
+                                </div>
+                                <div class="sm-form-row">
+                                    <div class="sm-form-group">
+                                        <label>UPI Intent Type</label>
+                                        <select id="sm_sim_bankcode">
+                                            <option value="INTENT">Generic Intent (INTENT)</option>
+                                            <option value="TEZ">Google Pay (TEZ)</option>
+                                            <option value="PHONEPE">PhonePe (PHONEPE)</option>
+                                            <option value="PAYTM">Paytm (PAYTM)</option>
+                                        </select>
+                                    </div>
+                                    <div class="sm-form-group">
+                                        <label>Success URL</label>
+                                        <input type="text" id="sm_sim_surl" value="https://example.com/success">
+                                    </div>
+                                </div>
+                                <button class="button" onclick="smSimulatePayment()" style="width: 100%; margin-top: 1rem;">Simulate Payment Request</button>
+                            </div>
+
+                            <div id="smSimResult" style="display:none; margin-top: 2rem;">
+                                <h3>Generated Payload</h3>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>Payment Parameters</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code id="smSimPayload"></code></pre>
+                                </div>
+
+                                <h3>Generated Hash</h3>
+                                <div class="hash-output" id="smSimHash"></div>
+
+                                <h3>cURL Command</h3>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>cURL</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code id="smSimCurl"></code></pre>
+                                </div>
+
+                                <h3>QR Code (Simulated Deeplink)</h3>
+                                <div class="sm-qr-container" id="smSimQR">
+                                    <p style="color: var(--text-secondary);">QR code will be generated from the UPI deeplink</p>
+                                    <canvas id="smQRCanvas"></canvas>
+                                    <p id="smQRDeeplink" style="font-family: var(--font-family-mono); font-size: 0.8rem; color: var(--text-tertiary); word-break: break-all; margin-top: 1rem;"></p>
+                                </div>
+
+                                <h3>Expected Response</h3>
+                                <div class="sm-code-block">
+                                    <div class="sm-code-header"><span>Sample Success Response</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                    <pre><code id="smSimResponse">{
+  "status": 1,
+  "result": "upi://pay?pa=payu@axisbank&pn=PayU&tr=TXN_SIM_123&am=10.00&cu=INR",
+  "mihpayid": "403993715536330700",
+  "mode": "UPI",
+  "unmappedstatus": "captured",
+  "txnid": "TXN_SIM_123",
+  "amount": "10.00",
+  "net_amount_debit": "10.00"
+}</code></pre>
+                                </div>
+
+                                <div id="smSimValidation" style="display:none; margin-top: 1rem;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Code Generator Modal -->
     <div id="codeGeneratorModal" class="code-modal" style="display: none;">

@@ -14,7 +14,8 @@
             'preauth': 'preauth',
             'checkoutplus': 'checkoutplus',
             'split': 'split',
-            'bankoffer': 'bankoffer'
+            'bankoffer': 'bankoffer',
+            'seamless': 'seamless'
         };
         
         const routeToFlowMap = {
@@ -26,10 +27,11 @@
             'preauth': 'preauth',
             'checkoutplus': 'checkoutplus',
             'split': 'split',
-            'bankoffer': 'bankoffer'
+            'bankoffer': 'bankoffer',
+            'seamless': 'seamless'
         };
         
-        const validRoutes = ['crossborder', 'payu-hosted', 'subscription', 'tpv', 'upiotm', 'preauth', 'checkoutplus', 'split', 'bankoffer'];
+        const validRoutes = ['crossborder', 'payu-hosted', 'subscription', 'tpv', 'upiotm', 'preauth', 'checkoutplus', 'split', 'bankoffer', 'seamless'];
         
         // Flow display names for analytics
         const flowDisplayNames = {
@@ -41,7 +43,8 @@
             'preauth': 'PreAuth Card Flow',
             'checkoutplus': 'Checkout Plus',
             'split': 'Split Payment',
-            'bankoffer': 'Bank Offers'
+            'bankoffer': 'Bank Offers',
+            'seamless': 'Seamless Checkout'
         };
         
         /*
@@ -1542,7 +1545,7 @@
             }
             
             // If switching from a different flow, reset the new flow's fields
-            if (currentFlow && currentFlow !== selectedFlow) {
+            if (currentFlow && currentFlow !== selectedFlow && selectedFlow !== 'seamless' && currentFlow !== 'seamless') {
                 resetFormFields(selectedFlow);
                 
                 // Reset UDF fields for the new flow
@@ -1694,6 +1697,15 @@
                 // Add one default split row
                 addSplitRow();
                 console.log('✓ Split flow initialized with default row');
+            }
+            
+            // Reset seamless flow to method selector when entering
+            if (selectedFlow === 'seamless') {
+                var methodSel = document.getElementById('seamlessMethodSelector');
+                var layout = document.getElementById('seamlessLayout');
+                if (methodSel) methodSel.style.display = 'block';
+                if (layout) layout.style.display = 'none';
+                console.log('✓ Seamless flow initialized');
             }
             
             // Save current flow to localStorage for persistence on refresh
@@ -1902,6 +1914,8 @@
                 udf1: 'Testing UDF 1',
                 udf2: 'Testing UDF2',
                 udf5: 'Sample_Invoice_11',
+                surl: 'https://test.payu.in/admin/test_response',
+                furl: 'https://test.payu.in/admin/test_response',
                 user_token: '1234567890'  // Default user_token for bank offers
             };
             
@@ -1923,6 +1937,10 @@
             setFieldValue(prefix + '_lastname', templateData.lastname);
             setFieldValue(prefix + '_email', templateData.email);
             setFieldValue(prefix + '_phone', templateData.phone);
+            
+            // Fill redirect URLs
+            setFieldValue(prefix + '_surl', templateData.surl);
+            setFieldValue(prefix + '_furl', templateData.furl);
             
             // Fill address fields (if they exist)
             setFieldValue(prefix + '_address1', templateData.address1);
@@ -2467,7 +2485,7 @@
             }
             
             // Common required fields
-            let requiredFields = ['amount', 'productinfo', 'firstname', 'email', 'phone'];
+            let requiredFields = ['amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl'];
             
             // Flow-specific required fields
             if (flow === 'split') {
@@ -2635,7 +2653,7 @@
             const prefix = flow === 'crossborder' ? 'cb' : (flow === 'subscription' ? 'sub' : (flow === 'tpv' ? 'tpv' : (flow === 'upiotm' ? 'upi' : (flow === 'preauth' ? 'preauth' : (flow === 'checkoutplus' ? 'cp' : (flow === 'split' ? 'split' : (flow === 'bankoffer' ? 'bo' : 'ns')))))));
             
             // Common required fields for all flows
-            let requiredFields = ['amount', 'productinfo', 'firstname', 'email', 'phone'];
+            let requiredFields = ['amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl'];
             
             // Flow-specific required fields
             if (flow === 'crossborder') {
@@ -6922,9 +6940,408 @@ nodeCartDetailsUsage +
         window.showCurlCommand = showCurlCommand;
         window.showCodeGeneratorModal = showCodeGeneratorModal;
         window.closeCodeGeneratorModal = closeCodeGeneratorModal;
-        window.switchCodeTab = switchCodeTab;
-        window.copyCode = copyCode;
-        window.downloadCode = downloadCode;
+        window.switchCodeLanguage = switchCodeLanguage;
+        window.copyGeneratedCode = copyGeneratedCode;
+        window.downloadGeneratedCode = downloadGeneratedCode;
         window.submitPayment = submitPayment;
         window.launchCheckoutPlus = launchCheckoutPlus;
         window.resetFormFields = resetFormFields;
+
+        // ============================================
+        // SEAMLESS INTEGRATION LAB FUNCTIONS
+        // ============================================
+
+        function selectSeamlessMethod(method) {
+            if (method !== 'upi') return;
+            document.querySelectorAll('.seamless-method-tile').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelector('.seamless-method-tile[onclick*="' + method + '"]').classList.add('active');
+            document.getElementById('seamlessMethodSelector').style.display = 'none';
+            document.getElementById('seamlessLayout').style.display = 'grid';
+            // Generate a txnid for the hash section
+            var txnField = document.getElementById('sm_hash_txnid');
+            if (txnField && !txnField.value) txnField.value = 'SM_' + Date.now();
+            var simTxnField = document.getElementById('sm_sim_txnid');
+            if (simTxnField && !simTxnField.value) simTxnField.value = 'SIM_' + Date.now();
+        }
+
+        function backToMethodSelector() {
+            document.getElementById('seamlessMethodSelector').style.display = 'block';
+            document.getElementById('seamlessLayout').style.display = 'none';
+        }
+
+        var seamlessSections = ['sm-overview','sm-prerequisites','sm-architecture','sm-hash','sm-validate-vpa','sm-payment','sm-upiflow','sm-mandate','sm-otm','sm-capture','sm-response','sm-verify','sm-cancel','sm-otm-status','sm-recurring','sm-troubleshoot','sm-simulate'];
+
+        function showSeamlessSection(navItem, sectionId) {
+            document.querySelectorAll('.seamless-nav-item').forEach(function(n) { n.classList.remove('active'); });
+            document.querySelectorAll('.seamless-section').forEach(function(s) { s.classList.remove('active'); });
+            if (navItem && navItem.classList) navItem.classList.add('active');
+            else {
+                var nav = document.querySelector('[data-section="' + sectionId + '"]');
+                if (nav) nav.classList.add('active');
+            }
+            var section = document.getElementById(sectionId);
+            if (section) {
+                section.classList.add('active');
+                var contentArea = document.getElementById('seamlessContent');
+                if (contentArea) contentArea.scrollTop = 0;
+            }
+            var idx = seamlessSections.indexOf(sectionId);
+            if (idx >= 0) {
+                var pct = ((idx + 1) / seamlessSections.length * 100);
+                var bar = document.getElementById('seamlessProgressBar');
+                var txt = document.getElementById('seamlessProgressText');
+                if (bar) bar.style.width = pct + '%';
+                if (txt) txt.textContent = (idx + 1) + '/' + seamlessSections.length;
+            }
+        }
+
+        function smCopyCode(btn) {
+            var codeBlock = btn.closest('.sm-code-block') || btn.closest('.sm-code-header').parentElement;
+            var pre = codeBlock.querySelector('pre code') || codeBlock.querySelector('pre');
+            if (pre) {
+                navigator.clipboard.writeText(pre.textContent).then(function() {
+                    var orig = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    btn.style.background = 'var(--success-color)';
+                    setTimeout(function() { btn.textContent = orig; btn.style.background = ''; }, 1500);
+                });
+            }
+        }
+
+        function smSwitchCodeTab(tab, blockId) {
+            var parent = tab.parentElement;
+            parent.querySelectorAll('.sm-code-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            // Hide all sibling code blocks
+            var allBlocks = ['hash-node','hash-php','hash-python','hash-java'];
+            allBlocks.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.style.display = (id === blockId) ? 'block' : 'none';
+            });
+        }
+
+        function smSwitchUPITab(tab, tabId) {
+            tab.parentElement.querySelectorAll('.sm-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            document.querySelectorAll('.sm-upi-tab-content').forEach(function(c) { c.classList.remove('active'); });
+            var content = document.getElementById(tabId);
+            if (content) content.classList.add('active');
+        }
+
+        function smToggleAccordion(header) {
+            var item = header.closest('.sm-accordion-item');
+            item.classList.toggle('open');
+        }
+
+        function smSHA512(str) {
+            if (typeof CryptoJS !== 'undefined') {
+                return CryptoJS.SHA512(str).toString();
+            }
+            // Fallback: use Web Crypto API if available (sync not possible), just show message
+            return 'CryptoJS not loaded - include CryptoJS library';
+        }
+
+        function smGenerateHash() {
+            var key = document.getElementById('sm_hash_key').value.trim();
+            var salt = document.getElementById('sm_hash_salt').value.trim();
+            var txnid = document.getElementById('sm_hash_txnid').value.trim();
+            var amount = document.getElementById('sm_hash_amount').value.trim();
+            var productinfo = document.getElementById('sm_hash_productinfo').value.trim();
+            var firstname = document.getElementById('sm_hash_firstname').value.trim();
+            var email = document.getElementById('sm_hash_email').value.trim();
+            var udf = document.getElementById('sm_hash_udf').value.trim();
+
+            // Validation
+            var errors = [];
+            if (!key) errors.push('Merchant Key is required');
+            if (!salt) errors.push('Merchant Salt is required');
+            if (!txnid) errors.push('Transaction ID is required');
+            if (!amount) errors.push('Amount is required');
+            if (!productinfo) errors.push('Product Info is required');
+            if (!firstname) errors.push('First Name is required');
+            if (!email) errors.push('Email is required');
+
+            if (errors.length > 0) {
+                alert('Please fix the following:\n\n' + errors.join('\n'));
+                return;
+            }
+
+            var udf1 = udf || '';
+            var hashString = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|||||||||' + salt;
+            // Correct format: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt
+            hashString = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '||||' + '||||||' + salt;
+            // Actual correct: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt
+            var udf2='', udf3='', udf4='', udf5='';
+            hashString = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|'+udf1+'|'+udf2+'|'+udf3+'|'+udf4+'|'+udf5+'||||||'+salt;
+            
+            var hash = smSHA512(hashString);
+
+            document.getElementById('smHashString').textContent = hashString;
+            document.getElementById('smHashOutput').textContent = hash;
+            document.getElementById('smHashResult').style.display = 'block';
+        }
+
+        function smSimulatePayment() {
+            var key = document.getElementById('sm_sim_key').value.trim();
+            var salt = document.getElementById('sm_sim_salt').value.trim();
+            var txnid = document.getElementById('sm_sim_txnid').value.trim() || ('SIM_' + Date.now());
+            var amount = document.getElementById('sm_sim_amount').value.trim();
+            var productinfo = document.getElementById('sm_sim_productinfo').value.trim();
+            var firstname = document.getElementById('sm_sim_firstname').value.trim();
+            var email = document.getElementById('sm_sim_email').value.trim();
+            var phone = document.getElementById('sm_sim_phone').value.trim();
+            var bankcode = document.getElementById('sm_sim_bankcode').value;
+            var surl = document.getElementById('sm_sim_surl').value.trim();
+
+            // Validation
+            var errors = [];
+            var validations = [];
+            if (!key) { errors.push('Merchant Key is required'); }
+            if (!salt) { errors.push('Merchant Salt is required'); }
+            if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) { errors.push('Amount must be a positive number'); }
+            if (!productinfo) { errors.push('Product Info is required'); }
+            if (!firstname) { errors.push('First Name is required'); }
+            if (!email) { errors.push('Email is required'); }
+            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errors.push('Email format is invalid (expected: user@domain.com)'); }
+            if (!phone) { errors.push('Phone is required'); }
+            else if (!/^\d{10}$/.test(phone)) { errors.push('Phone must be a 10-digit number'); }
+            if (!surl) { errors.push('Success URL is required'); }
+
+            if (errors.length > 0) {
+                var valDiv = document.getElementById('smSimValidation');
+                valDiv.innerHTML = '<div class="sm-info-box warning"><strong>Validation Errors Found</strong><ul>' + errors.map(function(e){return '<li style="color: var(--error-color);">'+e+'</li>';}).join('') + '</ul><p style="margin-top:0.5rem;"><strong>Guidance:</strong> Fix the errors above. In a real integration, PayU would reject this request.</p></div>';
+                valDiv.style.display = 'block';
+                document.getElementById('smSimResult').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('sm_sim_txnid').value = txnid;
+
+            // Generate hash
+            var udf1='',udf2='',udf3='',udf4='',udf5='';
+            var hashString = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|'+udf1+'|'+udf2+'|'+udf3+'|'+udf4+'|'+udf5+'||||||'+salt;
+            var hash = smSHA512(hashString);
+
+            // Build payload display
+            var payload = {
+                key: key,
+                txnid: txnid,
+                amount: amount,
+                productinfo: productinfo,
+                firstname: firstname,
+                email: email,
+                phone: phone,
+                surl: surl,
+                furl: surl.replace('success','failure'),
+                pg: 'UPI',
+                bankcode: bankcode,
+                txn_s2s_flow: '4',
+                hash: hash
+            };
+
+            document.getElementById('smSimPayload').textContent = JSON.stringify(payload, null, 2);
+            document.getElementById('smSimHash').textContent = hash;
+
+            // Generate cURL
+            var curl = "curl --location 'https://test.payu.in/_payment' \\\n";
+            curl += "--header 'Content-Type: application/x-www-form-urlencoded' \\\n";
+            Object.keys(payload).forEach(function(k) {
+                curl += "--data-urlencode '" + k + "=" + payload[k] + "' \\\n";
+            });
+            curl = curl.slice(0, -3); // remove trailing backslash
+            document.getElementById('smSimCurl').textContent = curl;
+
+            // Generate simulated deeplink and QR
+            var deeplink = 'upi://pay?pa=payu@axisbank&pn=PayU&tr=' + txnid + '&am=' + amount + '&cu=INR&mc=5411';
+            document.getElementById('smQRDeeplink').textContent = deeplink;
+
+            // Update simulated response
+            document.getElementById('smSimResponse').textContent = JSON.stringify({
+                status: 1,
+                result: deeplink,
+                mihpayid: '40399' + Math.floor(Math.random() * 10000000),
+                mode: 'UPI',
+                unmappedstatus: 'captured',
+                txnid: txnid,
+                amount: amount,
+                net_amount_debit: amount,
+                bankcode: bankcode
+            }, null, 2);
+
+            // Generate QR code using canvas
+            smGenerateQR(deeplink);
+
+            // Show validation success
+            var valDiv = document.getElementById('smSimValidation');
+            valDiv.innerHTML = '<div class="sm-info-box"><strong>Payload Valid</strong><p>All required fields are present and correctly formatted. This request would be accepted by PayU.</p></div>';
+            valDiv.style.display = 'block';
+
+            document.getElementById('smSimResult').style.display = 'block';
+        }
+
+        var smQRInstance = null;
+        function smGenerateQR(data) {
+            var container = document.getElementById('smSimQR');
+            var canvas = document.getElementById('smQRCanvas');
+            
+            // Remove old QR if exists
+            if (smQRInstance) {
+                smQRInstance.clear();
+                smQRInstance.makeCode(data);
+                return;
+            }
+            
+            // Hide the canvas (we'll use the QRCode lib's own element)
+            if (canvas) canvas.style.display = 'none';
+            
+            // Remove any previously created QR div
+            var oldQR = document.getElementById('smQRDiv');
+            if (oldQR) oldQR.remove();
+            
+            var qrDiv = document.createElement('div');
+            qrDiv.id = 'smQRDiv';
+            qrDiv.style.display = 'inline-block';
+            qrDiv.style.margin = '0.75rem auto';
+            
+            var deeplinkEl = document.getElementById('smQRDeeplink');
+            container.insertBefore(qrDiv, deeplinkEl);
+            
+            if (typeof QRCode !== 'undefined') {
+                smQRInstance = new QRCode(qrDiv, {
+                    text: data,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
+        }
+
+        function smSwitchOtmTab(tab, tabId) {
+            tab.parentElement.querySelectorAll('.sm-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            var parent = tab.closest('.seamless-section') || document;
+            parent.querySelectorAll('.sm-tab-content').forEach(function(c) { c.style.display = 'none'; });
+            var target = document.getElementById(tabId);
+            if (target) target.style.display = 'block';
+        }
+
+        function smValidateVPA() {
+            var key = document.getElementById('sm_vpa_key').value.trim();
+            var salt = document.getElementById('sm_vpa_salt').value.trim();
+            var vpa = document.getElementById('sm_vpa_address').value.trim();
+            var autopay = document.getElementById('sm_vpa_autopay').value;
+            if (!key || !salt || !vpa) { alert('Please fill in Key, Salt and VPA.'); return; }
+
+            var command = 'validateVPA';
+            var hashStr = key + '|' + command + '|' + vpa + '|' + salt;
+            var hash = smSHA512(hashStr);
+
+            document.getElementById('smVpaHashString').textContent = hashStr;
+            document.getElementById('smVpaHashOutput').innerHTML = '<h4>Generated Hash (SHA-512)</h4><div style="background:var(--primary);color:#fff;padding:1rem;border-radius:8px;word-break:break-all;text-align:center;">' + hash + '</div>';
+
+            var curl = 'curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \\\n';
+            curl += '  -H "Content-Type: application/x-www-form-urlencoded" \\\n';
+            curl += '  --data-urlencode "key=' + key + '" \\\n';
+            curl += '  --data-urlencode "command=validateVPA" \\\n';
+            curl += '  --data-urlencode "var1=' + vpa + '" \\\n';
+            if (autopay === '1') {
+                curl += '  --data-urlencode \'var2={"validateAutoPayVPA":"1"}\' \\\n';
+            }
+            curl += '  --data-urlencode "hash=' + hash + '"';
+            document.getElementById('smVpaCurl').textContent = curl;
+            document.getElementById('smVpaResult').style.display = 'block';
+        }
+
+        function smGenerateCapture() {
+            var key = document.getElementById('sm_cap_key').value.trim();
+            var salt = document.getElementById('sm_cap_salt').value.trim();
+            var mihpayid = document.getElementById('sm_cap_mihpayid').value.trim();
+            var amount = document.getElementById('sm_cap_amount').value.trim();
+            if (!key || !salt || !mihpayid) { alert('Please fill in Key, Salt and mihpayid.'); return; }
+
+            var command = 'capture_transaction';
+            var hashStr = key + '|' + command + '|' + mihpayid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var captureId = mihpayid + '_cap_' + Date.now();
+
+            document.getElementById('smCapHashOutput').innerHTML = '<div style="background:var(--primary);color:#fff;padding:1rem;border-radius:8px;word-break:break-all;text-align:center;">' + hash + '</div>';
+
+            var curl = 'curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \\\n';
+            curl += '  --data-urlencode "key=' + key + '" \\\n';
+            curl += '  --data-urlencode "command=capture_transaction" \\\n';
+            curl += '  --data-urlencode "var1=' + mihpayid + '" \\\n';
+            curl += '  --data-urlencode "var2=' + captureId + '" \\\n';
+            curl += '  --data-urlencode "var3=' + amount + '" \\\n';
+            curl += '  --data-urlencode "hash=' + hash + '"';
+            document.getElementById('smCapCurl').textContent = curl;
+            document.getElementById('smCapResult').style.display = 'block';
+        }
+
+        function smGenerateVerify() {
+            var key = document.getElementById('sm_ver_key').value.trim();
+            var salt = document.getElementById('sm_ver_salt').value.trim();
+            var txnid = document.getElementById('sm_ver_txnid').value.trim();
+            if (!key || !salt || !txnid) { alert('Please fill in Key, Salt and Transaction ID.'); return; }
+
+            var command = 'verify_payment';
+            var hashStr = key + '|' + command + '|' + txnid + '|' + salt;
+            var hash = smSHA512(hashStr);
+
+            document.getElementById('smVerHashOutput').innerHTML = '<div style="background:var(--primary);color:#fff;padding:1rem;border-radius:8px;word-break:break-all;text-align:center;">' + hash + '</div>';
+
+            var curl = 'curl -X POST "https://test.payu.in/merchant/postservice.php?form=2" \\\n';
+            curl += '  -H "Content-Type: application/x-www-form-urlencoded" \\\n';
+            curl += '  --data-urlencode "key=' + key + '" \\\n';
+            curl += '  --data-urlencode "command=verify_payment" \\\n';
+            curl += '  --data-urlencode "var1=' + txnid + '" \\\n';
+            curl += '  --data-urlencode "hash=' + hash + '"';
+            document.getElementById('smVerCurl').textContent = curl;
+            document.getElementById('smVerResult').style.display = 'block';
+        }
+
+        function smGenerateHMAC() {
+            var key = document.getElementById('sm_hmac_key').value.trim();
+            var salt = document.getElementById('sm_hmac_salt').value.trim();
+            var payuid = document.getElementById('sm_hmac_payuid').value.trim();
+            if (!key || !salt || !payuid) { alert('Please fill in Key, Salt and PayU ID.'); return; }
+
+            var requestBody = '';
+            var bodyHash = CryptoJS.SHA256(requestBody);
+            var digest = CryptoJS.enc.Base64.stringify(bodyHash);
+            var date = new Date().toUTCString();
+            var signatureString = 'date: ' + date + '\ndigest: ' + digest;
+            var signature = CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA256(signatureString, salt));
+            var auth = 'hmac username="' + key + '", algorithm="hmac-sha256", headers="date digest", signature="' + signature + '"';
+
+            var headers = 'Date: ' + date + '\n';
+            headers += 'Digest: ' + digest + '\n';
+            headers += 'Authorization: ' + auth + '\n';
+            headers += 'Content-Type: application/json\nAccept: application/json';
+            document.getElementById('smHmacOutput').textContent = headers;
+
+            var curl = 'curl --location \\\n';
+            curl += '  "https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId=' + payuid + '" \\\n';
+            curl += '  --header "date: ' + date + '" \\\n';
+            curl += '  --header "digest: ' + digest + '" \\\n';
+            curl += '  --header \'Authorization: ' + auth + '\'';
+            document.getElementById('smHmacCurl').textContent = curl;
+            document.getElementById('smHmacResult').style.display = 'block';
+        }
+
+        // Expose seamless functions globally
+        window.selectSeamlessMethod = selectSeamlessMethod;
+        window.backToMethodSelector = backToMethodSelector;
+        window.showSeamlessSection = showSeamlessSection;
+        window.smCopyCode = smCopyCode;
+        window.smSwitchCodeTab = smSwitchCodeTab;
+        window.smSwitchUPITab = smSwitchUPITab;
+        window.smToggleAccordion = smToggleAccordion;
+        window.smGenerateHash = smGenerateHash;
+        window.smSimulatePayment = smSimulatePayment;
+        window.smSwitchOtmTab = smSwitchOtmTab;
+        window.smValidateVPA = smValidateVPA;
+        window.smGenerateCapture = smGenerateCapture;
+        window.smGenerateVerify = smGenerateVerify;
+        window.smGenerateHMAC = smGenerateHMAC;

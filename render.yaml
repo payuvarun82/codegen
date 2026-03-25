@@ -6,7 +6,7 @@ services:
     name: payu-codegen
     runtime: docker
     plan: free
-    healthCheckPath: /
+    healthCheckPath: /health
     envVars:
       - key: PHP_DISPLAY_ERRORS
         value: "Off"
