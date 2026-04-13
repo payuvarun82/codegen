@@ -1,8 +1,13 @@
         // Global Variables
         let currentFlow = '';
         let currentPaymentType = 'onetime';
-        const DEFAULT_KEY = 'a4vGC2';
-        const DEFAULT_SALT = 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli';
+        const DEFAULT_KEY = 'PRiQvJ';
+        const DEFAULT_SALT = 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ';
+
+        function getProxyUrl() {
+            return window.location.origin + '/proxy.php';
+        }
+        window.getProxyUrl = getProxyUrl;
 
         // Route Mappings: Internal flow names ↔ URL routes
         const flowToRouteMap = {
@@ -32,6 +37,23 @@
         };
         
         const validRoutes = ['crossborder', 'payu-hosted', 'subscription', 'tpv', 'upiotm', 'preauth', 'checkoutplus', 'split', 'bankoffer', 'seamless'];
+
+        const seamlessSectionIds = [
+            'sm-overview','sm-validate-vpa','sm-payment','sm-upiflow','sm-verify','sm-cancel',
+            'sm-otm','sm-capture','sm-otm-status',
+            'sm-mandate','sm-recurring',
+            'sm-crossborder-s2s','sm-split-s2s',
+            'sm-hash','sm-udf-update','sm-check-status','sm-simulate','sm-troubleshoot',
+            'sm-prerequisites','sm-architecture',
+            'sm-nb-overview','sm-nb-status','sm-nb-bankpage',
+            'sm-nb-payment','sm-nb-redirect','sm-nb-verify','sm-nb-cancel',
+            'sm-nb-subscription','sm-nb-mandate-verify','sm-nb-mandate-status','sm-nb-mandate-execute',
+            'sm-nb-tpv','sm-nb-tpv-redirect','sm-nb-tpv-verify',
+            'sm-nb-pacb','sm-nb-pacb-redirect','sm-nb-pacb-verify','sm-nb-capture',
+            'sm-nb-split','sm-nb-split-verify',
+            'sm-nb-offers','sm-nb-sku-offers',
+            'sm-nb-settlement','sm-nb-codes'
+        ];
         
         // Flow display names for analytics
         const flowDisplayNames = {
@@ -78,17 +100,51 @@
             }
         });
         
+        function isNbSection(sectionId) {
+            return sectionId && sectionId.startsWith('sm-nb-');
+        }
+
         // Handle browser back/forward navigation
         window.addEventListener('popstate', function(event) {
-            if (event.state && event.state.flow) {
+            if (event.state && event.state.flow === 'seamless' && event.state.smMode === 'netbanking' && event.state.section) {
+                showFlow('seamless', true);
+                _smNavSilent = true;
+                openNbSeamlessFlow(event.state.section);
+                _smNavSilent = false;
+            } else if (event.state && event.state.flow === 'seamless' && event.state.smMode === 'cards') {
+                showFlow('seamless', true);
+                _smShowCardsMode();
+            } else if (event.state && event.state.flow === 'seamless' && event.state.section) {
+                showFlow('seamless', true);
+                _smNavSilent = true;
+                if (isNbSection(event.state.section)) {
+                    openNbSeamlessFlow(event.state.section);
+                } else {
+                    openSeamlessFlow(event.state.section);
+                }
+                _smNavSilent = false;
+            } else if (event.state && event.state.flow === 'seamless' && event.state.smMode === 'landing') {
+                showFlow('seamless', true);
+                _smShowModeLanding();
+            } else if (event.state && event.state.flow) {
                 showFlow(event.state.flow, true);
             } else {
                 const pathname = window.location.pathname;
                 const pathSegments = pathname.split('/').filter(segment => segment !== '');
-                const routeFromPath = pathSegments.length > 0 ? pathSegments[pathSegments.length - 1].toLowerCase() : null;
+                const firstSeg = pathSegments.length > 0 ? pathSegments[0].toLowerCase() : null;
+                const secondSeg = pathSegments.length > 1 ? pathSegments[1].toLowerCase() : null;
                 
-                if (routeFromPath && validRoutes.includes(routeFromPath)) {
-                    const flowName = routeToFlowMap[routeFromPath] || routeFromPath;
+                if (firstSeg === 'seamless' && secondSeg && seamlessSectionIds.includes(secondSeg)) {
+                    showFlow('seamless', true);
+                    _smNavSilent = true;
+                    if (isNbSection(secondSeg)) {
+                        openNbSeamlessFlow(secondSeg);
+                    } else {
+                        openSeamlessFlow(secondSeg);
+                    }
+                    _smNavSilent = false;
+                } else if (firstSeg && validRoutes.includes(firstSeg)) {
+                    const flowName = routeToFlowMap[firstSeg] || firstSeg;
                     showFlow(flowName, true);
                 } else {
                     goHome(true);
@@ -240,14 +296,20 @@
             // Path-Based Routing: Read flow from URL pathname
             const pathname = window.location.pathname;
             const pathSegments = pathname.split('/').filter(segment => segment !== '');
-            const flowFromPath = pathSegments.length > 0 ? pathSegments[pathSegments.length - 1].toLowerCase() : null;
-            const routeFromURL = validRoutes.includes(flowFromPath) ? flowFromPath : null;
+            const firstSegment = pathSegments.length > 0 ? pathSegments[0].toLowerCase() : null;
+            const secondSegment = pathSegments.length > 1 ? pathSegments[1].toLowerCase() : null;
+            const routeFromURL = validRoutes.includes(firstSegment) ? firstSegment : null;
             const flowFromURL = routeFromURL ? (routeToFlowMap[routeFromURL] || routeFromURL) : null;
+            const seamlessSection = (flowFromURL === 'seamless' && secondSegment && seamlessSectionIds.includes(secondSegment)) ? secondSegment : null;
             
             if (flowFromURL) {
-                console.log('Flow from URL:', flowFromURL);
+                console.log('Flow from URL:', flowFromURL, seamlessSection ? '/ section: ' + seamlessSection : '');
                 showFlow(flowFromURL, true);
-                window.history.replaceState({ flow: flowFromURL }, '', pathname);
+                var historyState = { flow: flowFromURL, section: seamlessSection || null };
+                if (seamlessSection && seamlessSection.startsWith('sm-nb-')) {
+                    historyState.smMode = 'netbanking';
+                }
+                window.history.replaceState(historyState, '', pathname);
                 
                 // For cross border, restore payment type if saved
                 const savedPaymentType = localStorage.getItem('currentPaymentType');
@@ -277,8 +339,72 @@
             
             // Initialize transaction ID field listeners (for custom credentials mode)
             initializeTxnidListeners();
+            
+            // Initialize live hash preview for UPI OTM
+            initUpiOtmLiveHash();
         });
         
+        // Live Hash Preview for UPI OTM
+        function computeUpiOtmLiveHash() {
+            var formulaEl = document.getElementById('upi_otm_hash_formula');
+            var stringEl = document.getElementById('upi_otm_hash_string');
+            var valueEl = document.getElementById('upi_otm_hash_value');
+            if (!formulaEl || !stringEl || !valueEl) return;
+
+            var creds = getCredentials('upiotm');
+            var key = creds.key;
+            var salt = creds.salt;
+            var txnid = document.getElementById('upi_txnid_display') ? document.getElementById('upi_txnid_display').value : '';
+            var amount = document.getElementById('upi_amount') ? document.getElementById('upi_amount').value : '';
+            var productinfo = document.getElementById('upi_productinfo') ? document.getElementById('upi_productinfo').value : '';
+            var firstname = document.getElementById('upi_firstname') ? document.getElementById('upi_firstname').value : '';
+            var email = document.getElementById('upi_email') ? document.getElementById('upi_email').value : '';
+            var udf1 = document.getElementById('upi_udf1') ? document.getElementById('upi_udf1').value : '';
+            var udf2 = document.getElementById('upi_udf2') ? document.getElementById('upi_udf2').value : '';
+            var udf3 = document.getElementById('upi_udf3') ? document.getElementById('upi_udf3').value : '';
+            var udf4 = document.getElementById('upi_udf4') ? document.getElementById('upi_udf4').value : '';
+            var udf5 = document.getElementById('upi_udf5') ? document.getElementById('upi_udf5').value : '';
+            var startDate = document.getElementById('upi_payment_start_date') ? document.getElementById('upi_payment_start_date').value : '';
+            var endDate = document.getElementById('upi_payment_end_date') ? document.getElementById('upi_payment_end_date').value : '';
+
+            var siObj = { paymentStartDate: startDate, paymentEndDate: endDate };
+            var siDetailsJson = JSON.stringify(siObj);
+
+            var hashString = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetailsJson + '|' + salt;
+            var formula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||si_details|SALT)';
+
+            formulaEl.textContent = formula;
+            stringEl.textContent = hashString;
+
+            if (key && salt && txnid && amount) {
+                var hash = CryptoJS.SHA512(hashString).toString();
+                valueEl.textContent = hash;
+            } else {
+                valueEl.textContent = 'Fill required fields (key, salt, txnid, amount) to see computed hash';
+            }
+        }
+
+        function initUpiOtmLiveHash() {
+            var fieldIds = [
+                'upi_txnid_display', 'upi_amount', 'upi_productinfo', 'upi_firstname',
+                'upi_email', 'upi_phone', 'upi_udf1', 'upi_udf2', 'upi_udf3', 'upi_udf4', 'upi_udf5',
+                'upi_payment_start_date', 'upi_payment_end_date',
+                'upi_custom_key', 'upi_custom_salt'
+            ];
+            fieldIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', computeUpiOtmLiveHash);
+                    el.addEventListener('change', computeUpiOtmLiveHash);
+                }
+            });
+            var customKeysCheckbox = document.getElementById('upi_use_custom_keys');
+            if (customKeysCheckbox) {
+                customKeysCheckbox.addEventListener('change', computeUpiOtmLiveHash);
+            }
+            computeUpiOtmLiveHash();
+        }
+
         // Character Counter Functions
         function updateCharCounter(inputElement) {
             const maxLength = parseInt(inputElement.getAttribute('maxlength'));
@@ -1531,16 +1657,18 @@
             localStorage.removeItem('currentPaymentFlow');
             localStorage.removeItem('currentPaymentType');
             
-            // Reset the flow dropdown
+            // Set dropdown to PayU Hosted since we're on the home page
             var flowSelect = document.getElementById('flowSelect');
-            if (flowSelect) flowSelect.value = '';
+            if (flowSelect) flowSelect.value = 'payu-hosted';
             
             console.log('✓ localStorage cleared - returned to home page');
         }
         
         function onFlowDropdownChange(value) {
-            if (value) {
-                showFlow(value);
+            if (value === 'payu-hosted') {
+                goHome();
+            } else if (value === 'merchant-hosted') {
+                showFlow('seamless');
             }
         }
         window.onFlowDropdownChange = onFlowDropdownChange;
@@ -1691,7 +1819,6 @@
             // Show selected flow
             document.getElementById(selectedFlow + 'Flow').classList.add('active');
             
-            // Update URL with route (unless triggered by popstate)
             if (!skipPushState) {
                 const route = flowToRouteMap[selectedFlow] || selectedFlow;
                 const newUrl = '/' + route;
@@ -1711,15 +1838,22 @@
                 console.log('✓ Split flow initialized with default row');
             }
             
-            // Initialize seamless flow: show Level 1 (method tiles)
             if (selectedFlow === 'seamless') {
-                var methodSelect = document.getElementById('seamlessMethodSelect');
-                var upiFlows = document.getElementById('seamlessUpiFlows');
-                var flowDetail = document.getElementById('seamlessFlowDetail');
-                if (methodSelect) methodSelect.style.display = 'block';
-                if (upiFlows) upiFlows.style.display = 'none';
-                if (flowDetail) flowDetail.style.display = 'none';
-                console.log('✓ Seamless flow initialized (Level 1: method tiles)');
+                var segs = window.location.pathname.split('/').filter(function(s) { return s !== ''; });
+                var subSection = segs.length > 1 ? segs[1].toLowerCase() : null;
+                if (subSection && seamlessSectionIds.includes(subSection) && document.getElementById(subSection)) {
+                    _smNavSilent = true;
+                    if (subSection.startsWith('sm-nb-')) {
+                        _smShowNbMode();
+                        openNbSeamlessFlow(subSection);
+                    } else {
+                        _smShowUpiMode();
+                        openSeamlessFlow(subSection);
+                    }
+                    _smNavSilent = false;
+                } else {
+                    _smShowModeLanding();
+                }
             }
             
             // Save current flow to localStorage for persistence on refresh
@@ -1730,7 +1864,7 @@
             console.log('✓ Flow saved to localStorage:', selectedFlow);
             
             if (flowSelect) {
-                flowSelect.value = selectedFlow;
+                flowSelect.value = selectedFlow === 'seamless' ? 'merchant-hosted' : 'payu-hosted';
             }
         }
         
@@ -6965,61 +7099,3621 @@ nodeCartDetailsUsage +
         // SEAMLESS INTEGRATION LAB FUNCTIONS
         // ============================================
 
-        // Level 1 -> Level 2: show UPI flow tiles
-        function showSeamlessMethod(method) {
-            if (method !== 'upi') return;
-            document.getElementById('seamlessMethodSelect').style.display = 'none';
-            document.getElementById('seamlessUpiFlows').style.display = 'block';
-            document.getElementById('seamlessFlowDetail').style.display = 'none';
-            window.scrollTo(0, 0);
-        }
-
-        // Level 2 -> Level 1: back to payment methods
-        function backToSeamlessMethods() {
-            document.getElementById('seamlessMethodSelect').style.display = 'block';
-            document.getElementById('seamlessUpiFlows').style.display = 'none';
-            document.getElementById('seamlessFlowDetail').style.display = 'none';
-            window.scrollTo(0, 0);
-        }
-
-        // Level 2 -> Level 3: open a specific flow detail page
-        function openSeamlessFlow(sectionId) {
-            document.getElementById('seamlessMethodSelect').style.display = 'none';
-            document.getElementById('seamlessUpiFlows').style.display = 'none';
-            document.getElementById('seamlessFlowDetail').style.display = 'block';
-            // Hide all sections, show the selected one
-            document.querySelectorAll('#seamlessDetailContent .seamless-section').forEach(function(s) {
-                s.classList.remove('active');
-            });
-            var section = document.getElementById(sectionId);
-            if (section) section.classList.add('active');
-            // Auto-fill txnid fields if empty
-            var txnField = document.getElementById('sm_hash_txnid');
-            if (txnField && !txnField.value) txnField.value = 'SM_' + Date.now();
-            var simTxnField = document.getElementById('sm_sim_txnid');
-            if (simTxnField && !simTxnField.value) simTxnField.value = 'SIM_' + Date.now();
-            window.scrollTo(0, 0);
-        }
-
-        // Level 3 -> Level 2: back to UPI flow tiles
-        function backToUpiFlows() {
-            document.getElementById('seamlessMethodSelect').style.display = 'none';
-            document.getElementById('seamlessUpiFlows').style.display = 'block';
-            document.getElementById('seamlessFlowDetail').style.display = 'none';
-            window.scrollTo(0, 0);
-        }
-
-        // Keep for backward compat
-        function selectSeamlessMethod(method) { showSeamlessMethod(method); }
-        function backToMethodSelector() { goHome(); }
-
-        var seamlessSections = ['sm-overview','sm-prerequisites','sm-architecture','sm-hash','sm-validate-vpa','sm-payment','sm-upiflow','sm-mandate','sm-otm','sm-capture','sm-response','sm-verify','sm-cancel','sm-otm-status','sm-recurring','sm-troubleshoot','sm-simulate'];
-
-        function showSeamlessSection(navItem, sectionId) {
+        // Sidebar navigation: switch section and highlight nav item
+        var _smNavSilent = false;
+        function smNavTo(navItem, sectionId) {
+            document.querySelectorAll('#seamlessNav .seamless-nav-item').forEach(function(n) { n.classList.remove('active'); });
+            if (navItem) navItem.classList.add('active');
             document.querySelectorAll('#seamlessDetailContent .seamless-section').forEach(function(s) { s.classList.remove('active'); });
             var section = document.getElementById(sectionId);
             if (section) section.classList.add('active');
-            window.scrollTo(0, 0);
+
+            if (navItem && navItem.classList.contains('seamless-nav-sub')) {
+                var prev = navItem.previousElementSibling;
+                while (prev) {
+                    if (prev.classList.contains('seamless-nav-group-label')) {
+                        if (prev.classList.contains('collapsed')) smToggleNavGroup(prev);
+                        break;
+                    }
+                    prev = prev.previousElementSibling;
+                }
+            }
+
+            if (navItem) navItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            var autoFillTxnIds = {
+                sm_hash_txnid: 'SM_', sm_sim_txnid: 'SIM_', sm_cbs_txnid: 'CBS_',
+                sm_cbsub_txnid: 'CBSUB_', sm_spl_txnid: 'SPL_'
+            };
+            for (var fieldId in autoFillTxnIds) {
+                var f = document.getElementById(fieldId);
+                if (f && !f.value) f.value = autoFillTxnIds[fieldId] + Date.now();
+            }
+            var content = document.getElementById('seamlessDetailContent');
+            if (content) content.scrollTo(0, 0);
+
+            if (!_smNavSilent && sectionId) {
+                history.pushState({ flow: 'seamless', section: sectionId }, '', '/seamless/' + sectionId);
+            }
+        }
+
+        function _smShowModeLanding() {
+            var landing = document.getElementById('smModeLanding');
+            var upiContent = document.getElementById('smModeUpi');
+            var cardsContent = document.getElementById('smModeCards');
+            var nbContent = document.getElementById('smModeNetbanking');
+            if (upiContent) upiContent.style.display = 'none';
+            if (cardsContent) cardsContent.style.display = 'none';
+            if (nbContent) nbContent.style.display = 'none';
+            if (landing) landing.classList.add('active');
+        }
+
+        function _smShowUpiMode() {
+            var landing = document.getElementById('smModeLanding');
+            var upiContent = document.getElementById('smModeUpi');
+            var cardsContent = document.getElementById('smModeCards');
+            var nbContent = document.getElementById('smModeNetbanking');
+            if (landing) landing.classList.remove('active');
+            if (cardsContent) cardsContent.style.display = 'none';
+            if (nbContent) nbContent.style.display = 'none';
+            if (upiContent) upiContent.style.display = '';
+        }
+
+        function _smShowCardsMode() {
+            var landing = document.getElementById('smModeLanding');
+            var upiContent = document.getElementById('smModeUpi');
+            var cardsContent = document.getElementById('smModeCards');
+            var nbContent = document.getElementById('smModeNetbanking');
+            if (landing) landing.classList.remove('active');
+            if (upiContent) upiContent.style.display = 'none';
+            if (nbContent) nbContent.style.display = 'none';
+            if (cardsContent) cardsContent.style.display = '';
+        }
+
+        function _smShowNbMode() {
+            var landing = document.getElementById('smModeLanding');
+            var upiContent = document.getElementById('smModeUpi');
+            var cardsContent = document.getElementById('smModeCards');
+            var nbContent = document.getElementById('smModeNetbanking');
+            if (landing) landing.classList.remove('active');
+            if (upiContent) upiContent.style.display = 'none';
+            if (cardsContent) cardsContent.style.display = 'none';
+            if (nbContent) nbContent.style.display = '';
+        }
+
+        function smOpenMode(mode) {
+            if (mode === 'upi') {
+                _smShowUpiMode();
+                _smNavSilent = true;
+                openSeamlessFlow('sm-overview');
+                _smNavSilent = false;
+                history.pushState({ flow: 'seamless', section: 'sm-overview' }, '', '/seamless/sm-overview');
+            } else if (mode === 'cards') {
+                _smShowCardsMode();
+                cardsNavTo(document.querySelector('#cardsNav .cards-nav-item.active') || document.querySelector('#cardsNav .cards-nav-item'), 'cards-overview');
+                history.pushState({ flow: 'seamless', smMode: 'cards' }, '', '/seamless/cards');
+            } else if (mode === 'netbanking') {
+                _smShowNbMode();
+                _smNavSilent = true;
+                smNbNavTo(null, 'sm-nb-overview');
+                _smNavSilent = false;
+                history.pushState({ flow: 'seamless', smMode: 'netbanking', section: 'sm-nb-overview' }, '', '/seamless/sm-nb-overview');
+            }
+        }
+        window.smOpenMode = smOpenMode;
+
+        function smBackToModeLanding() {
+            _smShowModeLanding();
+            history.pushState({ flow: 'seamless', smMode: 'landing' }, '', '/seamless');
+        }
+        window.smBackToModeLanding = smBackToModeLanding;
+
+        function openSeamlessFlow(sectionId) {
+            _smShowUpiMode();
+            var navItem = document.querySelector('#seamlessNav .seamless-nav-item[data-section="' + sectionId + '"]');
+            smNavTo(navItem, sectionId);
+        }
+
+
+        // Net Banking navigation function
+        function smNbNavTo(navItem, sectionId) {
+            document.querySelectorAll('#seamlessNbNav .seamless-nav-item').forEach(function(n) { n.classList.remove('active'); });
+            if (navItem) navItem.classList.add('active');
+            document.querySelectorAll('#seamlessNbDetailContent .seamless-section').forEach(function(s) { s.classList.remove('active'); });
+            var section = document.getElementById(sectionId);
+            if (section) section.classList.add('active');
+
+            if (navItem && navItem.classList.contains('seamless-nav-sub')) {
+                var prev = navItem.previousElementSibling;
+                while (prev) {
+                    if (prev.classList.contains('seamless-nav-group-label')) {
+                        if (prev.classList.contains('collapsed')) smToggleNavGroup(prev);
+                        break;
+                    }
+                    prev = prev.previousElementSibling;
+                }
+            }
+
+            if (navItem) navItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            var content = document.getElementById('seamlessNbDetailContent');
+            if (content) content.scrollTo(0, 0);
+
+            // Auto-fill Transaction ID when navigating to Execute Debit section
+            if (sectionId === 'sm-nb-mandate-execute') {
+                var execTxnidField = document.getElementById('sm_nb_mandate_exec_txnid');
+                if (execTxnidField && !execTxnidField.value) {
+                    execTxnidField.value = _smNbMandateRegTxnid || 'MANDATE_' + Date.now();
+                }
+            }
+
+            if (!_smNavSilent) {
+                history.pushState({ flow: 'seamless', smMode: 'netbanking', section: sectionId }, '', '/seamless/' + sectionId);
+            }
+        }
+        window.smNbNavTo = smNbNavTo;
+
+        function openNbSeamlessFlow(sectionId) {
+            _smShowNbMode();
+            var navItem = document.querySelector('#seamlessNbNav .seamless-nav-item[data-section="' + sectionId + '"]');
+            smNbNavTo(navItem, sectionId);
+        }
+        window.openNbSeamlessFlow = openNbSeamlessFlow;
+
+        // ============================================
+        // NET BANKING BANK PAGE FUNCTIONS
+        // ============================================
+
+        var _smNbSelectedBankCode = '';
+
+        function smNbSelectBank(card) {
+            var grid = document.getElementById('smNbBankGrid');
+            var prev = grid.querySelector('.sm-bank-card.selected');
+            if (prev) prev.classList.remove('selected');
+            card.classList.add('selected');
+
+            _smNbSelectedBankCode = card.getAttribute('data-bankcode');
+            var bankName = card.getAttribute('data-name');
+
+            document.getElementById('smNbSelectedBankName').textContent = bankName;
+            document.getElementById('smNbSelectedBankCode').textContent = _smNbSelectedBankCode;
+            document.getElementById('smNbBankActionBar').style.display = 'flex';
+        }
+        window.smNbSelectBank = smNbSelectBank;
+
+        function smNbFilterBanks() {
+            var query = document.getElementById('smNbBankSearch').value.toLowerCase().trim();
+            var cards = document.querySelectorAll('#smNbBankGrid .sm-bank-card');
+            var visible = 0;
+            cards.forEach(function(card) {
+                var name = card.getAttribute('data-name').toLowerCase();
+                var code = card.getAttribute('data-bankcode').toLowerCase();
+                var match = name.indexOf(query) !== -1 || code.indexOf(query) !== -1;
+                if (!match && query.length > 0) {
+                    card.style.display = 'none';
+                } else {
+                    card.style.display = '';
+                    visible++;
+                }
+            });
+            document.getElementById('smNbBankNoResults').style.display = visible === 0 ? 'block' : 'none';
+        }
+        window.smNbFilterBanks = smNbFilterBanks;
+
+        var _smNbActiveCat = 'all';
+
+        function smNbFilterBankCat(btn, cat) {
+            _smNbActiveCat = cat;
+            var tabs = document.querySelectorAll('.sm-bank-cat-btn');
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            btn.classList.add('active');
+
+            var cards = document.querySelectorAll('#smNbBankGrid .sm-bank-card');
+            var visible = 0;
+            cards.forEach(function(card) {
+                var cats = card.getAttribute('data-cat') || '';
+                if (cat === 'all' || cats.indexOf(cat) !== -1) {
+                    card.style.display = '';
+                    visible++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            document.getElementById('smNbBankNoResults').style.display = visible === 0 ? 'block' : 'none';
+            document.getElementById('smNbBankSearch').value = '';
+        }
+        window.smNbFilterBankCat = smNbFilterBankCat;
+
+        function smNbGoToPaymentWithBank() {
+            if (!_smNbSelectedBankCode) return;
+            smNbNavTo(document.querySelector('[data-section=sm-nb-payment]'), 'sm-nb-payment');
+            setTimeout(function() {
+                var sel = document.getElementById('sm_nb_pay_bankcode');
+                if (sel) {
+                    for (var i = 0; i < sel.options.length; i++) {
+                        if (sel.options[i].value === _smNbSelectedBankCode) {
+                            sel.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }, 100);
+        }
+        window.smNbGoToPaymentWithBank = smNbGoToPaymentWithBank;
+
+        function smNbGoToPacbWithBank() {
+            if (!_smNbSelectedBankCode) return;
+            smNbNavTo(document.querySelector('[data-section=sm-nb-pacb]'), 'sm-nb-pacb');
+            setTimeout(function() {
+                var sel = document.getElementById('sm_nb_pacb_bankcode');
+                if (sel) {
+                    for (var i = 0; i < sel.options.length; i++) {
+                        if (sel.options[i].value === _smNbSelectedBankCode) {
+                            sel.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }, 100);
+        }
+        window.smNbGoToPacbWithBank = smNbGoToPacbWithBank;
+
+        // ============================================
+        // NET BANKING S2S FUNCTIONS
+        // ============================================
+
+        var _smNbAcsTemplate = '';
+
+        function smNbFillSamplePayment() {
+            document.getElementById('sm_nb_pay_txnid').value = 'NB_' + Date.now();
+            document.getElementById('sm_nb_pay_amount').value = '100.00';
+            document.getElementById('sm_nb_pay_productinfo').value = 'Test Product';
+            document.getElementById('sm_nb_pay_firstname').value = 'Test';
+            document.getElementById('sm_nb_pay_email').value = 'test@example.com';
+            document.getElementById('sm_nb_pay_phone').value = '9876543210';
+            document.getElementById('sm_nb_pay_surl').value = 'https://payu.in/integrationlab/callback.php';
+            document.getElementById('sm_nb_pay_furl').value = 'https://payu.in/integrationlab/callback.php';
+        }
+        window.smNbFillSamplePayment = smNbFillSamplePayment;
+
+        function smNbBuildPaymentPayload() {
+            var key = document.getElementById('sm_nb_pay_key').value;
+            var salt = document.getElementById('sm_nb_pay_salt').value;
+            var txnid = document.getElementById('sm_nb_pay_txnid').value || 'NB_' + Date.now();
+            var amount = document.getElementById('sm_nb_pay_amount').value;
+            var productinfo = document.getElementById('sm_nb_pay_productinfo').value;
+            var firstname = document.getElementById('sm_nb_pay_firstname').value;
+            var email = document.getElementById('sm_nb_pay_email').value;
+            var phone = document.getElementById('sm_nb_pay_phone').value;
+            var bankcode = document.getElementById('sm_nb_pay_bankcode').value;
+            var surl = document.getElementById('sm_nb_pay_surl').value;
+            var furl = document.getElementById('sm_nb_pay_furl').value;
+
+            document.getElementById('sm_nb_pay_txnid').value = txnid;
+
+            // NB one-time: no api_version=6, no beneficiarydetail → 11 pipes
+            // key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT
+            var hashString = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|||||||||||' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            return {
+                key: key, txnid: txnid, amount: amount, productinfo: productinfo,
+                firstname: firstname, email: email, phone: phone, pg: 'NB',
+                bankcode: bankcode, surl: surl, furl: furl, hash: hash,
+                txn_s2s_flow: '4'
+            };
+        }
+
+        function smNbPreviewPaymentRequest() {
+            var data = smNbBuildPaymentPayload();
+            document.getElementById('smNbPayReqRes').style.display = 'block';
+            document.getElementById('smNbPayRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbPayResponseView').textContent = '// Response will appear here after sending';
+            document.getElementById('smNbPayStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbPayStatusBadge').textContent = 'Pending';
+            document.getElementById('smNbPayResponseGuide').style.display = 'none';
+            document.getElementById('smNbOpenBankBtn').style.display = 'none';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/_payment' \\\n  -H 'Content-Type: application/x-www-form-urlencoded' \\\n";
+            for (var k in data) {
+                curlCmd += "  -d '" + k + "=" + encodeURIComponent(data[k]) + "' \\\n";
+            }
+            document.getElementById('smNbPayCurlView').textContent = curlCmd.replace(/ \\\n$/, '');
+        }
+        window.smNbPreviewPaymentRequest = smNbPreviewPaymentRequest;
+
+        function smNbSendPaymentRequest() {
+            var data = smNbBuildPaymentPayload();
+            document.getElementById('smNbPayReqRes').style.display = 'block';
+            document.getElementById('smNbPayRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbPayStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbPayStatusBadge').textContent = 'Sending...';
+
+            var payload = { endpoint: 'payment', method: 'POST', params: data };
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                smNbDisplayPaymentResponse(result, data);
+            })
+            .catch(function(err) {
+                document.getElementById('smNbPayStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbPayStatusBadge').textContent = 'Error';
+                document.getElementById('smNbPayResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendPaymentRequest = smNbSendPaymentRequest;
+
+        function smNbDisplayPaymentResponse(result, data) {
+            var badge = document.getElementById('smNbPayStatusBadge');
+            var respView = document.getElementById('smNbPayResponseView');
+            var guide = document.getElementById('smNbPayResponseGuide');
+            var explain = document.getElementById('smNbPayResponseExplain');
+            var bankBtn = document.getElementById('smNbOpenBankBtn');
+
+            if (result.http_code === 200) {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'HTTP 200 OK';
+            } else {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + (result.http_code || 'Error');
+            }
+
+            respView.textContent = JSON.stringify(result.response || result, null, 2);
+
+            var resp = result.response;
+            
+            // Check for acsTemplate in different possible locations
+            var acsTemplate = null;
+            if (resp) {
+                if (resp.acsTemplate) {
+                    acsTemplate = resp.acsTemplate;
+                } else if (resp.result && resp.result.acsTemplate) {
+                    acsTemplate = resp.result.acsTemplate;
+                } else if (resp.data && resp.data.acsTemplate) {
+                    acsTemplate = resp.data.acsTemplate;
+                }
+            }
+
+            // Get metadata for display
+            var meta = resp && resp.metaData ? resp.metaData : null;
+            var metaHtml = '';
+            if (meta) {
+                metaHtml = '<div style="margin-top:0.75rem; padding:0.75rem; background:rgba(0,0,0,0.03); border-radius:6px; font-size:0.82rem;">' +
+                    '<table style="width:100%;color:#1a202c;">' +
+                    '<tr><td style="padding:2px 8px 2px 0;color:#718096;">txnId:</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">' + (meta.txnId || '-') + '</code></td></tr>' +
+                    '<tr><td style="padding:2px 8px 2px 0;color:#718096;">txnStatus:</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">' + (meta.txnStatus || '-') + '</code></td></tr>' +
+                    '<tr><td style="padding:2px 8px 2px 0;color:#718096;">unmappedStatus:</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">' + (meta.unmappedStatus || '-') + '</code></td></tr>' +
+                    '<tr><td style="padding:2px 8px 2px 0;color:#718096;">referenceId:</td><td style="word-break:break-all;"><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;font-size:0.75rem;">' + (meta.referenceId || '-') + '</code></td></tr>' +
+                    '</table></div>';
+            }
+
+            if (acsTemplate) {
+                _smNbAcsTemplate = acsTemplate;
+                guide.style.display = 'block';
+                explain.innerHTML = 
+                    '<div style="border-left:4px solid #4caf50; padding:1rem; background:#f0fff4; border-radius:0 8px 8px 0; margin-bottom:0.75rem;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#276749;">&#10003; NB Payment Initiated — acsTemplate Received</p>' +
+                    '<p style="margin:0; color:#2d3748;">Click the button below to open the bank page. Complete authentication to process payment.</p>' +
+                    metaHtml + '</div>' +
+                    
+                    // acsTemplate Decode Section - Simplified
+                    '<div style="border-left:4px solid #10846D; padding:1rem; background:#f0fff4; border-radius:0 8px 8px 0; margin-bottom:0.75rem;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#10846D;">🔐 ACS Template Decode Guide</p>' +
+                    '<p style="margin:0 0 0.75rem; color:#2d3748;">The <code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">acsTemplate</code> is a <strong>Base64-encoded HTML string</strong>. Decode it to get the bank redirect form.</p>' +
+                    
+                    '<details open style="margin-top:0.75rem;">' +
+                    '<summary style="cursor:pointer; color:#10846D; font-weight:600;">📖 How to Decode Base64 acsTemplate</summary>' +
+                    '<div style="margin-top:0.75rem; padding:0.75rem; background:#1a1a2e; border-radius:6px; font-family:monospace; font-size:0.8rem; color:#a5d6a7; overflow-x:auto;">' +
+                    '<pre style="margin:0; white-space:pre-wrap; color:#90cdf4;">// JavaScript - Decode Base64 acsTemplate</pre>' +
+                    '<pre style="margin:0.5rem 0; white-space:pre-wrap;">const acsTemplate = response.result.acsTemplate;\nconst decodedHtml = atob(acsTemplate);\n\n// Open decoded HTML in popup window\nconst bankWindow = window.open(\'\', \'BankAuth\', \'width=800,height=600\');\nbankWindow.document.write(decodedHtml);\nbankWindow.document.close();</pre>' +
+                    '</div>' +
+                    
+                    '<p style="margin:0.75rem 0 0.5rem; font-weight:600; color:#374151; font-size:0.9rem;">Decoded HTML Structure:</p>' +
+                    '<div style="padding:0.75rem; background:#1a1a2e; border-radius:6px; font-family:monospace; font-size:0.75rem; color:#a5d6a7; overflow-x:auto;">' +
+                    '<pre style="margin:0; white-space:pre-wrap;">&lt;html&gt;&lt;body&gt;\n&lt;form name="payment_post" action="https://pgsim01.payu.in/initiate" method="post"&gt;\n  &lt;input type="hidden" name="merchantName" value="PAYU"&gt;\n  &lt;input type="hidden" name="txnAmount" value="100.00"&gt;\n  &lt;input type="hidden" name="txnRefId" value="NB_xxx"&gt;\n  &lt;input type="hidden" name="ibibo_code" value="TESTPGNB"&gt;\n  &lt;!-- ... more hidden fields ... --&gt;\n&lt;/form&gt;\n&lt;script&gt;\n  window.onload = function() {\n    document.forms[\'payment_post\'].submit();  // Auto-submits to bank\n  }\n&lt;/script&gt;\n&lt;/body&gt;&lt;/html&gt;</pre>' +
+                    '</div>' +
+                    '</details></div>' +
+                    
+                    '<div style="border-left:4px solid #ed8936; padding:1rem; background:#fffaf0; border-radius:0 8px 8px 0; margin-bottom:0.75rem;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#c05621;">&#9888; Test Bank Note</p>' +
+                    '<p style="margin:0; color:#2d3748;">The <strong>test bank simulator auto-completes</strong> the payment instantly. You may see "Transaction is already in terminal state" — <strong>this is normal</strong>.</p></div>' +
+                    
+                    '<div style="border-left:4px solid #3182ce; padding:1rem; background:#ebf8ff; border-radius:0 8px 8px 0;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#2b6cb0;">&#128073; After Bank Page</p>' +
+                    '<ol style="margin:0; padding-left:1.25rem; color:#2d3748; line-height:1.8;">' +
+                    '<li>The test bank will auto-process the payment</li>' +
+                    '<li>PayU will POST the result to your SURL/FURL (callback)</li>' +
+                    '<li>Use <strong>"Verify Payment"</strong> to confirm the transaction status</li>' +
+                    '</ol></div>';
+                bankBtn.style.display = 'inline-block';
+            } else if (resp && resp.status === 0 && resp.error) {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>&#10007; Error:</strong> ' + resp.error + '</p>';
+                bankBtn.style.display = 'none';
+            } else if (resp && resp.status === -1 && resp.msg) {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>&#10007; Error:</strong> ' + resp.msg + '</p>';
+                bankBtn.style.display = 'none';
+            } else if (resp && resp.message) {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>Response:</strong> ' + resp.message + '</p>';
+                bankBtn.style.display = 'none';
+            } else {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>Note:</strong> No acsTemplate in response. Check the response JSON for details.</p>';
+                bankBtn.style.display = 'none';
+            }
+            
+            // Log for debugging
+            console.log('NB Payment Response:', resp);
+            console.log('acsTemplate found:', acsTemplate ? 'Yes' : 'No');
+            
+            // Auto-fill transaction ID in Verify form
+            if (data && data.txnid) {
+                var verifyTxnField = document.getElementById('sm_nb_verify_txnid');
+                if (verifyTxnField) {
+                    verifyTxnField.value = data.txnid;
+                    console.log('Auto-filled verify txnid:', data.txnid);
+                }
+            }
+        }
+
+        var _smNbBankPageOpened = false;
+        function smNbOpenBankPage() {
+            if (_smNbBankPageOpened) {
+                alert('Bank page already opened. Please complete the payment in the bank window or start a new transaction.');
+                return;
+            }
+            if (!_smNbAcsTemplate) return alert('No acsTemplate available');
+            
+            _smNbBankPageOpened = true;
+            var html = atob(_smNbAcsTemplate);
+            
+            // Use blob URL approach for better compatibility with PayU's security
+            var blob = new Blob([html], { type: 'text/html' });
+            var blobUrl = URL.createObjectURL(blob);
+            var win = window.open(blobUrl, '_blank');
+            
+            // Revoke blob URL after a short delay to free memory
+            setTimeout(function() {
+                URL.revokeObjectURL(blobUrl);
+            }, 5000);
+            
+            _smNbAcsTemplate = ''; // Clear to prevent reuse
+
+            var bankBtn = document.getElementById('smNbOpenBankBtn');
+            bankBtn.disabled = true;
+            bankBtn.textContent = '\u2705 Bank Page Opened';
+            bankBtn.style.opacity = '0.6';
+
+            var postDiv = document.getElementById('smNbPostBank');
+            if (!postDiv) {
+                postDiv = document.createElement('div');
+                postDiv.id = 'smNbPostBank';
+                postDiv.style.cssText = 'margin-top:1rem; padding:1rem; border-radius:8px; background:#f0fff4; border:1px solid #9ae6b4;';
+                postDiv.innerHTML =
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#276749;">&#10003; Bank page opened in new tab</p>' +
+                    '<p style="margin:0 0 0.75rem; color:#2d3748; font-size:0.88rem;">Complete the payment in the bank simulator.</p>' +
+                    '<div style="background:#fffbeb; border:1px solid #fbbf24; padding:0.5rem 0.75rem; border-radius:6px; margin-bottom:0.75rem; font-size:0.85rem;">' +
+                    '<strong style="color:#92400e;">&#9888; PayU Test Environment Note:</strong><br>' +
+                    '<span style="color:#78350f;">• If you see "Pardon, Some Problem Occurred" → <strong>Refresh the page once</strong><br>' +
+                    '• If you see "Transaction is already in terminal state" → Payment was <strong>successful</strong></span></div>' +
+                    '<button class="button sm-btn-primary" onclick="smNbNavTo(document.querySelector(\'[data-section=sm-nb-verify]\'),\'sm-nb-verify\')" style="font-size:0.88rem;">Verify This Payment &rarr;</button>';
+                bankBtn.parentNode.insertBefore(postDiv, bankBtn.nextSibling);
+            }
+        }
+        window.smNbOpenBankPage = smNbOpenBankPage;
+
+        // Verify Payment
+        function smNbPreviewVerifyRequest() {
+            var key = document.getElementById('sm_nb_verify_key').value;
+            var salt = document.getElementById('sm_nb_verify_salt').value;
+            var txnid = document.getElementById('sm_nb_verify_txnid').value;
+
+            if (!txnid || txnid.trim() === '') {
+                alert('Please enter the Transaction ID (txnid) to verify.');
+                document.getElementById('sm_nb_verify_txnid').focus();
+                return;
+            }
+
+            var hashString = key + '|verify_payment|' + txnid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'verify_payment', var1: txnid, hash: hash };
+
+            document.getElementById('smNbVerifyReqRes').style.display = 'block';
+            document.getElementById('smNbVerifyRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbVerifyResponseView').textContent = '// Response will appear here';
+            document.getElementById('smNbVerifyStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbVerifyStatusBadge').textContent = 'Pending';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice?form=2' \\\n  -d 'key=" + key + "' \\\n  -d 'command=verify_payment' \\\n  -d 'var1=" + txnid + "' \\\n  -d 'hash=" + hash + "'";
+            document.getElementById('smNbVerifyCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewVerifyRequest = smNbPreviewVerifyRequest;
+
+        function smNbSendVerifyRequest() {
+            var key = document.getElementById('sm_nb_verify_key').value;
+            var salt = document.getElementById('sm_nb_verify_salt').value;
+            var txnid = document.getElementById('sm_nb_verify_txnid').value;
+
+            if (!txnid || txnid.trim() === '') {
+                alert('Please enter the Transaction ID (txnid) to verify.\n\nYou can find this in the payment initiation response or your callback URL.');
+                document.getElementById('sm_nb_verify_txnid').focus();
+                return;
+            }
+
+            var hashString = key + '|verify_payment|' + txnid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'verify_payment', var1: txnid, hash: hash };
+            var payload = { endpoint: 'postservice', method: 'POST', params: data };
+
+            document.getElementById('smNbVerifyReqRes').style.display = 'block';
+            document.getElementById('smNbVerifyRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbVerifyStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbVerifyStatusBadge').textContent = 'Sending...';
+
+            // Show curl command
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=verify_payment' \\\n" +
+                "  -d 'var1=" + txnid + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbVerifyCurlView').textContent = curlCmd;
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var badge = document.getElementById('smNbVerifyStatusBadge');
+                var response = result.response || result;
+                
+                // Extract transaction status from response (handle multiple formats)
+                var txnStatus = '';
+                var txnData = null;
+                
+                // Format 1: transaction_details[txnid]
+                if (response && response.transaction_details && response.transaction_details[txnid]) {
+                    txnData = response.transaction_details[txnid];
+                    txnStatus = txnData.status || '';
+                }
+                // Format 2: Directly in response (keyed by txnid)
+                else if (response && response[txnid]) {
+                    txnData = response[txnid];
+                    txnStatus = txnData.status || '';
+                }
+                // Format 3: Direct response object with status field
+                else if (response && response.status && typeof response.status === 'string') {
+                    txnStatus = response.status;
+                    txnData = response;
+                }
+                
+                if (result.http_code === 200 && txnStatus) {
+                    if (txnStatus === 'success') {
+                        badge.className = 'sm-status-badge success';
+                        badge.textContent = 'Status: SUCCESS ✓';
+                    } else if (txnStatus === 'failure' || txnStatus === 'failed') {
+                        badge.className = 'sm-status-badge error';
+                        badge.textContent = 'Status: FAILED ✗';
+                    } else if (txnStatus === 'pending') {
+                        badge.className = 'sm-status-badge pending';
+                        badge.textContent = 'Status: PENDING';
+                    } else {
+                        badge.className = 'sm-status-badge success';
+                        badge.textContent = 'Status: ' + txnStatus.toUpperCase();
+                    }
+                } else if (result.http_code === 200) {
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'HTTP 200 OK';
+                } else {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'HTTP ' + (result.http_code || 'Error');
+                }
+                document.getElementById('smNbVerifyResponseView').textContent = JSON.stringify(response, null, 2);
+            })
+            .catch(function(err) {
+                document.getElementById('smNbVerifyStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbVerifyStatusBadge').textContent = 'Error';
+                document.getElementById('smNbVerifyResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendVerifyRequest = smNbSendVerifyRequest;
+
+        // ============================================
+        // NET BANKING REFUND FUNCTIONS
+        // ============================================
+
+        function smNbFillSampleRefund() {
+            document.getElementById('sm_nb_refund_mihpayid').value = '403993715537135556';
+            document.getElementById('sm_nb_refund_tokenid').value = 'REFUND_' + Date.now();
+            document.getElementById('sm_nb_refund_amount').value = '100.00';
+        }
+        window.smNbFillSampleRefund = smNbFillSampleRefund;
+
+        function smNbPreviewRefundRequest() {
+            var key = document.getElementById('sm_nb_refund_key').value;
+            var salt = document.getElementById('sm_nb_refund_salt').value;
+            var mihpayid = document.getElementById('sm_nb_refund_mihpayid').value;
+            var tokenId = document.getElementById('sm_nb_refund_tokenid').value;
+            var amount = document.getElementById('sm_nb_refund_amount').value;
+
+            if (!mihpayid) { alert('Please enter the PayU Transaction ID (mihpayid)'); return; }
+            if (!tokenId) { alert('Please enter a unique Refund Token ID'); return; }
+            if (!amount) { alert('Please enter the refund amount'); return; }
+
+            var hashString = key + '|cancel_refund_transaction|' + mihpayid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { 
+                key: key, 
+                command: 'cancel_refund_transaction', 
+                var1: mihpayid, 
+                var2: tokenId, 
+                var3: amount, 
+                hash: hash 
+            };
+
+            document.getElementById('smNbRefundReqRes').style.display = 'block';
+            document.getElementById('smNbRefundRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbRefundResponseView').textContent = '// Response will appear here';
+            document.getElementById('smNbRefundStatusBadge').className = 'sm-status-badge';
+            document.getElementById('smNbRefundStatusBadge').textContent = '';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=cancel_refund_transaction' \\\n" +
+                "  -d 'var1=" + mihpayid + "' \\\n" +
+                "  -d 'var2=" + tokenId + "' \\\n" +
+                "  -d 'var3=" + amount + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbRefundCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewRefundRequest = smNbPreviewRefundRequest;
+
+        function smNbSendRefundRequest() {
+            var key = document.getElementById('sm_nb_refund_key').value;
+            var salt = document.getElementById('sm_nb_refund_salt').value;
+            var mihpayid = document.getElementById('sm_nb_refund_mihpayid').value;
+            var tokenId = document.getElementById('sm_nb_refund_tokenid').value;
+            var amount = document.getElementById('sm_nb_refund_amount').value;
+
+            if (!mihpayid) { alert('Please enter the PayU Transaction ID (mihpayid)'); return; }
+            if (!tokenId) { alert('Please enter a unique Refund Token ID'); return; }
+            if (!amount) { alert('Please enter the refund amount'); return; }
+
+            var hashString = key + '|cancel_refund_transaction|' + mihpayid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { 
+                key: key, 
+                command: 'cancel_refund_transaction', 
+                var1: mihpayid, 
+                var2: tokenId, 
+                var3: amount, 
+                hash: hash 
+            };
+            var payload = { endpoint: 'postservice', method: 'POST', params: data };
+
+            document.getElementById('smNbRefundReqRes').style.display = 'block';
+            document.getElementById('smNbRefundRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbRefundStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbRefundStatusBadge').textContent = 'Sending...';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=cancel_refund_transaction' \\\n" +
+                "  -d 'var1=" + mihpayid + "' \\\n" +
+                "  -d 'var2=" + tokenId + "' \\\n" +
+                "  -d 'var3=" + amount + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbRefundCurlView').textContent = curlCmd;
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var badge = document.getElementById('smNbRefundStatusBadge');
+                var response = result.response || result;
+                
+                if (response.status === 1 || response.status === '1') {
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'Refund Initiated';
+                    
+                    if (response.request_id) {
+                        document.getElementById('sm_nb_refund_status_reqid').value = response.request_id;
+                    }
+                } else {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'Failed';
+                }
+                document.getElementById('smNbRefundResponseView').textContent = JSON.stringify(response, null, 2);
+            })
+            .catch(function(err) {
+                document.getElementById('smNbRefundStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbRefundStatusBadge').textContent = 'Error';
+                document.getElementById('smNbRefundResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendRefundRequest = smNbSendRefundRequest;
+
+        function smNbPreviewRefundStatusRequest() {
+            var key = document.getElementById('sm_nb_refund_status_key').value;
+            var salt = document.getElementById('sm_nb_refund_status_salt').value;
+            var requestId = document.getElementById('sm_nb_refund_status_reqid').value;
+
+            if (!requestId) { alert('Please enter the Request ID from the refund response'); return; }
+
+            var hashString = key + '|check_action_status|' + requestId + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'check_action_status', var1: requestId, hash: hash };
+
+            document.getElementById('smNbRefundStatusReqRes').style.display = 'block';
+            document.getElementById('smNbRefundStatusRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbRefundStatusResponseView').textContent = '// Response will appear here';
+            document.getElementById('smNbRefundStatusStatusBadge').className = 'sm-status-badge';
+            document.getElementById('smNbRefundStatusStatusBadge').textContent = '';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=check_action_status' \\\n" +
+                "  -d 'var1=" + requestId + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbRefundStatusCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewRefundStatusRequest = smNbPreviewRefundStatusRequest;
+
+        function smNbSendRefundStatusRequest() {
+            var key = document.getElementById('sm_nb_refund_status_key').value;
+            var salt = document.getElementById('sm_nb_refund_status_salt').value;
+            var requestId = document.getElementById('sm_nb_refund_status_reqid').value;
+
+            if (!requestId) { alert('Please enter the Request ID from the refund response'); return; }
+
+            var hashString = key + '|check_action_status|' + requestId + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'check_action_status', var1: requestId, hash: hash };
+            var payload = { endpoint: 'postservice', method: 'POST', params: data };
+
+            document.getElementById('smNbRefundStatusReqRes').style.display = 'block';
+            document.getElementById('smNbRefundStatusRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbRefundStatusStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbRefundStatusStatusBadge').textContent = 'Checking...';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=check_action_status' \\\n" +
+                "  -d 'var1=" + requestId + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbRefundStatusCurlView').textContent = curlCmd;
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var badge = document.getElementById('smNbRefundStatusStatusBadge');
+                var response = result.response || result;
+                
+                if (result.http_code === 200) {
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'HTTP 200 OK';
+                } else {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'HTTP ' + (result.http_code || 'Error');
+                }
+                document.getElementById('smNbRefundStatusResponseView').textContent = JSON.stringify(response, null, 2);
+            })
+            .catch(function(err) {
+                document.getElementById('smNbRefundStatusStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbRefundStatusStatusBadge').textContent = 'Error';
+                document.getElementById('smNbRefundStatusResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendRefundStatusRequest = smNbSendRefundStatusRequest;
+
+        // ============================================
+        // NB SPLIT REFUND FUNCTIONS
+        // ============================================
+
+        function smNbFillSampleSplitRefund() {
+            document.getElementById('sm_nb_split_refund_mihpayid').value = '403993715537135556';
+            document.getElementById('sm_nb_split_refund_tokenid').value = 'SPLIT_REFUND_' + Date.now();
+            document.getElementById('sm_nb_split_refund_amount').value = '500.00';
+            document.getElementById('sm_nb_split_refund_details').value = JSON.stringify({
+                "splitInfo": [
+                    { "merchantId": "SPLIT_MERCHANT_1", "amount": "300.00" },
+                    { "merchantId": "SPLIT_MERCHANT_2", "amount": "200.00" }
+                ]
+            }, null, 2);
+        }
+        window.smNbFillSampleSplitRefund = smNbFillSampleSplitRefund;
+
+        function smNbPreviewSplitRefundRequest() {
+            var key = document.getElementById('sm_nb_split_refund_key').value;
+            var salt = document.getElementById('sm_nb_split_refund_salt').value;
+            var mihpayid = document.getElementById('sm_nb_split_refund_mihpayid').value;
+            var tokenId = document.getElementById('sm_nb_split_refund_tokenid').value;
+            var amount = document.getElementById('sm_nb_split_refund_amount').value;
+            var splitDetails = document.getElementById('sm_nb_split_refund_details').value;
+
+            var hashString = key + '|cancel_refund_transaction|' + mihpayid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = {
+                key: key,
+                command: 'cancel_refund_transaction',
+                var1: mihpayid,
+                var2: tokenId,
+                var3: amount,
+                var5: splitDetails,
+                hash: hash
+            };
+
+            document.getElementById('smNbSplitRefundReqRes').style.display = 'block';
+            document.getElementById('smNbSplitRefundRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbSplitRefundResponseView').textContent = '// Response will appear here after sending';
+            document.getElementById('smNbSplitRefundStatusBadge').className = 'sm-status-badge';
+            document.getElementById('smNbSplitRefundStatusBadge').textContent = '';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=cancel_refund_transaction' \\\n" +
+                "  -d 'var1=" + mihpayid + "' \\\n" +
+                "  -d 'var2=" + tokenId + "' \\\n" +
+                "  -d 'var3=" + amount + "' \\\n" +
+                "  -d 'var5=" + encodeURIComponent(splitDetails) + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbSplitRefundCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewSplitRefundRequest = smNbPreviewSplitRefundRequest;
+
+        function smNbSendSplitRefundRequest() {
+            var key = document.getElementById('sm_nb_split_refund_key').value;
+            var salt = document.getElementById('sm_nb_split_refund_salt').value;
+            var mihpayid = document.getElementById('sm_nb_split_refund_mihpayid').value;
+            var tokenId = document.getElementById('sm_nb_split_refund_tokenid').value;
+            var amount = document.getElementById('sm_nb_split_refund_amount').value;
+            var splitDetails = document.getElementById('sm_nb_split_refund_details').value;
+
+            if (!mihpayid) {
+                alert('Please enter the mihpayid from the original split payment');
+                return;
+            }
+
+            var hashString = key + '|cancel_refund_transaction|' + mihpayid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var payload = {
+                url: 'https://test.payu.in/merchant/postservice.php?form=2',
+                method: 'POST',
+                data: {
+                    key: key,
+                    command: 'cancel_refund_transaction',
+                    var1: mihpayid,
+                    var2: tokenId,
+                    var3: amount,
+                    var5: splitDetails,
+                    hash: hash
+                }
+            };
+
+            document.getElementById('smNbSplitRefundReqRes').style.display = 'block';
+            document.getElementById('smNbSplitRefundRequestView').textContent = JSON.stringify(payload.data, null, 2);
+            document.getElementById('smNbSplitRefundStatusBadge').className = 'sm-status-badge';
+            document.getElementById('smNbSplitRefundStatusBadge').textContent = 'Sending...';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=cancel_refund_transaction' \\\n" +
+                "  -d 'var1=" + mihpayid + "' \\\n" +
+                "  -d 'var2=" + tokenId + "' \\\n" +
+                "  -d 'var3=" + amount + "' \\\n" +
+                "  -d 'var5=" + encodeURIComponent(splitDetails) + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbSplitRefundCurlView').textContent = curlCmd;
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var badge = document.getElementById('smNbSplitRefundStatusBadge');
+                var response = result.response || result;
+                
+                if (result.http_code === 200 && (response.status === 1 || response.status === '1')) {
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'Split Refund Queued';
+                } else {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'Failed';
+                }
+                document.getElementById('smNbSplitRefundResponseView').textContent = JSON.stringify(response, null, 2);
+            })
+            .catch(function(err) {
+                document.getElementById('smNbSplitRefundStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbSplitRefundStatusBadge').textContent = 'Error';
+                document.getElementById('smNbSplitRefundResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendSplitRefundRequest = smNbSendSplitRefundRequest;
+
+        // ============================================
+        // NB MANDATE REGISTRATION FUNCTIONS
+        // ============================================
+
+        var _smNbMandateRegAcsTemplate = '';
+        var _smNbMandateRegSimMode = false;
+        var _smNbMandateRegSimMihpayid = '';
+        var _smNbMandateRegTxnid = ''; // Store the mandate txnid for use in Execute Debit
+
+        function smNbToggleMandateRegSim() {
+            _smNbMandateRegSimMode = false;
+        }
+        window.smNbToggleMandateRegSim = smNbToggleMandateRegSim;
+
+        function smNbFillSampleMandateReg() {
+            var txnid = 'MANDATE_' + Date.now();
+            _smNbMandateRegTxnid = txnid; // Store for use in Execute Debit
+            document.getElementById('sm_nb_mandate_reg_txnid').value = txnid;
+            document.getElementById('sm_nb_mandate_reg_amount').value = '1.00';
+            document.getElementById('sm_nb_mandate_reg_productinfo').value = 'SIP Investment';
+            document.getElementById('sm_nb_mandate_reg_firstname').value = 'Test';
+            document.getElementById('sm_nb_mandate_reg_lastname').value = 'User';
+            document.getElementById('sm_nb_mandate_reg_email').value = 'test@example.com';
+            document.getElementById('sm_nb_mandate_reg_phone').value = '9876543210';
+            
+            // Beneficiary details
+            document.getElementById('sm_nb_mandate_reg_benef_name').value = 'Test User';
+            document.getElementById('sm_nb_mandate_reg_benef_accno').value = '1234567890123456';
+            document.getElementById('sm_nb_mandate_reg_benef_acctype').value = 'SAVINGS';
+            document.getElementById('sm_nb_mandate_reg_benef_ifsc').value = 'ICIC0001234';
+            
+            // Billing details
+            document.getElementById('sm_nb_mandate_reg_billingamt').value = '1000.00';
+            document.getElementById('sm_nb_mandate_reg_interval').value = '1';
+            
+            document.getElementById('sm_nb_mandate_reg_surl').value = 'https://payu.in/integrationlab/callback.php';
+            document.getElementById('sm_nb_mandate_reg_furl').value = 'https://payu.in/integrationlab/callback.php';
+            
+            // Set start date to tomorrow (current date + 1) for eNACH
+            var today = new Date();
+            var tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            var startDate = tomorrow.toISOString().split('T')[0];
+            var endDateObj = new Date(tomorrow);
+            endDateObj.setFullYear(endDateObj.getFullYear() + 1);
+            var endDate = endDateObj.toISOString().split('T')[0];
+            document.getElementById('sm_nb_mandate_reg_startdate').value = startDate;
+            document.getElementById('sm_nb_mandate_reg_enddate').value = endDate;
+        }
+        window.smNbFillSampleMandateReg = smNbFillSampleMandateReg;
+
+        function smNbBuildMandateRegPayload() {
+            var key = document.getElementById('sm_nb_mandate_reg_key').value;
+            var salt = document.getElementById('sm_nb_mandate_reg_salt').value;
+            var txnid = document.getElementById('sm_nb_mandate_reg_txnid').value;
+            _smNbMandateRegTxnid = txnid; // Store for use in Execute Debit
+            var amount = document.getElementById('sm_nb_mandate_reg_amount').value;
+            var productinfo = document.getElementById('sm_nb_mandate_reg_productinfo').value;
+            var firstname = document.getElementById('sm_nb_mandate_reg_firstname').value;
+            var lastname = document.getElementById('sm_nb_mandate_reg_lastname').value;
+            var email = document.getElementById('sm_nb_mandate_reg_email').value;
+            var phone = document.getElementById('sm_nb_mandate_reg_phone').value;
+            var bankcode = document.getElementById('sm_nb_mandate_reg_bankcode').value;
+            var surl = document.getElementById('sm_nb_mandate_reg_surl').value;
+            var furl = document.getElementById('sm_nb_mandate_reg_furl').value;
+            
+            // Beneficiary details (mandatory for Net Banking eNACH)
+            var benefName = document.getElementById('sm_nb_mandate_reg_benef_name').value;
+            var benefAccNo = document.getElementById('sm_nb_mandate_reg_benef_accno').value;
+            var benefAccType = document.getElementById('sm_nb_mandate_reg_benef_acctype').value;
+            var benefIfsc = document.getElementById('sm_nb_mandate_reg_benef_ifsc').value;
+            
+            // Billing details
+            var billingAmount = document.getElementById('sm_nb_mandate_reg_billingamt').value;
+            var billingCycle = document.getElementById('sm_nb_mandate_reg_cycle').value;
+            var billingInterval = document.getElementById('sm_nb_mandate_reg_interval').value;
+            var startDate = document.getElementById('sm_nb_mandate_reg_startdate').value;
+            var endDate = document.getElementById('sm_nb_mandate_reg_enddate').value;
+
+            var siDetails = JSON.stringify({
+                billingAmount: billingAmount,
+                billingCurrency: 'INR',
+                billingCycle: billingCycle,
+                billingInterval: parseInt(billingInterval) || 1,
+                paymentStartDate: startDate,
+                paymentEndDate: endDate
+            });
+            
+            // Beneficiary detail JSON (mandatory for Net Banking)
+            var beneficiarydetail = JSON.stringify({
+                beneficiaryName: benefName,
+                beneficiaryAccountNumber: benefAccNo,
+                beneficiaryAccountType: benefAccType,
+                beneficiaryIfscCode: benefIfsc
+            });
+
+            // Hash formula for SI: sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||si_details|SALT)
+            // 11 pipes between email and si_details (udf1-5 empty + 5 more empty), then si_details, then salt
+            var hashString = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|||||||||||' + siDetails + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            return {
+                key: key,
+                txnid: txnid,
+                amount: amount,
+                productinfo: productinfo,
+                firstname: firstname,
+                lastname: lastname,
+                email: email,
+                phone: phone,
+                pg: 'ENACH',
+                bankcode: bankcode,
+                surl: surl,
+                furl: furl,
+                si: '1',
+                api_version: '7',
+                si_details: siDetails,
+                beneficiarydetail: beneficiarydetail,
+                hash: hash,
+                txn_s2s_flow: '4'
+            };
+        }
+
+        function smNbPreviewMandateRegRequest() {
+            var data = smNbBuildMandateRegPayload();
+            
+            document.getElementById('smNbMandateRegReqRes').style.display = 'block';
+            document.getElementById('smNbMandateRegRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbMandateRegResponseView').textContent = '// Response will appear here';
+            document.getElementById('smNbMandateRegStatusBadge').className = 'sm-status-badge';
+            document.getElementById('smNbMandateRegStatusBadge').textContent = '';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/_payment' \\\n" +
+                "  -H 'Content-Type: application/x-www-form-urlencoded' \\\n" +
+                "  -d 'key=" + data.key + "' \\\n" +
+                "  -d 'txnid=" + data.txnid + "' \\\n" +
+                "  -d 'amount=" + data.amount + "' \\\n" +
+                "  -d 'productinfo=" + encodeURIComponent(data.productinfo) + "' \\\n" +
+                "  -d 'firstname=" + data.firstname + "' \\\n" +
+                "  -d 'lastname=" + data.lastname + "' \\\n" +
+                "  -d 'email=" + data.email + "' \\\n" +
+                "  -d 'phone=" + data.phone + "' \\\n" +
+                "  -d 'pg=ENACH' \\\n" +
+                "  -d 'bankcode=" + data.bankcode + "' \\\n" +
+                "  -d 'si=1' \\\n" +
+                "  -d 'api_version=7' \\\n" +
+                "  -d 'si_details=" + encodeURIComponent(data.si_details) + "' \\\n" +
+                "  -d 'beneficiarydetail=" + encodeURIComponent(data.beneficiarydetail) + "' \\\n" +
+                "  -d 'txn_s2s_flow=4' \\\n" +
+                "  -d 'surl=" + encodeURIComponent(data.surl) + "' \\\n" +
+                "  -d 'furl=" + encodeURIComponent(data.furl) + "' \\\n" +
+                "  -d 'hash=" + data.hash + "'";
+            document.getElementById('smNbMandateRegCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewMandateRegRequest = smNbPreviewMandateRegRequest;
+
+        function smNbSendMandateRegRequest() {
+            console.log('🏦 smNbSendMandateRegRequest called');
+            
+            var data = smNbBuildMandateRegPayload();
+            console.log('📦 Payload built:', data);
+            
+            document.getElementById('smNbMandateRegReqRes').style.display = 'block';
+            document.getElementById('smNbMandateRegRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbMandateRegStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbMandateRegStatusBadge').textContent = 'Sending...';
+            document.getElementById('smNbMandateRegBankSection').style.display = 'none';
+
+            // Real API mode - no simulation
+            var isSimulationEnabled = false;
+            console.log('🔧 Using real PayU API for eNACH mandate registration');
+            
+            if (isSimulationEnabled) {
+                console.log('✅ Running SIMULATION mode');
+                try {
+                    // Generate simulated response
+                    _smNbMandateRegSimMihpayid = '40399371552' + Math.floor(Math.random() * 10000000);
+                    console.log('📝 Generated mihpayid:', _smNbMandateRegSimMihpayid);
+                    var simRefId = Array.from({length: 64}, function() { return '0123456789abcdef'[Math.floor(Math.random() * 16)]; }).join('');
+                    
+                    // Parse JSON safely
+                    var siDetails = {};
+                    var benefDetails = {};
+                    try { siDetails = JSON.parse(data.si_details); } catch(e) { siDetails = {billingAmount: '1000.00', billingCycle: 'MONTHLY'}; }
+                    try { benefDetails = JSON.parse(data.beneficiarydetail); } catch(e) { benefDetails = {beneficiaryAccountNumber: '0000'}; }
+                    
+                    // Generate request ID for mandate status
+                    var simRequestId = 'REQ_' + Date.now();
+                    
+                    // Build SURL redirect with success parameters (like production)
+                    var successParams = {
+                        mihpayid: _smNbMandateRegSimMihpayid,
+                        status: 'success',
+                        txnid: data.txnid,
+                        amount: data.amount,
+                        productinfo: data.productinfo,
+                        firstname: data.firstname,
+                        lastname: data.lastname || '',
+                        email: data.email,
+                        phone: data.phone,
+                        mode: 'ENACH',
+                        unmappedstatus: 'captured',
+                        bank_ref_num: 'ENACH' + Date.now(),
+                        bankcode: data.bankcode,
+                        PG_TYPE: 'ENACH',
+                        error_Message: 'No Error',
+                        si_status: 'SUCCESS',
+                        requestId: simRequestId
+                    };
+                    
+                    var surlWithParams = data.surl + '?' + Object.keys(successParams).map(function(k) {
+                        return encodeURIComponent(k) + '=' + encodeURIComponent(successParams[k]);
+                    }).join('&');
+                    
+                    var furlWithParams = data.furl + '?status=failure&txnid=' + encodeURIComponent(data.txnid) + '&error_Message=User%20cancelled';
+                    
+                    // Build hidden form fields for POST (like PayU production)
+                    var successFormFields = Object.keys(successParams).map(function(k) {
+                        return '<input type="hidden" name="' + k + '" value="' + String(successParams[k]).replace(/"/g, '&quot;') + '">';
+                    }).join('');
+                    
+                    var failureParams = {
+                        status: 'failure',
+                        txnid: data.txnid,
+                        error_Message: 'User cancelled',
+                        mihpayid: _smNbMandateRegSimMihpayid
+                    };
+                    var failureFormFields = Object.keys(failureParams).map(function(k) {
+                        return '<input type="hidden" name="' + k + '" value="' + String(failureParams[k]).replace(/"/g, '&quot;') + '">';
+                    }).join('');
+                    
+                    // Create mock acsTemplate (bank redirect page) - Using POST forms like production
+                    var baseUrl = window.location.origin + window.location.pathname;
+                    var mockBankPage = [
+                        '<!DOCTYPE html>',
+                        '<html><head><title>eNACH Bank Authorization - Simulation</title>',
+                        '<meta charset="UTF-8">',
+                        '<style>',
+                        'body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);}',
+                        '.container{background:white;padding:40px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2);text-align:center;max-width:500px;}',
+                        '.bank-logo{font-size:64px;margin-bottom:20px;}',
+                        'h2{color:#1a202c;margin-bottom:10px;}',
+                        '.subtitle{color:#718096;margin-bottom:25px;}',
+                        '.btn{color:white;border:none;padding:14px 35px;border-radius:8px;font-size:16px;cursor:pointer;margin:10px;font-weight:600;transition:all 0.2s;}',
+                        '.btn-success{background:linear-gradient(135deg, #38a169 0%, #2f855a 100%);}.btn-success:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(56,161,105,0.4);}',
+                        '.btn-danger{background:linear-gradient(135deg, #e53e3e 0%, #c53030 100%);}.btn-danger:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(229,62,62,0.4);}',
+                        '.info{background:#f7fafc;padding:20px;border-radius:12px;margin:25px 0;text-align:left;font-size:14px;border:1px solid #e2e8f0;}',
+                        '.info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;}',
+                        '.info-row:last-child{border-bottom:none;}',
+                        '.info-label{color:#718096;font-weight:500;}',
+                        '.info-value{color:#1a202c;font-weight:600;}',
+                        '.note{background:#f0fff4;padding:12px;border-radius:8px;margin-top:20px;font-size:13px;color:#276749;border-left:4px solid #38a169;}',
+                        '.processing{display:none;margin-top:20px;}',
+                        '.spinner{width:40px;height:40px;border:4px solid #e2e8f0;border-top:4px solid #667eea;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto;}',
+                        '@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}',
+                        '</style></head><body>',
+                        '<div class="container">',
+                        '<div class="bank-logo">🏦</div>',
+                        '<h2>eNACH Mandate Authorization</h2>',
+                        '<p class="subtitle">Simulation Mode - PayU Integration Lab</p>',
+                        '<div class="info">',
+                        '<div class="info-row"><span class="info-label">Transaction ID</span><span class="info-value">' + data.txnid + '</span></div>',
+                        '<div class="info-row"><span class="info-label">Billing Amount</span><span class="info-value">₹' + (siDetails.billingAmount || '1000.00') + '</span></div>',
+                        '<div class="info-row"><span class="info-label">Billing Cycle</span><span class="info-value">' + (siDetails.billingCycle || 'MONTHLY') + '</span></div>',
+                        '<div class="info-row"><span class="info-label">Account</span><span class="info-value">****' + (benefDetails.beneficiaryAccountNumber || '0000').slice(-4) + '</span></div>',
+                        '<div class="info-row"><span class="info-label">Request ID</span><span class="info-value" style="font-size:12px;">' + simRequestId + '</span></div>',
+                        '</div>',
+                        '<div id="buttons">',
+                        '<p style="color:#4a5568;">Click to simulate bank authorization:</p>',
+                        '<button class="btn btn-success" onclick="authorizeMandate()">✓ Authorize Mandate</button>',
+                        '<button class="btn btn-danger" onclick="rejectMandate()">✗ Reject</button>',
+                        '</div>',
+                        '<div class="processing" id="processing">',
+                        '<div class="spinner"></div>',
+                        '<p style="color:#667eea;margin-top:15px;">Processing authorization...</p>',
+                        '</div>',
+                        '<div class="note">✓ This will redirect to Handle Response page in Integration Lab</div>',
+                        '</div>',
+                        '<script>',
+                        'var successResponse = ' + JSON.stringify(successParams) + ';',
+                        'var failureResponse = ' + JSON.stringify(failureParams) + ';',
+                        'var baseUrl = "' + baseUrl + '";',
+                        'function showProcessing() {',
+                        '  document.getElementById("buttons").style.display = "none";',
+                        '  document.getElementById("processing").style.display = "block";',
+                        '}',
+                        'function authorizeMandate() {',
+                        '  showProcessing();',
+                        '  localStorage.setItem("nbMandateResponse", JSON.stringify(successResponse));',
+                        '  localStorage.setItem("nbMandateStatus", "success");',
+                        '  setTimeout(function() {',
+                        '    if (window.opener && !window.opener.closed) {',
+                        '      try {',
+                        '        window.opener.postMessage({type:"mandateComplete",status:"success",data:successResponse}, "*");',
+                        '        window.close();',
+                        '      } catch(e) {',
+                        '        window.location.href = baseUrl + "?mandateSuccess=1&txnid=" + successResponse.txnid;',
+                        '      }',
+                        '    } else {',
+                        '      window.location.href = baseUrl + "?mandateSuccess=1&txnid=" + successResponse.txnid;',
+                        '    }',
+                        '  }, 800);',
+                        '}',
+                        'function rejectMandate() {',
+                        '  showProcessing();',
+                        '  localStorage.setItem("nbMandateResponse", JSON.stringify(failureResponse));',
+                        '  localStorage.setItem("nbMandateStatus", "failure");',
+                        '  setTimeout(function() {',
+                        '    if (window.opener && !window.opener.closed) {',
+                        '      try {',
+                        '        window.opener.postMessage({type:"mandateComplete",status:"failure",data:failureResponse}, "*");',
+                        '        window.close();',
+                        '      } catch(e) {',
+                        '        window.location.href = baseUrl + "?mandateFailure=1&txnid=" + failureResponse.txnid;',
+                        '      }',
+                        '    } else {',
+                        '      window.location.href = baseUrl + "?mandateFailure=1&txnid=" + failureResponse.txnid;',
+                        '    }',
+                        '  }, 800);',
+                        '}',
+                        '</script>',
+                        '</body></html>'
+                    ].join('');
+                    
+                    var simResponse = {
+                        metaData: {
+                            message: null,
+                            referenceId: simRefId,
+                            statusCode: null,
+                            txnId: data.txnid,
+                            txnStatus: 'pending',
+                            unmappedStatus: 'pending'
+                        },
+                        result: {
+                            acsTemplate: btoa(unescape(encodeURIComponent(mockBankPage))),
+                            mihpayid: _smNbMandateRegSimMihpayid,
+                            requestId: simRequestId
+                        },
+                        _simulation: true,
+                        _note: 'This is a simulated response. PayU test environment does not have an eNACH simulator.'
+                    };
+
+                    // Store request ID for later use
+                    window._smNbMandateRegSimRequestId = simRequestId;
+
+                    setTimeout(function() {
+                        console.log('⏰ Simulation timeout executing...');
+                        var badge = document.getElementById('smNbMandateRegStatusBadge');
+                        console.log('📋 Badge element:', badge);
+                        document.getElementById('smNbMandateRegResponseView').textContent = JSON.stringify(simResponse, null, 2);
+                        console.log('✅ Response set in view');
+                        
+                        badge.className = 'sm-status-badge success';
+                        badge.textContent = 'Bank Redirect Ready (Simulated)';
+                        _smNbMandateRegAcsTemplate = simResponse.result.acsTemplate;
+                        document.getElementById('smNbMandateRegBankSection').style.display = 'block';
+                        
+                        // Auto-fill verify form
+                        var verifyTxnField = document.getElementById('sm_nb_mandate_verify_txnid');
+                        if (verifyTxnField) verifyTxnField.value = data.txnid;
+                        
+                        // Auto-fill mandate status with simulated mihpayid and request ID
+                        var statusField = document.getElementById('sm_nb_mandate_status_authpayuid');
+                        if (statusField) statusField.value = _smNbMandateRegSimMihpayid;
+                        
+                        var requestIdField = document.getElementById('sm_nb_mandate_status_requestid');
+                        if (requestIdField) requestIdField.value = simRequestId;
+                        
+                        // Auto-fill execute debit form with simulated mihpayid and use the same mandate txnid
+                        var execTokenField = document.getElementById('sm_nb_mandate_exec_token');
+                        if (execTokenField) execTokenField.value = _smNbMandateRegSimMihpayid;
+                        
+                        var execTxnidField = document.getElementById('sm_nb_mandate_exec_txnid');
+                        if (execTxnidField) execTxnidField.value = _smNbMandateRegTxnid || 'MANDATE_' + Date.now();
+                    }, 800);
+                    return;
+                } catch (simError) {
+                    console.error('❌ Simulation error:', simError);
+                    console.error('Stack:', simError.stack);
+                    // Show error in response
+                    document.getElementById('smNbMandateRegResponseView').textContent = JSON.stringify({
+                        error: 'Simulation failed',
+                        message: simError.message
+                    }, null, 2);
+                    document.getElementById('smNbMandateRegStatusBadge').className = 'sm-status-badge failed';
+                    document.getElementById('smNbMandateRegStatusBadge').textContent = 'Simulation Error';
+                    return;
+                }
+            }
+
+            // Real API call
+            console.log('🌐 Running REAL API call (simulation disabled)');
+            var payload = { endpoint: 'payment', method: 'POST', params: data };
+            
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var badge = document.getElementById('smNbMandateRegStatusBadge');
+                var response = result.response || result;
+                
+                document.getElementById('smNbMandateRegResponseView').textContent = JSON.stringify(response, null, 2);
+                
+                if (response.result && response.result.acsTemplate) {
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'Bank Redirect Ready';
+                    _smNbMandateRegAcsTemplate = response.result.acsTemplate;
+                    document.getElementById('smNbMandateRegBankSection').style.display = 'block';
+                    
+                    document.getElementById('sm_nb_mandate_verify_txnid').value = data.txnid;
+                } else if (response.status === 'failed' || response.error) {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'Failed';
+                } else {
+                    badge.className = 'sm-status-badge pending';
+                    badge.textContent = response.metaData?.txnStatus || 'Pending';
+                }
+            })
+            .catch(function(err) {
+                document.getElementById('smNbMandateRegStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbMandateRegStatusBadge').textContent = 'Error';
+                document.getElementById('smNbMandateRegResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendMandateRegRequest = smNbSendMandateRegRequest;
+
+        // Store the transaction ID for polling
+        var _smNbMandatePendingTxnId = '';
+        var _smNbMandatePollingInterval = null;
+        var _smNbMandatePollingCount = 0;
+        var _smNbMandatePollingMaxAttempts = 30; // Poll for up to 60 seconds (30 * 2s)
+        
+        function smNbStartMandatePolling(txnid) {
+            _smNbMandatePollingCount = 0;
+            smNbStopMandatePolling(); // Clear any existing polling
+            
+            // Update status badge to show polling
+            var badge = document.getElementById('smNbMandateRegStatusBadge');
+            if (badge) {
+                badge.className = 'sm-status-badge pending';
+                badge.textContent = 'Waiting for bank authorization...';
+            }
+            
+            _smNbMandatePollingInterval = setInterval(function() {
+                _smNbMandatePollingCount++;
+                console.log('🔄 Polling attempt', _smNbMandatePollingCount, 'for txnid:', txnid);
+                
+                if (_smNbMandatePollingCount > _smNbMandatePollingMaxAttempts) {
+                    smNbStopMandatePolling();
+                    console.log('⏱️ Polling timed out');
+                    return;
+                }
+                
+                // Call verify_payment API
+                var key = document.getElementById('sm_nb_mandate_reg_key').value;
+                var salt = document.getElementById('sm_nb_mandate_reg_salt').value;
+                var hashString = key + '|verify_payment|' + txnid + '|' + salt;
+                var hash = CryptoJS.SHA512(hashString).toString();
+                
+                var data = { key: key, command: 'verify_payment', var1: txnid, hash: hash };
+                var payload = { endpoint: 'postservice', method: 'POST', params: data };
+                
+                fetch(getProxyUrl(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(result) {
+                    var response = result.response || result;
+                    console.log('📋 Poll response:', response);
+                    
+                    // Check if transaction is complete
+                    if (response.transaction_details && response.transaction_details[txnid]) {
+                        var txnDetails = response.transaction_details[txnid];
+                        var status = txnDetails.status;
+                        
+                        if (status === 'success' || status === 'captured' || txnDetails.unmappedstatus === 'captured') {
+                            console.log('✅ Transaction successful!');
+                            smNbStopMandatePolling();
+                            smNbHandleMandateSuccess(txnDetails);
+                        } else if (status === 'failure' || status === 'failed') {
+                            console.log('❌ Transaction failed');
+                            smNbStopMandatePolling();
+                            smNbHandleMandateFailure(txnDetails);
+                        }
+                        // If status is 'pending' or 'Not Found', continue polling
+                    }
+                })
+                .catch(function(err) {
+                    console.log('⚠️ Poll error:', err.message);
+                });
+            }, 2000); // Poll every 2 seconds
+        }
+        window.smNbStartMandatePolling = smNbStartMandatePolling;
+        
+        function smNbStopMandatePolling() {
+            if (_smNbMandatePollingInterval) {
+                clearInterval(_smNbMandatePollingInterval);
+                _smNbMandatePollingInterval = null;
+            }
+        }
+        window.smNbStopMandatePolling = smNbStopMandatePolling;
+        
+        function smNbHandleMandateSuccess(txnDetails) {
+            // Navigate to Handle Response section
+            var navItem = document.querySelector('[data-section="sm-nb-mandate-verify"]');
+            if (navItem && typeof smNbNavTo === 'function') {
+                smNbNavTo(navItem, 'sm-nb-mandate-verify');
+            }
+            
+            // Update Register Mandate badge
+            var regBadge = document.getElementById('smNbMandateRegStatusBadge');
+            if (regBadge) {
+                regBadge.className = 'sm-status-badge success';
+                regBadge.textContent = 'Mandate Registered ✓';
+            }
+            
+            // Display the response in Handle Response section
+            var verifyReqRes = document.getElementById('smNbMandateVerifyReqRes');
+            var responseView = document.getElementById('smNbMandateVerifyResponseView');
+            var badge = document.getElementById('smNbMandateVerifyStatusBadge');
+            
+            if (verifyReqRes) verifyReqRes.style.display = 'block';
+            if (responseView) {
+                responseView.textContent = JSON.stringify(txnDetails, null, 2);
+            }
+            if (badge) {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'Mandate Authorized ✓';
+            }
+            
+            // Auto-fill fields
+            var txnidField = document.getElementById('sm_nb_mandate_verify_txnid');
+            if (txnidField && txnDetails.txnid) txnidField.value = txnDetails.txnid;
+            
+            var authPayUIdField = document.getElementById('sm_nb_mandate_status_authpayuid');
+            if (authPayUIdField && txnDetails.mihpayid) authPayUIdField.value = txnDetails.mihpayid;
+            
+            // Auto-generate Request ID based on mihpayid
+            var requestIdField = document.getElementById('sm_nb_mandate_status_requestid');
+            if (requestIdField && txnDetails.mihpayid) {
+                requestIdField.value = 'REQ_' + txnDetails.mihpayid.slice(-6) + '_' + Date.now();
+            }
+            
+            var execTokenField = document.getElementById('sm_nb_mandate_exec_token');
+            if (execTokenField && txnDetails.mihpayid) execTokenField.value = txnDetails.mihpayid;
+            
+            var execTxnidField = document.getElementById('sm_nb_mandate_exec_txnid');
+            if (execTxnidField) {
+                // Use the same txnid from mandate registration
+                _smNbMandateRegTxnid = txnDetails.txnid || _smNbMandateRegTxnid;
+                execTxnidField.value = _smNbMandateRegTxnid || 'MANDATE_' + Date.now();
+            }
+            
+            // Show success notification
+            alert('✅ Mandate Registration Successful!\n\nTransaction ID: ' + txnDetails.txnid + '\nPayment ID: ' + txnDetails.mihpayid + '\n\nNavigating to Handle Response section...');
+        }
+        
+        function smNbHandleMandateFailure(txnDetails) {
+            var badge = document.getElementById('smNbMandateRegStatusBadge');
+            if (badge) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'Mandate Failed';
+            }
+            
+            alert('❌ Mandate Registration Failed\n\nReason: ' + (txnDetails.error_Message || 'Unknown error'));
+        }
+        
+        var _smNbMandateRegBankPageOpened = false;
+        function smNbMandateRegOpenBankPage() {
+            if (_smNbMandateRegBankPageOpened) {
+                alert('Bank page already opened. Please complete the mandate in the bank window or start a new transaction.');
+                return;
+            }
+            if (_smNbMandateRegAcsTemplate) {
+                _smNbMandateRegBankPageOpened = true;
+                try {
+                    // Decode properly (reverse of btoa(unescape(encodeURIComponent())))
+                    var decoded = decodeURIComponent(escape(atob(_smNbMandateRegAcsTemplate)));
+                    
+                    // Use blob URL approach for better compatibility with PayU's security
+                    var blob = new Blob([decoded], { type: 'text/html' });
+                    var blobUrl = URL.createObjectURL(blob);
+                    var bankWindow = window.open(blobUrl, '_blank');
+                    
+                    // Revoke blob URL after a short delay to free memory
+                    setTimeout(function() {
+                        URL.revokeObjectURL(blobUrl);
+                    }, 5000);
+                    
+                    if (bankWindow) {
+                        
+                        // Get transaction ID for polling
+                        var txnidField = document.getElementById('sm_nb_mandate_reg_txnid');
+                        _smNbMandatePendingTxnId = txnidField ? txnidField.value : '';
+                        
+                        // Start polling to check transaction status
+                        if (_smNbMandatePendingTxnId) {
+                            console.log('🔄 Starting transaction status polling for:', _smNbMandatePendingTxnId);
+                            smNbStartMandatePolling(_smNbMandatePendingTxnId);
+                        }
+                        
+                        // Add message listener to handle response from bank page
+                        window.addEventListener('message', function handleMandateMessage(event) {
+                            if (event.data && event.data.type === 'mandateComplete') {
+                                window.removeEventListener('message', handleMandateMessage);
+                                smNbStopMandatePolling();
+                                
+                                var response = event.data.data;
+                                var status = event.data.status;
+                                
+                                // Navigate to Handle Response section
+                                var navItem = document.querySelector('[data-section="sm-nb-mandate-verify"]');
+                                if (navItem && typeof smNbNavTo === 'function') {
+                                    smNbNavTo(navItem, 'sm-nb-mandate-verify');
+                                }
+                                
+                                // Display the response
+                                var verifyReqRes = document.getElementById('smNbMandateVerifyReqRes');
+                                var responseView = document.getElementById('smNbMandateVerifyResponseView');
+                                var badge = document.getElementById('smNbMandateVerifyStatusBadge');
+                                
+                                if (verifyReqRes) verifyReqRes.style.display = 'block';
+                                if (responseView) {
+                                    responseView.textContent = JSON.stringify(response, null, 2);
+                                }
+                                if (badge) {
+                                    if (status === 'success') {
+                                        badge.className = 'sm-status-badge success';
+                                        badge.textContent = 'Mandate Authorized ✓';
+                                    } else {
+                                        badge.className = 'sm-status-badge error';
+                                        badge.textContent = 'Mandate Rejected';
+                                    }
+                                }
+                                
+                                // Auto-fill txnid field
+                                var txnidField = document.getElementById('sm_nb_mandate_verify_txnid');
+                                if (txnidField && response.txnid) {
+                                    txnidField.value = response.txnid;
+                                }
+                                
+                                // Auto-fill mandate status form
+                                var authPayUIdField = document.getElementById('sm_nb_mandate_status_authpayuid');
+                                if (authPayUIdField && response.mihpayid) {
+                                    authPayUIdField.value = response.mihpayid;
+                                }
+                                
+                                // Auto-fill execute debit form
+                                var execTokenField = document.getElementById('sm_nb_mandate_exec_token');
+                                if (execTokenField && response.mihpayid) {
+                                    execTokenField.value = response.mihpayid;
+                                }
+                                var execTxnidField = document.getElementById('sm_nb_mandate_exec_txnid');
+                                if (execTxnidField) {
+                                    // Use the same txnid from mandate registration
+                                    _smNbMandateRegTxnid = response.txnid || _smNbMandateRegTxnid;
+                                    execTxnidField.value = _smNbMandateRegTxnid || 'MANDATE_' + Date.now();
+                                }
+                            }
+                        });
+                    } else {
+                        alert('Popup blocked! Please allow popups for this site.');
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Error decoding bank page:', e);
+                    // Fallback: try simple atob
+                    var decoded = atob(_smNbMandateRegAcsTemplate);
+                    var bankWindow = window.open('', '_blank');
+                    bankWindow.document.write(decoded);
+                    bankWindow.document.close();
+                }
+                
+                var btn = document.getElementById('smNbMandateRegOpenBank');
+                btn.textContent = 'Bank Page Opened ✓';
+                btn.disabled = true;
+                btn.style.background = '#718096';
+            }
+        }
+        window.smNbMandateRegOpenBankPage = smNbMandateRegOpenBankPage;
+
+        // ============================================
+        // NB MANDATE VERIFY FUNCTIONS
+        // ============================================
+
+        function smNbPreviewMandateVerifyRequest() {
+            var key = document.getElementById('sm_nb_mandate_verify_key').value;
+            var salt = document.getElementById('sm_nb_mandate_verify_salt').value;
+            var txnid = document.getElementById('sm_nb_mandate_verify_txnid').value;
+
+            if (!txnid) { alert('Please enter the Transaction ID from mandate registration'); return; }
+
+            var hashString = key + '|verify_payment|' + txnid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'verify_payment', var1: txnid, hash: hash };
+
+            document.getElementById('smNbMandateVerifyReqRes').style.display = 'block';
+            document.getElementById('smNbMandateVerifyRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbMandateVerifyResponseView').textContent = '// Response will appear here';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=verify_payment' \\\n" +
+                "  -d 'var1=" + txnid + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbMandateVerifyCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewMandateVerifyRequest = smNbPreviewMandateVerifyRequest;
+
+        function smNbSendMandateVerifyRequest() {
+            var key = document.getElementById('sm_nb_mandate_verify_key').value;
+            var salt = document.getElementById('sm_nb_mandate_verify_salt').value;
+            var txnid = document.getElementById('sm_nb_mandate_verify_txnid').value;
+
+            if (!txnid) { alert('Please enter the Transaction ID from mandate registration'); return; }
+
+            var hashString = key + '|verify_payment|' + txnid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'verify_payment', var1: txnid, hash: hash };
+
+            document.getElementById('smNbMandateVerifyReqRes').style.display = 'block';
+            document.getElementById('smNbMandateVerifyRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbMandateVerifyStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbMandateVerifyStatusBadge').textContent = 'Verifying...';
+            document.getElementById('smNbMandateVerifyAutoFill').style.display = 'none';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=verify_payment' \\\n" +
+                "  -d 'var1=" + txnid + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbMandateVerifyCurlView').textContent = curlCmd;
+
+            // Check if this is a simulated transaction
+            if (_smNbMandateRegSimMode && txnid.startsWith('MANDATE_') && _smNbMandateRegSimMihpayid) {
+                var simTxnDetails = {};
+                simTxnDetails[txnid] = {
+                    mihpayid: _smNbMandateRegSimMihpayid,
+                    mode: 'ENACH',
+                    status: 'success',
+                    unmappedstatus: 'captured',
+                    key: key,
+                    txnid: txnid,
+                    amount: '0.00',
+                    productinfo: 'SIP Investment',
+                    firstname: 'Test',
+                    lastname: 'User',
+                    email: 'test@example.com',
+                    phone: '9876543210',
+                    addedon: new Date().toISOString().replace('T', ' ').substr(0, 19),
+                    payment_source: 'sist',
+                    PG_TYPE: 'ENACH-PG',
+                    bank_ref_num: 'ENACH' + Math.floor(Math.random() * 1000000000),
+                    error: 'E000',
+                    error_Message: 'No Error',
+                    field9: 'Mandate successfully scheduled at bank end: Your payment is scheduled successfully'
+                };
+                
+                var simResponse = {
+                    status: 1,
+                    msg: 'Transaction Fetched Successfully',
+                    transaction_details: simTxnDetails,
+                    _simulation: true,
+                    _note: 'This is a simulated response for testing the mandate flow.'
+                };
+
+                setTimeout(function() {
+                    var badge = document.getElementById('smNbMandateVerifyStatusBadge');
+                    document.getElementById('smNbMandateVerifyResponseView').textContent = JSON.stringify(simResponse, null, 2);
+                    
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'Verified (Simulated)';
+                    
+                    document.getElementById('sm_nb_mandate_status_authpayuid').value = _smNbMandateRegSimMihpayid;
+                    document.getElementById('smNbMandateVerifyAuthPayuId').textContent = _smNbMandateRegSimMihpayid;
+                    document.getElementById('smNbMandateVerifyAutoFill').style.display = 'block';
+                }, 600);
+                return;
+            }
+
+            // Real API call
+            var payload = { endpoint: 'postservice', method: 'POST', params: data };
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var badge = document.getElementById('smNbMandateVerifyStatusBadge');
+                var response = result.response || result;
+                
+                document.getElementById('smNbMandateVerifyResponseView').textContent = JSON.stringify(response, null, 2);
+                
+                if (response.status === 1 && response.transaction_details) {
+                    var txnDetails = response.transaction_details[txnid];
+                    if (txnDetails && txnDetails.mihpayid) {
+                        badge.className = 'sm-status-badge success';
+                        badge.textContent = 'Verified';
+                        
+                        document.getElementById('sm_nb_mandate_status_authpayuid').value = txnDetails.mihpayid;
+                        document.getElementById('smNbMandateVerifyAuthPayuId').textContent = txnDetails.mihpayid;
+                        document.getElementById('smNbMandateVerifyAutoFill').style.display = 'block';
+                    } else {
+                        badge.className = 'sm-status-badge error';
+                        badge.textContent = 'No mihpayid';
+                    }
+                } else {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = response.msg || 'Failed';
+                }
+            })
+            .catch(function(err) {
+                document.getElementById('smNbMandateVerifyStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbMandateVerifyStatusBadge').textContent = 'Error';
+                document.getElementById('smNbMandateVerifyResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendMandateVerifyRequest = smNbSendMandateVerifyRequest;
+
+        // ============================================
+        // NB MANDATE STATUS FUNCTIONS
+        // Reference: https://docs.payu.in/reference/net_banking_mandate_status_api
+        // ============================================
+
+        function smNbAutoGenerateMandateRequestId() {
+            var authpayuid = document.getElementById('sm_nb_mandate_status_authpayuid').value;
+            var requestIdField = document.getElementById('sm_nb_mandate_status_requestid');
+            if (authpayuid && requestIdField) {
+                requestIdField.value = 'REQ_' + authpayuid.slice(-6) + '_' + Date.now();
+            } else if (requestIdField) {
+                requestIdField.value = 'REQ_' + Date.now();
+            }
+        }
+        window.smNbAutoGenerateMandateRequestId = smNbAutoGenerateMandateRequestId;
+
+        function smNbFillSampleMandateStatus() {
+            document.getElementById('sm_nb_mandate_status_authpayuid').value = '10731087875';
+            smNbAutoGenerateMandateRequestId();
+        }
+        window.smNbFillSampleMandateStatus = smNbFillSampleMandateStatus;
+
+        function smNbPreviewMandateStatusRequest() {
+            var key = document.getElementById('sm_nb_mandate_status_key').value;
+            var salt = document.getElementById('sm_nb_mandate_status_salt').value;
+            var authpayuid = document.getElementById('sm_nb_mandate_status_authpayuid').value;
+            var requestId = document.getElementById('sm_nb_mandate_status_requestid').value;
+
+            if (!authpayuid) { alert('Please enter the Auth PayU ID (mihpayid)'); return; }
+            if (!requestId) { alert('Please enter a unique Request ID'); return; }
+
+            var var1 = JSON.stringify({ authpayuid: authpayuid, requestId: requestId });
+            var hashString = key + '|NB_mandate_status|' + var1 + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'NB_mandate_status', var1: var1, hash: hash };
+
+            document.getElementById('smNbMandateStatusReqRes').style.display = 'block';
+            document.getElementById('smNbMandateStatusRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbMandateStatusResponseView').textContent = '// Response will appear here';
+            document.getElementById('smNbMandateStatusStatusBadge').className = 'sm-status-badge';
+            document.getElementById('smNbMandateStatusStatusBadge').textContent = '';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -H 'Content-Type: application/x-www-form-urlencoded' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=NB_mandate_status' \\\n" +
+                "  -d 'var1=" + encodeURIComponent(var1) + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbMandateStatusCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewMandateStatusRequest = smNbPreviewMandateStatusRequest;
+
+        function smNbSendMandateStatusRequest() {
+            var key = document.getElementById('sm_nb_mandate_status_key').value;
+            var salt = document.getElementById('sm_nb_mandate_status_salt').value;
+            var authpayuid = document.getElementById('sm_nb_mandate_status_authpayuid').value;
+            var requestId = document.getElementById('sm_nb_mandate_status_requestid').value;
+
+            if (!authpayuid) { alert('Please enter the Auth PayU ID (mihpayid)'); return; }
+            if (!requestId) { alert('Please enter a unique Request ID'); return; }
+
+            var var1 = JSON.stringify({ authpayuid: authpayuid, requestId: requestId });
+            var hashString = key + '|NB_mandate_status|' + var1 + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'NB_mandate_status', var1: var1, hash: hash };
+
+            document.getElementById('smNbMandateStatusReqRes').style.display = 'block';
+            document.getElementById('smNbMandateStatusRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbMandateStatusStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbMandateStatusStatusBadge').textContent = 'Checking...';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -H 'Content-Type: application/x-www-form-urlencoded' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=NB_mandate_status' \\\n" +
+                "  -d 'var1=" + encodeURIComponent(var1) + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbMandateStatusCurlView').textContent = curlCmd;
+
+            // Check if this is a simulated mandate
+            if (_smNbMandateRegSimMode && _smNbMandateRegSimMihpayid && authpayuid === _smNbMandateRegSimMihpayid) {
+                var today = new Date();
+                var startDate = today.toISOString().split('T')[0];
+                var endDate = new Date(today.setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0];
+                
+                var simResponse = {
+                    status: 'SUCCESS',
+                    message: 'Mandate is active',
+                    mandateDetails: {
+                        authpayuid: authpayuid,
+                        merchantName: 'Integration Lab Testing',
+                        accountNumber: '****3456',
+                        accountType: 'SAVINGS',
+                        ifscCode: 'ICIC0001234',
+                        billingAmount: '1000.00',
+                        billingCycle: 'MONTHLY',
+                        billingInterval: 1,
+                        startDate: startDate,
+                        endDate: endDate,
+                        bankReferenceNumber: 'ENACH' + Math.floor(Math.random() * 1000000000),
+                        registrationDate: new Date().toISOString().split('T')[0],
+                        lastExecutionDate: null,
+                        nextExecutionDate: startDate
+                    },
+                    _simulation: true,
+                    _note: 'This is a simulated response. Mandate status shows as SUCCESS for testing.'
+                };
+
+                setTimeout(function() {
+                    var badge = document.getElementById('smNbMandateStatusStatusBadge');
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'Mandate Active (Simulated)';
+                    document.getElementById('smNbMandateStatusResponseView').textContent = JSON.stringify(simResponse, null, 2);
+                }, 600);
+                return;
+            }
+
+            // Real API call
+            var payload = { endpoint: 'postservice', method: 'POST', params: data };
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var badge = document.getElementById('smNbMandateStatusStatusBadge');
+                var response = result.response || result;
+                
+                if (response.status === 'SUCCESS') {
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'Mandate Active';
+                } else if (response.status === 'INITIATED' || response.status === 'CANCEL_PENDING') {
+                    badge.className = 'sm-status-badge pending';
+                    badge.textContent = response.status;
+                } else {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = response.status || 'Error';
+                }
+                document.getElementById('smNbMandateStatusResponseView').textContent = JSON.stringify(response, null, 2);
+            })
+            .catch(function(err) {
+                document.getElementById('smNbMandateStatusStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbMandateStatusStatusBadge').textContent = 'Error';
+                document.getElementById('smNbMandateStatusResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendMandateStatusRequest = smNbSendMandateStatusRequest;
+
+        // ============================================
+        // NB MANDATE EXECUTE DEBIT FUNCTIONS
+        // ============================================
+
+        function smNbToggleMandateExecSim(cb) {
+            var toggleDiv = cb.closest('.sm-sim-toggle');
+            if (toggleDiv) {
+                var labelDiv = toggleDiv.querySelector('div > div:first-child');
+                if (labelDiv) {
+                    labelDiv.innerHTML = cb.checked
+                        ? '&#9889; Simulation Mode (Enabled)'
+                        : '&#9889; Simulation Mode (Disabled)';
+                }
+            }
+        }
+        window.smNbToggleMandateExecSim = smNbToggleMandateExecSim;
+
+        function smNbAutoGenerateExecTxnId() {
+            var authpayuid = document.getElementById('sm_nb_mandate_exec_token').value;
+            if (authpayuid && authpayuid.length >= 1) {
+                // Generate a NEW unique txnid for each debit execution
+                // si_transaction requires a unique txnid for each debit, not the mandate registration txnid
+                var txnid = 'DEBIT_' + Date.now();
+                document.getElementById('sm_nb_mandate_exec_txnid').value = txnid;
+            }
+        }
+        window.smNbAutoGenerateExecTxnId = smNbAutoGenerateExecTxnId;
+
+        function smNbFillSampleMandateExec() {
+            document.getElementById('sm_nb_mandate_exec_amount').value = '100.00';
+            // Use authpayuid if available from mandate registration
+            if (_smNbMandateRegSimMihpayid) {
+                document.getElementById('sm_nb_mandate_exec_token').value = _smNbMandateRegSimMihpayid;
+            } else {
+                document.getElementById('sm_nb_mandate_exec_token').value = '403993715525331373';
+            }
+            // Generate a NEW unique txnid for each debit execution
+            var txnidField = document.getElementById('sm_nb_mandate_exec_txnid');
+            if (txnidField) {
+                txnidField.value = 'DEBIT_' + Date.now();
+            }
+        }
+        window.smNbFillSampleMandateExec = smNbFillSampleMandateExec;
+
+        function smNbPreviewMandateExecRequest() {
+            var key = document.getElementById('sm_nb_mandate_exec_key').value;
+            var salt = document.getElementById('sm_nb_mandate_exec_salt').value;
+            var authpayuid = document.getElementById('sm_nb_mandate_exec_token').value;
+            var amount = document.getElementById('sm_nb_mandate_exec_amount').value;
+            var txnid = document.getElementById('sm_nb_mandate_exec_txnid').value;
+
+            if (!authpayuid) { alert('Please enter the authpayuid (mihpayid)'); return; }
+            if (!amount) { alert('Please enter the Debit Amount'); return; }
+            if (!txnid) { alert('Please enter a unique Transaction ID'); return; }
+
+            // Build var1 JSON as per PayU si_transaction API spec (all required fields)
+            var var1Json = {
+                authpayuid: authpayuid,
+                invoiceDisplayNumber: txnid,
+                amount: amount,
+                txnid: txnid,
+                phone: '9999999999',
+                email: 'test@example.com',
+                udf2: '',
+                udf3: '',
+                udf4: '',
+                udf5: ''
+            };
+            var var1String = JSON.stringify(var1Json);
+
+            var hashString = key + '|si_transaction|' + var1String + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = {
+                key: key,
+                command: 'si_transaction',
+                var1: var1String,
+                hash: hash
+            };
+
+            document.getElementById('smNbMandateExecReqRes').style.display = 'block';
+            document.getElementById('smNbMandateExecRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbMandateExecResponseView').textContent = '// Response will appear here';
+
+            var curlCmd = "curl --location 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=si_transaction' \\\n" +
+                "  -d 'var1=" + encodeURIComponent(var1String) + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbMandateExecCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewMandateExecRequest = smNbPreviewMandateExecRequest;
+
+        function smNbSendMandateExecRequest() {
+            var key = document.getElementById('sm_nb_mandate_exec_key').value;
+            var salt = document.getElementById('sm_nb_mandate_exec_salt').value;
+            var authpayuid = document.getElementById('sm_nb_mandate_exec_token').value;
+            var amount = document.getElementById('sm_nb_mandate_exec_amount').value;
+            var txnid = document.getElementById('sm_nb_mandate_exec_txnid').value;
+
+            if (!authpayuid) { alert('Please enter the authpayuid (mihpayid)'); return; }
+            if (!amount) { alert('Please enter the Debit Amount'); return; }
+            if (!txnid) { alert('Please enter a unique Transaction ID'); return; }
+
+            // Build var1 JSON as per PayU si_transaction API spec (all required fields)
+            var var1Json = {
+                authpayuid: authpayuid,
+                invoiceDisplayNumber: txnid,
+                amount: amount,
+                txnid: txnid,
+                phone: '9999999999',
+                email: 'test@example.com',
+                udf2: '',
+                udf3: '',
+                udf4: '',
+                udf5: ''
+            };
+            var var1String = JSON.stringify(var1Json);
+
+            var hashString = key + '|si_transaction|' + var1String + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = {
+                key: key,
+                command: 'si_transaction',
+                var1: var1String,
+                hash: hash
+            };
+
+            document.getElementById('smNbMandateExecReqRes').style.display = 'block';
+            document.getElementById('smNbMandateExecRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbMandateExecStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbMandateExecStatusBadge').textContent = 'Sending...';
+
+            var curlCmd = "curl --location 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=si_transaction' \\\n" +
+                "  -d 'var1=" + encodeURIComponent(var1String) + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbMandateExecCurlView').textContent = curlCmd;
+
+            // Real API call
+            var payload = { endpoint: 'postservice', method: 'POST', params: data };
+            
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var response = result.response || result;
+                var badge = document.getElementById('smNbMandateExecStatusBadge');
+                
+                if (response.status === 1 || response.status === '1') {
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'Success';
+                } else {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = response.msg || 'Failed';
+                }
+                document.getElementById('smNbMandateExecResponseView').textContent = JSON.stringify(response, null, 2);
+            })
+            .catch(function(err) {
+                document.getElementById('smNbMandateExecStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbMandateExecStatusBadge').textContent = 'Error';
+                document.getElementById('smNbMandateExecResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendMandateExecRequest = smNbSendMandateExecRequest;
+
+        // Get NB Status - Reference: https://docs.payu.in/reference/get_net_banking_status_api
+        function smNbPreviewStatusRequest() {
+            var key = document.getElementById('sm_nb_status_key').value;
+            var salt = document.getElementById('sm_nb_status_salt').value;
+            var bankcodeInput = document.getElementById('sm_nb_status_bankcode').value.trim();
+            var bankcode = bankcodeInput || 'default';
+
+            var hashString = key + '|getNetbankingStatus|' + bankcode + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'getNetbankingStatus', var1: bankcode, hash: hash };
+
+            document.getElementById('smNbStatusReqRes').style.display = 'block';
+            document.getElementById('smNbStatusRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbStatusResponseView').textContent = '// Response will appear here';
+            document.getElementById('smNbStatusStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbStatusStatusBadge').textContent = 'Pending';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice?form=2' \\\n" +
+                "  -H 'Content-Type: application/x-www-form-urlencoded' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=getNetbankingStatus' \\\n" +
+                "  -d 'var1=" + bankcode + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbStatusCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewStatusRequest = smNbPreviewStatusRequest;
+
+        var _smNbActiveBanks = [];
+
+        function smNbSendStatusRequest() {
+            console.log('🏦 smNbSendStatusRequest called');
+            
+            try {
+                var keyEl = document.getElementById('sm_nb_status_key');
+                var saltEl = document.getElementById('sm_nb_status_salt');
+                var bankcodeEl = document.getElementById('sm_nb_status_bankcode');
+                
+                if (!keyEl || !saltEl || !bankcodeEl) {
+                    console.error('Missing form elements:', { keyEl: !!keyEl, saltEl: !!saltEl, bankcodeEl: !!bankcodeEl });
+                    alert('Error: Form elements not found. Please refresh the page.');
+                    return;
+                }
+                
+                var key = keyEl.value;
+                var salt = saltEl.value;
+                var bankcodeInput = bankcodeEl.value.trim();
+                var bankcode = bankcodeInput || 'default';
+
+                console.log('🔑 Request params:', { key: key, bankcode: bankcode });
+
+            var hashString = key + '|getNetbankingStatus|' + bankcode + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'getNetbankingStatus', var1: bankcode, hash: hash };
+            var payload = { endpoint: 'postservice', method: 'POST', params: data };
+
+            document.getElementById('smNbStatusReqRes').style.display = 'block';
+            document.getElementById('smNbStatusRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbStatusStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbStatusStatusBadge').textContent = 'Sending...';
+
+                var bankListEl = document.getElementById('smNbActiveBanksList');
+                if (bankListEl) bankListEl.style.display = 'none';
+
+                var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice?form=2' \\\n" +
+                    "  -H 'Content-Type: application/x-www-form-urlencoded' \\\n" +
+                    "  -d 'key=" + key + "' \\\n" +
+                    "  -d 'command=getNetbankingStatus' \\\n" +
+                    "  -d 'var1=" + bankcode + "' \\\n" +
+                    "  -d 'hash=" + hash + "'";
+                document.getElementById('smNbStatusCurlView').textContent = curlCmd;
+
+                var proxyUrl = getProxyUrl();
+                console.log('📡 Sending request to:', proxyUrl);
+
+                fetch(proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(function(res) { 
+                    console.log('📥 Response status:', res.status);
+                    return res.json(); 
+                })
+            .then(function(result) {
+                    console.log('✅ Response received:', result);
+                var badge = document.getElementById('smNbStatusStatusBadge');
+                if (result.http_code === 200) {
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'HTTP 200 OK';
+                } else {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'HTTP ' + (result.http_code || 'Error');
+                }
+                document.getElementById('smNbStatusResponseView').textContent = JSON.stringify(result.response || result, null, 2);
+                    
+                    smNbDisplayBankList(result.response, bankcodeInput);
+            })
+            .catch(function(err) {
+                    console.error('❌ Fetch error:', err);
+                document.getElementById('smNbStatusStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbStatusStatusBadge').textContent = 'Error';
+                document.getElementById('smNbStatusResponseView').textContent = 'Error: ' + err.message;
+            });
+            } catch (e) {
+                console.error('❌ Exception in smNbSendStatusRequest:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+        window.smNbSendStatusRequest = smNbSendStatusRequest;
+
+        function smNbDisplayBankList(response, specificBank) {
+            var container = document.getElementById('smNbActiveBanksList');
+            var tbody = document.getElementById('smNbBankListBody');
+            var countEl = document.getElementById('smNbBankCount');
+            
+            if (!response || typeof response !== 'object') {
+                container.style.display = 'none';
+                return;
+            }
+
+            _smNbActiveBanks = [];
+            
+            if (specificBank && response.ibibo_code) {
+                _smNbActiveBanks.push({
+                    code: response.ibibo_code,
+                    name: response.title || response.ibibo_code,
+                    isActive: response.up_status === 1 || response.up_status === '1',
+                    mode: response.mode || 'NB'
+                });
+            } else {
+                for (var code in response) {
+                    if (response.hasOwnProperty(code) && typeof response[code] === 'object') {
+                        var bankInfo = response[code];
+                        var bankCode = bankInfo.ibibo_code || code;
+                        // Filter: mode must be 'NB' and exclude TPV bank codes (Phase 1)
+                        if (bankInfo.mode === 'NB' && !bankCode.toUpperCase().endsWith('TPV')) {
+                            _smNbActiveBanks.push({
+                                code: bankCode,
+                                name: bankInfo.title || code,
+                                isActive: bankInfo.up_status === 1 || bankInfo.up_status === '1',
+                                mode: bankInfo.mode
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (_smNbActiveBanks.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            _smNbActiveBanks.sort(function(a, b) {
+                if (a.isActive !== b.isActive) return b.isActive ? 1 : -1;
+                return a.name.localeCompare(b.name);
+            });
+
+            var activeCount = _smNbActiveBanks.filter(function(b) { return b.isActive; }).length;
+            countEl.textContent = '(' + activeCount + ' up / ' + _smNbActiveBanks.length + ' total Net Banking options)';
+
+            smNbRenderBankListRows(_smNbActiveBanks);
+            container.style.display = 'block';
+        }
+        window.smNbDisplayBankList = smNbDisplayBankList;
+
+        function smNbRenderBankListRows(banks) {
+            var tbody = document.getElementById('smNbBankListBody');
+            var html = '';
+
+            banks.forEach(function(bank) {
+                var statusBadge = bank.isActive 
+                    ? '<span style="display:inline-block; padding:0.25rem 0.5rem; background:#c6f6d5; color:#22543d; border-radius:4px; font-size:0.75rem; font-weight:600;">&#9650; Up</span>'
+                    : '<span style="display:inline-block; padding:0.25rem 0.5rem; background:#fed7d7; color:#822727; border-radius:4px; font-size:0.75rem; font-weight:600;">&#9660; Down</span>';
+                
+                var useBtn = bank.isActive 
+                    ? '<button onclick="smNbUseBankCode(\'' + bank.code + '\')" style="padding:0.25rem 0.75rem; background:#3182ce; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">Use This Bank</button>'
+                    : '<button disabled style="padding:0.25rem 0.75rem; background:#e2e8f0; color:#a0aec0; border:none; border-radius:4px; cursor:not-allowed; font-size:0.8rem;">Unavailable</button>';
+
+                html += '<tr class="sm-bank-row" data-code="' + bank.code.toLowerCase() + '" data-name="' + bank.name.toLowerCase() + '" style="' + (bank.isActive ? '' : 'opacity:0.6;') + '">' +
+                    '<td style="padding:0.5rem 1rem; border-bottom:1px solid var(--border-color,#edf2f7);"><code style="background:#edf2f7; padding:0.1rem 0.4rem; border-radius:4px; font-family:monospace; color:#2d3748;">' + bank.code + '</code></td>' +
+                    '<td style="padding:0.5rem 1rem; border-bottom:1px solid var(--border-color,#edf2f7); color:#2d3748;">' + bank.name + '</td>' +
+                    '<td style="padding:0.5rem 1rem; border-bottom:1px solid var(--border-color,#edf2f7); text-align:center;">' + statusBadge + '</td>' +
+                    '<td style="padding:0.5rem 1rem; border-bottom:1px solid var(--border-color,#edf2f7); text-align:center;">' + useBtn + '</td>' +
+                    '</tr>';
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function smNbFilterBankList(query) {
+            var q = query.toLowerCase().trim();
+            var rows = document.querySelectorAll('#smNbBankListBody .sm-bank-row');
+            
+            rows.forEach(function(row) {
+                var code = row.getAttribute('data-code');
+                var name = row.getAttribute('data-name');
+                var show = !q || code.indexOf(q) !== -1 || name.indexOf(q) !== -1;
+                row.style.display = show ? '' : 'none';
+            });
+        }
+        window.smNbFilterBankList = smNbFilterBankList;
+
+        function smNbUseBankCode(bankcode) {
+            var payBankField = document.getElementById('sm_nb_pay_bankcode');
+            var pacbBankField = document.getElementById('sm_nb_pacb_bankcode');
+            var tpvBankField = document.getElementById('sm_nb_tpv_bankcode');
+            
+            if (payBankField) payBankField.value = bankcode;
+            if (pacbBankField) pacbBankField.value = bankcode;
+            if (tpvBankField) tpvBankField.value = bankcode;
+            
+            alert('Bank code "' + bankcode + '" has been applied to all payment forms!\n\nGo to Initiate Payment to start a transaction with this bank.');
+        }
+        window.smNbUseBankCode = smNbUseBankCode;
+
+        // Apply Global Config to all Net Banking forms
+        function smNbApplyGlobalConfig() {
+            var gKey = document.getElementById('sm_nb_global_key').value.trim();
+            var gSalt = document.getElementById('sm_nb_global_salt').value.trim();
+            if (!gKey || !gSalt) { 
+                alert('Please enter both Key and Salt.'); 
+                return; 
+            }
+
+            // Apply to all Net Banking form fields
+            var nbKeyFields = [
+                'sm_nb_pay_key', 'sm_nb_verify_key', 'sm_nb_status_key', 'sm_nb_pacb_key', 'sm_nb_capture_key'
+            ];
+            var nbSaltFields = [
+                'sm_nb_pay_salt', 'sm_nb_verify_salt', 'sm_nb_status_salt', 'sm_nb_pacb_salt', 'sm_nb_capture_salt'
+            ];
+
+            nbKeyFields.forEach(function(id) {
+                var f = document.getElementById(id);
+                if (f) f.value = gKey;
+            });
+
+            nbSaltFields.forEach(function(id) {
+                var f = document.getElementById(id);
+                if (f) f.value = gSalt;
+            });
+
+            // Visual feedback
+            var btn = document.querySelector('#smNbGlobalConfig .sm-global-apply-btn');
+            if (btn) {
+                btn.textContent = 'Applied!';
+                btn.style.background = '#16a34a';
+                setTimeout(function() { 
+                    btn.textContent = 'Apply to All Forms'; 
+                    btn.style.background = ''; 
+                }, 1500);
+            }
+        }
+        window.smNbApplyGlobalConfig = smNbApplyGlobalConfig;
+
+        // ============================================
+        // NET BANKING TPV FUNCTIONS
+        // ============================================
+
+        var _smNbTpvAcsTemplate = '';
+
+        function smNbFillSampleTpv() {
+            document.getElementById('sm_nb_tpv_txnid').value = 'TPV_' + Date.now();
+            document.getElementById('sm_nb_tpv_amount').value = '100.00';
+            document.getElementById('sm_nb_tpv_productinfo').value = 'Mutual Fund SIP';
+            document.getElementById('sm_nb_tpv_firstname').value = 'Test';
+            document.getElementById('sm_nb_tpv_email').value = 'test@example.com';
+            document.getElementById('sm_nb_tpv_phone').value = '9876543210';
+            // TPV bank code - AXNBTPV for Axis Bank
+            document.getElementById('sm_nb_tpv_bankcode').value = 'AXNBTPV';
+            document.getElementById('sm_nb_tpv_account').value = '919013353419388';
+            document.getElementById('sm_nb_tpv_ifsc').value = 'UTIB9992478';
+            document.getElementById('sm_nb_tpv_surl').value = 'https://payu.in/integrationlab/callback.php';
+            document.getElementById('sm_nb_tpv_furl').value = 'https://payu.in/integrationlab/callback.php';
+            // S2S Parameters
+            document.getElementById('sm_nb_tpv_client_ip').value = '10.200.12.12';
+            document.getElementById('sm_nb_tpv_device_info').value = navigator.userAgent || 'Mozilla/5.0';
+        }
+        window.smNbFillSampleTpv = smNbFillSampleTpv;
+
+        // TPV Bank List Functions
+        function smUseTpvBank(bankCode) {
+            var bankcodeField = document.getElementById('sm_nb_tpv_bankcode');
+            if (bankcodeField) {
+                bankcodeField.value = bankCode;
+                bankcodeField.focus();
+                // Scroll to the form
+                var formEl = document.getElementById('smNbTpvForm');
+                if (formEl) {
+                    formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        }
+        window.smUseTpvBank = smUseTpvBank;
+
+        function smFilterTpvBanks() {
+            var searchInput = document.getElementById('smTpvBankSearch');
+            var tableBody = document.getElementById('smTpvBankTableBody');
+            var countEl = document.getElementById('smTpvBankCount');
+            
+            if (!searchInput || !tableBody) return;
+            
+            var filter = searchInput.value.toLowerCase();
+            var rows = tableBody.getElementsByTagName('tr');
+            var visibleCount = 0;
+            var totalCount = rows.length;
+            
+            for (var i = 0; i < rows.length; i++) {
+                var bankCode = rows[i].cells[0] ? rows[i].cells[0].textContent.toLowerCase() : '';
+                var bankName = rows[i].cells[1] ? rows[i].cells[1].textContent.toLowerCase() : '';
+                
+                if (bankCode.indexOf(filter) > -1 || bankName.indexOf(filter) > -1) {
+                    rows[i].style.display = '';
+                    visibleCount++;
+                } else {
+                    rows[i].style.display = 'none';
+                }
+            }
+            
+            if (countEl) {
+                if (filter) {
+                    countEl.textContent = '(' + visibleCount + ' found / ' + totalCount + ' total TPV banks)';
+                } else {
+                    countEl.textContent = '(' + totalCount + ' up / ' + totalCount + ' total TPV banks)';
+                }
+            }
+        }
+        window.smFilterTpvBanks = smFilterTpvBanks;
+
+        // Initialize TPV bank count on page load
+        function smInitTpvBankCount() {
+            var tableBody = document.getElementById('smTpvBankTableBody');
+            var countEl = document.getElementById('smTpvBankCount');
+            if (tableBody && countEl) {
+                var totalCount = tableBody.getElementsByTagName('tr').length;
+                countEl.textContent = '(' + totalCount + ' up / ' + totalCount + ' total TPV banks)';
+            }
+        }
+        // Call on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', smInitTpvBankCount);
+        } else {
+            setTimeout(smInitTpvBankCount, 100);
+        }
+
+        function smNbBuildTpvPayload() {
+            var key = document.getElementById('sm_nb_tpv_key').value;
+            var salt = document.getElementById('sm_nb_tpv_salt').value;
+            var txnid = document.getElementById('sm_nb_tpv_txnid').value || 'TPV_' + Date.now();
+            var amount = document.getElementById('sm_nb_tpv_amount').value;
+            var productinfo = document.getElementById('sm_nb_tpv_productinfo').value;
+            var firstname = document.getElementById('sm_nb_tpv_firstname').value;
+            var email = document.getElementById('sm_nb_tpv_email').value;
+            var phone = document.getElementById('sm_nb_tpv_phone').value;
+            var bankcode = document.getElementById('sm_nb_tpv_bankcode').value;
+            var surl = document.getElementById('sm_nb_tpv_surl').value;
+            var furl = document.getElementById('sm_nb_tpv_furl').value;
+            var account = document.getElementById('sm_nb_tpv_account').value;
+            var ifsc = document.getElementById('sm_nb_tpv_ifsc').value.toUpperCase();
+            
+            // S2S Parameters (required for txn_s2s_flow=4)
+            var clientIp = document.getElementById('sm_nb_tpv_client_ip') ? document.getElementById('sm_nb_tpv_client_ip').value : '10.200.12.12';
+            var deviceInfo = document.getElementById('sm_nb_tpv_device_info') ? document.getElementById('sm_nb_tpv_device_info').value : navigator.userAgent;
+
+            document.getElementById('sm_nb_tpv_txnid').value = txnid;
+
+            var beneficiaryDetail = JSON.stringify({
+                beneficiaryAccountNumber: account,
+                ifscCode: ifsc
+            });
+
+            // Hash formula for TPV (api_version=6):
+            // sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||beneficiarydetail|salt)
+            // 5 UDF fields + 5 reserved fields = 10 empty values = 11 pipes between email and beneficiarydetail
+            var hashString = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|||||||||||' + beneficiaryDetail + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+            
+            console.log('TPV Hash String:', hashString);
+            console.log('TPV Hash:', hash);
+            console.log('TPV Beneficiary Detail:', beneficiaryDetail);
+
+            return {
+                key: key, txnid: txnid, amount: amount, productinfo: productinfo,
+                firstname: firstname, email: email, phone: phone, pg: 'NB',
+                bankcode: bankcode, surl: surl, furl: furl, hash: hash,
+                txn_s2s_flow: '4', api_version: '6',
+                beneficiarydetail: beneficiaryDetail,
+                s2s_client_ip: clientIp,
+                s2s_device_info: deviceInfo
+            };
+        }
+
+        function smNbPreviewTpvRequest() {
+            var data = smNbBuildTpvPayload();
+            document.getElementById('smNbTpvReqRes').style.display = 'block';
+            document.getElementById('smNbTpvRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbTpvResponseView').textContent = '// Response will appear here after sending';
+            document.getElementById('smNbTpvStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbTpvStatusBadge').textContent = 'Pending';
+            document.getElementById('smNbTpvResponseGuide').style.display = 'none';
+            document.getElementById('smNbTpvOpenBankBtn').style.display = 'none';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/_payment' \\\n  -H 'Content-Type: application/x-www-form-urlencoded' \\\n";
+            for (var k in data) {
+                curlCmd += "  -d '" + k + "=" + encodeURIComponent(data[k]) + "' \\\n";
+            }
+            document.getElementById('smNbTpvCurlView').textContent = curlCmd.replace(/ \\\n$/, '');
+        }
+        window.smNbPreviewTpvRequest = smNbPreviewTpvRequest;
+
+        function smNbSendTpvRequest() {
+            var data = smNbBuildTpvPayload();
+            document.getElementById('smNbTpvReqRes').style.display = 'block';
+            document.getElementById('smNbTpvRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbTpvStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbTpvStatusBadge').textContent = 'Sending...';
+
+            var payload = { endpoint: 'payment', method: 'POST', params: data };
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                smNbDisplayTpvResponse(result, data);
+            })
+            .catch(function(err) {
+                document.getElementById('smNbTpvStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbTpvStatusBadge').textContent = 'Error';
+                document.getElementById('smNbTpvResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendTpvRequest = smNbSendTpvRequest;
+
+        function smNbDisplayTpvResponse(result, data) {
+            var badge = document.getElementById('smNbTpvStatusBadge');
+            var respView = document.getElementById('smNbTpvResponseView');
+            var guide = document.getElementById('smNbTpvResponseGuide');
+            var explain = document.getElementById('smNbTpvResponseExplain');
+            var bankBtn = document.getElementById('smNbTpvOpenBankBtn');
+
+            if (result.http_code === 200) {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'HTTP 200 OK';
+            } else {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + (result.http_code || 'Error');
+            }
+
+            respView.textContent = JSON.stringify(result.response || result, null, 2);
+
+            var resp = result.response;
+            var acsTemplate = null;
+            if (resp) {
+                if (resp.acsTemplate) acsTemplate = resp.acsTemplate;
+                else if (resp.result && resp.result.acsTemplate) acsTemplate = resp.result.acsTemplate;
+                else if (resp.data && resp.data.acsTemplate) acsTemplate = resp.data.acsTemplate;
+            }
+
+            var meta = resp && resp.metaData ? resp.metaData : null;
+            var metaHtml = '';
+            if (meta) {
+                metaHtml = '<div style="margin-top:0.75rem; padding:0.75rem; background:rgba(0,0,0,0.03); border-radius:6px; font-size:0.82rem;">' +
+                    '<table style="width:100%;color:#1a202c;">' +
+                    '<tr><td style="padding:2px 8px 2px 0;color:#718096;">txnId:</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">' + (meta.txnId || '-') + '</code></td></tr>' +
+                    '<tr><td style="padding:2px 8px 2px 0;color:#718096;">txnStatus:</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">' + (meta.txnStatus || '-') + '</code></td></tr>' +
+                    '<tr><td style="padding:2px 8px 2px 0;color:#718096;">unmappedStatus:</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">' + (meta.unmappedStatus || '-') + '</code></td></tr>' +
+                    '<tr><td style="padding:2px 8px 2px 0;color:#718096;">referenceId:</td><td style="word-break:break-all;"><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;font-size:0.75rem;">' + (meta.referenceId || '-') + '</code></td></tr>' +
+                    '</table></div>';
+            }
+
+            if (acsTemplate) {
+                _smNbTpvAcsTemplate = acsTemplate;
+                bankBtn.style.display = 'inline-block';
+                bankBtn.disabled = false;
+                bankBtn.textContent = '\uD83C\uDFE6 Open Bank Page';
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div style="border-left:4px solid #4caf50; padding:1rem; background:#f0fff4; border-radius:0 8px 8px 0; margin-bottom:0.75rem;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#276749;">&#10003; TPV Payment Initiated — acsTemplate Received</p>' +
+                    '<p style="margin:0; color:#2d3748;">Click the button below to open the bank page. The bank will validate beneficiary account during authentication.</p>' +
+                    metaHtml + '</div>' +
+                    
+                    // acsTemplate Decode Section - Simplified
+                    '<div style="border-left:4px solid #10846D; padding:1rem; background:#f0fff4; border-radius:0 8px 8px 0; margin-bottom:0.75rem;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#10846D;">🔐 ACS Template Decode Guide</p>' +
+                    '<p style="margin:0 0 0.75rem; color:#2d3748;">The <code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">acsTemplate</code> is a <strong>Base64-encoded HTML string</strong>. Decode it to get the bank redirect form.</p>' +
+                    
+                    '<details open style="margin-top:0.75rem;">' +
+                    '<summary style="cursor:pointer; color:#10846D; font-weight:600;">📖 How to Decode Base64 acsTemplate</summary>' +
+                    '<div style="margin-top:0.75rem; padding:0.75rem; background:#1a1a2e; border-radius:6px; font-family:monospace; font-size:0.8rem; color:#a5d6a7; overflow-x:auto;">' +
+                    '<pre style="margin:0; white-space:pre-wrap; color:#90cdf4;">// JavaScript - Decode Base64 acsTemplate</pre>' +
+                    '<pre style="margin:0.5rem 0; white-space:pre-wrap;">const acsTemplate = response.result.acsTemplate;\nconst decodedHtml = atob(acsTemplate);\n\n// Open decoded HTML in popup window\nconst bankWindow = window.open(\'\', \'BankAuth\', \'width=800,height=600\');\nbankWindow.document.write(decodedHtml);\nbankWindow.document.close();</pre>' +
+                    '</div>' +
+                    
+                    '<p style="margin:0.75rem 0 0.5rem; font-weight:600; color:#374151; font-size:0.9rem;">Decoded HTML Structure:</p>' +
+                    '<div style="padding:0.75rem; background:#1a1a2e; border-radius:6px; font-family:monospace; font-size:0.75rem; color:#a5d6a7; overflow-x:auto;">' +
+                    '<pre style="margin:0; white-space:pre-wrap;">&lt;html&gt;&lt;body&gt;\n&lt;form name="payment_post" action="https://pgsim01.payu.in/initiate" method="post"&gt;\n  &lt;input type="hidden" name="merchantName" value="PAYU"&gt;\n  &lt;input type="hidden" name="txnAmount" value="100.00"&gt;\n  &lt;input type="hidden" name="txnRefId" value="TPV_xxx"&gt;\n  &lt;input type="hidden" name="ibibo_code" value="AXNBTPV"&gt;\n  &lt;!-- ... more hidden fields ... --&gt;\n&lt;/form&gt;\n&lt;script&gt;\n  window.onload = function() {\n    document.forms[\'payment_post\'].submit();  // Auto-submits to bank\n  }\n&lt;/script&gt;\n&lt;/body&gt;&lt;/html&gt;</pre>' +
+                    '</div>' +
+                    '</details></div>' +
+                    
+                    '<div style="border-left:4px solid #ed8936; padding:1rem; background:#fffaf0; border-radius:0 8px 8px 0; margin-bottom:0.75rem;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#c05621;">&#9888; Test Bank Note</p>' +
+                    '<p style="margin:0; color:#2d3748;">The <strong>test bank simulator auto-completes</strong> the payment instantly. You may see "Transaction is already in terminal state" — <strong>this is normal</strong>. It means the payment was processed successfully.</p></div>' +
+                    '<div style="border-left:4px solid #3182ce; padding:1rem; background:#ebf8ff; border-radius:0 8px 8px 0;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#2b6cb0;">&#128073; After Bank Page</p>' +
+                    '<ol style="margin:0; padding-left:1.25rem; color:#2d3748; line-height:1.8;">' +
+                    '<li>The test bank will auto-process the payment</li>' +
+                    '<li>PayU will POST the result to your SURL/FURL (callback)</li>' +
+                    '<li>Use <strong>"Verify TPV Payment"</strong> to confirm the transaction status</li>' +
+                    '</ol></div>';
+
+                if (document.getElementById('sm_nb_tpv_verify_txnid')) {
+                    document.getElementById('sm_nb_tpv_verify_txnid').value = data.txnid;
+                }
+            } else if (resp && resp.status === 0 && resp.error) {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>&#10007; Error:</strong> ' + resp.error + '</p>';
+                bankBtn.style.display = 'none';
+            } else if (resp && resp.status === -1 && resp.msg) {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>&#10007; Error:</strong> ' + resp.msg + '</p>';
+                bankBtn.style.display = 'none';
+            } else if (resp && resp.message) {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>Response:</strong> ' + resp.message + '</p>';
+                bankBtn.style.display = 'none';
+            } else {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>Note:</strong> No acsTemplate in response. Check the JSON for details.</p>';
+                bankBtn.style.display = 'none';
+            }
+            console.log('TPV Response:', resp);
+        }
+
+        var _smNbTpvBankPageOpened = false;
+        function smNbTpvOpenBankPage() {
+            if (_smNbTpvBankPageOpened) {
+                alert('Bank page already opened. Please complete the payment in the bank window or start a new transaction.');
+                return;
+            }
+            if (!_smNbTpvAcsTemplate) return alert('No acsTemplate available');
+            
+            _smNbTpvBankPageOpened = true;
+            var html = atob(_smNbTpvAcsTemplate);
+            
+            // Use blob URL approach for better compatibility with PayU's security
+            var blob = new Blob([html], { type: 'text/html' });
+            var blobUrl = URL.createObjectURL(blob);
+            var win = window.open(blobUrl, '_blank');
+            
+            // Revoke blob URL after a short delay to free memory
+            setTimeout(function() {
+                URL.revokeObjectURL(blobUrl);
+            }, 5000);
+            
+            _smNbTpvAcsTemplate = ''; // Clear to prevent reuse
+
+            var bankBtn = document.getElementById('smNbTpvOpenBankBtn');
+            bankBtn.disabled = true;
+            bankBtn.textContent = '\u2705 Bank Page Opened';
+            bankBtn.style.opacity = '0.6';
+
+            var postBankDiv = document.getElementById('smNbTpvPostBank');
+            if (!postBankDiv) {
+                postBankDiv = document.createElement('div');
+                postBankDiv.id = 'smNbTpvPostBank';
+                postBankDiv.style.cssText = 'margin-top:1rem; padding:1rem; border-radius:8px; background:#f0fff4; border:1px solid #9ae6b4;';
+                postBankDiv.innerHTML =
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#276749;">&#10003; Bank page opened in new tab</p>' +
+                    '<p style="margin:0 0 0.75rem; color:#2d3748; font-size:0.88rem;">Complete the payment in the bank simulator.</p>' +
+                    '<div style="background:#fffbeb; border:1px solid #fbbf24; padding:0.5rem 0.75rem; border-radius:6px; margin-bottom:0.75rem; font-size:0.85rem;">' +
+                    '<strong style="color:#92400e;">&#9888; PayU Test Environment Note:</strong><br>' +
+                    '<span style="color:#78350f;">• If you see "Pardon, Some Problem Occurred" → <strong>Refresh the page once</strong><br>' +
+                    '• If you see "Transaction is already in terminal state" → Payment was <strong>successful</strong></span></div>' +
+                    '<button class="button sm-btn-primary" onclick="smNbNavTo(document.querySelector(\'[data-section=sm-nb-tpv-verify]\'),\'sm-nb-tpv-verify\')" style="font-size:0.88rem;">Verify This Transaction &rarr;</button>';
+                bankBtn.parentNode.insertBefore(postBankDiv, bankBtn.nextSibling);
+            }
+        }
+        window.smNbTpvOpenBankPage = smNbTpvOpenBankPage;
+
+        // TPV Verify
+        function smNbPreviewTpvVerifyRequest() {
+            var key = document.getElementById('sm_nb_tpv_verify_key').value;
+            var salt = document.getElementById('sm_nb_tpv_verify_salt').value;
+            var txnid = document.getElementById('sm_nb_tpv_verify_txnid').value;
+
+            var hashString = key + '|verify_payment|' + txnid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'verify_payment', var1: txnid, hash: hash };
+
+            document.getElementById('smNbTpvVerifyReqRes').style.display = 'block';
+            document.getElementById('smNbTpvVerifyRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbTpvVerifyResponseView').textContent = '// Response will appear here';
+            document.getElementById('smNbTpvVerifyStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbTpvVerifyStatusBadge').textContent = 'Pending';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n  -d 'command=verify_payment' \\\n  -d 'var1=" + txnid + "' \\\n  -d 'hash=" + hash + "'";
+            document.getElementById('smNbTpvVerifyCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewTpvVerifyRequest = smNbPreviewTpvVerifyRequest;
+
+        function smNbSendTpvVerifyRequest() {
+            var key = document.getElementById('sm_nb_tpv_verify_key').value;
+            var salt = document.getElementById('sm_nb_tpv_verify_salt').value;
+            var txnid = document.getElementById('sm_nb_tpv_verify_txnid').value;
+
+            if (!txnid) { alert('Please enter the Transaction ID to verify'); return; }
+
+            var hashString = key + '|verify_payment|' + txnid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { key: key, command: 'verify_payment', var1: txnid, hash: hash };
+            var payload = { endpoint: 'postservice', method: 'POST', params: data };
+
+            document.getElementById('smNbTpvVerifyReqRes').style.display = 'block';
+            document.getElementById('smNbTpvVerifyRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbTpvVerifyStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbTpvVerifyStatusBadge').textContent = 'Sending...';
+
+            // Generate cURL command
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice.php?form=2' \\\n" +
+                "  -H 'Content-Type: application/x-www-form-urlencoded' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=verify_payment' \\\n" +
+                "  -d 'var1=" + txnid + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbTpvVerifyCurlView').textContent = curlCmd;
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var badge = document.getElementById('smNbTpvVerifyStatusBadge');
+                var guide = document.getElementById('smNbTpvVerifyResponseGuide');
+                var explain = document.getElementById('smNbTpvVerifyResponseExplain');
+
+                document.getElementById('smNbTpvVerifyResponseView').textContent = JSON.stringify(result.response || result, null, 2);
+
+                var resp = result.response;
+                guide.style.display = 'block';
+
+                if (resp && resp.status === 1 && resp.transaction_details) {
+                    var txn = resp.transaction_details[Object.keys(resp.transaction_details)[0]];
+                    var statusLabel = txn.status || 'unknown';
+                    
+                    // Show actual transaction status in badge
+                    if (statusLabel === 'success') {
+                        badge.className = 'sm-status-badge success';
+                        badge.textContent = 'Status: SUCCESS ✓';
+                    } else if (statusLabel === 'failure' || statusLabel === 'failed') {
+                        badge.className = 'sm-status-badge error';
+                        badge.textContent = 'Status: FAILED ✗';
+                    } else if (statusLabel === 'pending') {
+                        badge.className = 'sm-status-badge pending';
+                        badge.textContent = 'Status: PENDING';
+                    } else {
+                        badge.className = 'sm-status-badge pending';
+                        badge.textContent = 'Status: ' + statusLabel.toUpperCase();
+                    }
+                    var statusColor = statusLabel === 'success' ? '#276749' : statusLabel === 'failure' ? '#c53030' : '#c05621';
+                    var statusBg = statusLabel === 'success' ? '#f0fff4' : statusLabel === 'failure' ? '#fff5f5' : '#fffaf0';
+
+                    explain.innerHTML =
+                        '<div style="border-left:4px solid ' + statusColor + '; padding:1rem; background:' + statusBg + '; border-radius:0 8px 8px 0; margin-bottom:0.75rem;">' +
+                        '<p style="margin:0 0 0.5rem; font-weight:700; color:#1a202c;">Transaction Status: <span style="color:' + statusColor + ';">' + statusLabel.toUpperCase() + '</span></p>' +
+                        '<table style="width:100%;font-size:0.85rem;color:#2d3748;">' +
+                        '<tr><td style="padding:3px 0;color:#718096;">mihpayid:</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">' + (txn.mihpayid || '-') + '</code></td></tr>' +
+                        '<tr><td style="padding:3px 0;color:#718096;">mode:</td><td>' + (txn.mode || '-') + '</td></tr>' +
+                        '<tr><td style="padding:3px 0;color:#718096;">unmappedstatus:</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:3px;">' + (txn.unmappedstatus || '-') + '</code></td></tr>' +
+                        '<tr><td style="padding:3px 0;color:#718096;">amount:</td><td>&#8377;' + (txn.amt || txn.amount || '-') + '</td></tr>' +
+                        '<tr><td style="padding:3px 0;color:#718096;">bank_ref_num:</td><td>' + (txn.bank_ref_num || '-') + '</td></tr>' +
+                        '</table></div>';
+                } else if (resp && resp.status === 0) {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'Verification Failed';
+                    explain.innerHTML = '<p style="color:#c53030;"><strong>&#10007;</strong> ' + (resp.msg || 'Transaction not found or invalid.') + '</p>';
+                } else {
+                    badge.className = 'sm-status-badge pending';
+                    badge.textContent = 'HTTP ' + (result.http_code || '—');
+                    explain.innerHTML = '<p>Check the response JSON for details.</p>';
+                }
+            })
+            .catch(function(err) {
+                document.getElementById('smNbTpvVerifyStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbTpvVerifyStatusBadge').textContent = 'Error';
+                document.getElementById('smNbTpvVerifyResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendTpvVerifyRequest = smNbSendTpvVerifyRequest;
+
+        // ============================================
+        // NET BANKING PACB FUNCTIONS
+        // ============================================
+
+        var _smNbPacbAcsTemplate = '';
+        var _smNbPacbSimMode = true;
+        var _smNbPacbSimMihpayid = '';
+
+        function smNbTogglePacbSim(cb) {
+            _smNbPacbSimMode = cb.checked;
+            var captureCb = document.getElementById('sm_nb_capture_simulate');
+            if (captureCb) captureCb.checked = cb.checked;
+        }
+        window.smNbTogglePacbSim = smNbTogglePacbSim;
+
+        // ============================================
+        // NB ONE-TIME PAYMENT RESPONSE DISPLAY
+        // ============================================
+        var _smNbOtpCallbackData = null;
+
+        function smNbShowOtpResponse(data, isHashValid) {
+            _smNbOtpCallbackData = data;
+            
+            var origContent = document.getElementById('smNbOtpOriginalContent');
+            var respDisplay = document.getElementById('smNbOtpResponseDisplay');
+            if (origContent) origContent.style.display = 'none';
+            if (respDisplay) respDisplay.style.display = 'block';
+
+            var status = data.status || '';
+            var isSuccess = status.toLowerCase() === 'success';
+            var statusHeader = document.getElementById('smNbOtpStatusHeader');
+            var statusIcon = document.getElementById('smNbOtpStatusIcon');
+            var statusTitle = document.getElementById('smNbOtpStatusTitle');
+            var statusMsg = document.getElementById('smNbOtpStatusMsg');
+
+            if (isSuccess) {
+                statusHeader.style.borderBottomColor = '#10846D';
+                statusIcon.innerHTML = '<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><circle cx="60" cy="60" r="54" fill="none" stroke="#4CAF50" stroke-width="7"/><polyline points="30,60 50,75 90,40" fill="none" stroke="#4CAF50" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                statusTitle.style.color = '#4CAF50';
+                statusTitle.textContent = 'Payment Successful!';
+                statusMsg.style.color = '#4CAF50';
+                statusMsg.textContent = 'Your payment has been completed successfully';
+            } else {
+                statusHeader.style.borderBottomColor = '#f44336';
+                statusIcon.innerHTML = '<svg viewBox="0 0 120 120" style="width:100%;height:100%;"><circle cx="60" cy="60" r="54" fill="none" stroke="#f44336" stroke-width="7"/><line x1="40" y1="40" x2="80" y2="80" stroke="#f44336" stroke-width="8" stroke-linecap="round"/><line x1="80" y1="40" x2="40" y2="80" stroke="#f44336" stroke-width="8" stroke-linecap="round"/></svg>';
+                statusTitle.style.color = '#f44336';
+                statusTitle.textContent = 'Payment Failed';
+                statusMsg.style.color = '#f44336';
+                statusMsg.textContent = 'Unfortunately, your payment could not be processed';
+            }
+
+            var summaryGrid = document.getElementById('smNbOtpSummaryGrid');
+            var summaryHtml = '';
+            var fields = [
+                {key: 'txnid', label: '# TRANSACTION ID'},
+                {key: 'amount', label: '₹ AMOUNT', prefix: '₹'},
+                {key: 'mihpayid', label: '📋 PAYMENT ID'},
+                {key: 'status', label: '● STATUS'},
+                {key: 'productinfo', label: '📦 PRODUCT INFO'},
+                {key: 'firstname', label: '👤 CUSTOMER NAME'},
+                {key: 'email', label: '✉ EMAIL'},
+                {key: 'mode', label: '💳 PAYMENT MODE'}
+            ];
+            fields.forEach(function(f) {
+                if (data[f.key]) {
+                    var val = f.prefix ? f.prefix + data[f.key] : data[f.key];
+                    if (f.key === 'status') val = data[f.key].charAt(0).toUpperCase() + data[f.key].slice(1);
+                    summaryHtml += '<div style="background:linear-gradient(135deg,rgba(102,126,234,0.1),rgba(118,75,162,0.05));padding:15px;border-radius:10px;border-left:4px solid #667eea;"><div style="font-size:0.75rem;font-weight:600;color:#667eea;text-transform:uppercase;margin-bottom:6px;">' + f.label + '</div><div style="font-size:1rem;font-weight:600;color:#2d3748;word-break:break-all;">' + val + '</div></div>';
+                }
+            });
+            summaryGrid.innerHTML = summaryHtml;
+
+            var hashStatus = document.getElementById('smNbOtpHashStatus');
+            var hashResult = document.getElementById('smNbOtpHashResult');
+            var hashMsg = document.getElementById('smNbOtpHashMsg');
+            var hashUtilityLink = document.getElementById('smNbOtpHashUtilityLink');
+
+            if (isHashValid) {
+                hashStatus.style.background = 'linear-gradient(135deg, rgba(76,175,80,0.1), rgba(139,195,74,0.05))';
+                hashStatus.style.borderLeftColor = '#4CAF50';
+                hashResult.textContent = 'SUCCESS ✓';
+                hashResult.style.color = '#4CAF50';
+                hashMsg.textContent = 'Payment authenticity confirmed. Hash matches perfectly.';
+                hashUtilityLink.style.display = 'none';
+            } else {
+                hashStatus.style.background = 'linear-gradient(135deg, rgba(244,67,54,0.1), rgba(233,30,99,0.05))';
+                hashStatus.style.borderLeftColor = '#f44336';
+                hashResult.textContent = 'FAILED ✗';
+                hashResult.style.color = '#f44336';
+                hashMsg.textContent = 'Hash mismatch detected! This may indicate a security issue.';
+                hashUtilityLink.style.display = 'block';
+            }
+
+            var callbackDataEl = document.getElementById('smNbOtpCallbackData');
+            if (callbackDataEl) callbackDataEl.textContent = JSON.stringify(data, null, 2);
+        }
+        window.smNbShowOtpResponse = smNbShowOtpResponse;
+
+        function smNbToggleOtpDebug() {
+            var panel = document.getElementById('smNbOtpDebugPanel');
+            var btn = document.getElementById('smNbOtpDebugBtn');
+            if (panel.style.display === 'none') {
+                var content = document.getElementById('smNbOtpDebugContent');
+                if (_smNbOtpCallbackData) {
+                    var salt = document.getElementById('sm_nb_global_salt') ? document.getElementById('sm_nb_global_salt').value : '********';
+                    var key = _smNbOtpCallbackData.key || '';
+                    content.innerHTML = '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><strong style="color:#60a5fa;">Merchant Key:</strong> <span style="color:#fbbf24;">' + key.substring(0,4) + '****</span></div>' +
+                        '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><strong style="color:#60a5fa;">Salt Used:</strong> <span style="color:#fbbf24;">' + salt.substring(0,8) + '****</span></div>' +
+                        '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><strong style="color:#60a5fa;">Hash Formula:</strong> <span style="color:#fbbf24;font-size:0.8rem;">sha512(SALT|status||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key)</span></div>' +
+                        '<div style="padding:6px 0;"><strong style="color:#60a5fa;">Received Hash:</strong> <span style="color:#f59e0b;font-size:0.75rem;word-break:break-all;">' + (_smNbOtpCallbackData.hash || 'N/A') + '</span></div>';
+                }
+                panel.style.display = 'block';
+                btn.textContent = 'Hide Debug Info';
+            } else {
+                panel.style.display = 'none';
+                btn.textContent = 'Show Debug Info';
+            }
+        }
+        window.smNbToggleOtpDebug = smNbToggleOtpDebug;
+
+        function smNbToggleOtpCallback() {
+            var panel = document.getElementById('smNbOtpCallbackPanel');
+            var btn = document.getElementById('smNbOtpCallbackBtn');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                btn.textContent = 'Hide Callback Data';
+            } else {
+                panel.style.display = 'none';
+                btn.textContent = 'Check Callback Data';
+            }
+        }
+        window.smNbToggleOtpCallback = smNbToggleOtpCallback;
+
+        function smNbOpenOtpHashUtility() {
+            smNbNavTo(document.querySelector('[data-section=sm-nb-hash-verify]'), 'sm-nb-hash-verify');
+        }
+        window.smNbOpenOtpHashUtility = smNbOpenOtpHashUtility;
+
+        function smNbResetOtpResponse() {
+            var origContent = document.getElementById('smNbOtpOriginalContent');
+            var respDisplay = document.getElementById('smNbOtpResponseDisplay');
+            if (origContent) origContent.style.display = 'block';
+            if (respDisplay) respDisplay.style.display = 'none';
+            _smNbOtpCallbackData = null;
+        }
+        window.smNbResetOtpResponse = smNbResetOtpResponse;
+
+        function smNbFillSamplePacb() {
+            document.getElementById('sm_nb_pacb_txnid').value = 'PACB_' + Date.now();
+            document.getElementById('sm_nb_pacb_amount').value = '500.00';
+            document.getElementById('sm_nb_pacb_productinfo').value = 'Hotel Booking Deposit';
+            document.getElementById('sm_nb_pacb_firstname').value = 'Test';
+            if (document.getElementById('sm_nb_pacb_lastname')) {
+                document.getElementById('sm_nb_pacb_lastname').value = 'User';
+            }
+            document.getElementById('sm_nb_pacb_email').value = 'test@example.com';
+            document.getElementById('sm_nb_pacb_phone').value = '9876543210';
+            
+            // Address Parameters (Required for S2S)
+            if (document.getElementById('sm_nb_pacb_address1')) {
+                document.getElementById('sm_nb_pacb_address1').value = '123 Main Street';
+            }
+            if (document.getElementById('sm_nb_pacb_address2')) {
+                document.getElementById('sm_nb_pacb_address2').value = 'Apt 4B';
+            }
+            if (document.getElementById('sm_nb_pacb_city')) {
+                document.getElementById('sm_nb_pacb_city').value = 'Mumbai';
+            }
+            if (document.getElementById('sm_nb_pacb_state')) {
+                document.getElementById('sm_nb_pacb_state').value = 'Maharashtra';
+            }
+            if (document.getElementById('sm_nb_pacb_country')) {
+                document.getElementById('sm_nb_pacb_country').value = 'IN';
+            }
+            if (document.getElementById('sm_nb_pacb_zipcode')) {
+                document.getElementById('sm_nb_pacb_zipcode').value = '400001';
+            }
+            
+            // Buyer Type
+            if (document.getElementById('sm_nb_pacb_buyer_type')) {
+                document.getElementById('sm_nb_pacb_buyer_type').value = '0';
+            }
+            
+            document.getElementById('sm_nb_pacb_surl').value = 'https://payu.in/integrationlab/callback.php';
+            document.getElementById('sm_nb_pacb_furl').value = 'https://payu.in/integrationlab/callback.php';
+            document.getElementById('sm_nb_pacb_client_ip').value = '10.200.12.12';
+            document.getElementById('sm_nb_pacb_device_info').value = navigator.userAgent || 'Mozilla/5.0';
+            
+            // UDF Fields (with correct format as per PACB/LRS documentation)
+            document.getElementById('sm_nb_pacb_udf1').value = 'ABCDE1234F'; // PAN Number
+            document.getElementById('sm_nb_pacb_udf2').value = ''; // Free use (can be empty)
+            document.getElementById('sm_nb_pacb_udf3').value = '15-08-1990'; // DOB in DD-MM-YYYY format
+            document.getElementById('sm_nb_pacb_udf4').value = ''; // End Merchant / Passport (for PA only)
+            document.getElementById('sm_nb_pacb_udf5').value = 'INV_123456'; // Invoice ID (MANDATORY for all CB)
+            
+            // Update character counts
+            smNbUpdateCharCount(document.getElementById('sm_nb_pacb_udf1'), 'sm_nb_pacb_udf1_count');
+            smNbUpdateCharCount(document.getElementById('sm_nb_pacb_udf2'), 'sm_nb_pacb_udf2_count');
+            smNbUpdateCharCount(document.getElementById('sm_nb_pacb_udf3'), 'sm_nb_pacb_udf3_count');
+            smNbUpdateCharCount(document.getElementById('sm_nb_pacb_udf4'), 'sm_nb_pacb_udf4_count');
+            smNbUpdateCharCount(document.getElementById('sm_nb_pacb_udf5'), 'sm_nb_pacb_udf5_count');
+            smNbUpdateCharCount(document.getElementById('sm_nb_pacb_surl'), 'sm_nb_pacb_surl_count');
+            smNbUpdateCharCount(document.getElementById('sm_nb_pacb_furl'), 'sm_nb_pacb_furl_count');
+        }
+        window.smNbFillSamplePacb = smNbFillSamplePacb;
+
+        // PACB Tab Switching (One-Time vs Subscription Payment)
+        function smNbSwitchPacbTab(tabType) {
+            var onetimeTab = document.getElementById('smNbPacbTabOnetime');
+            var subscriptionTab = document.getElementById('smNbPacbTabSubscription');
+            var onetimeContent = document.getElementById('smNbPacbOnetimeContent');
+            var subscriptionContent = document.getElementById('smNbPacbSubscriptionContent');
+            
+            if (tabType === 'onetime') {
+                // Active state for One-Time
+                onetimeTab.style.border = '2px solid #10846D';
+                onetimeTab.style.background = 'rgba(16,132,109,0.05)';
+                onetimeTab.querySelector('div:first-child').style.color = '#10846D';
+                // Inactive state for Subscription
+                subscriptionTab.style.border = '2px solid #e5e7eb';
+                subscriptionTab.style.background = 'white';
+                subscriptionTab.querySelector('div:first-child').style.color = '#374151';
+                // Show/hide content
+                onetimeContent.style.display = 'block';
+                subscriptionContent.style.display = 'none';
+            } else {
+                // Active state for Subscription
+                subscriptionTab.style.border = '2px solid #10846D';
+                subscriptionTab.style.background = 'rgba(16,132,109,0.05)';
+                subscriptionTab.querySelector('div:first-child').style.color = '#10846D';
+                // Inactive state for One-Time
+                onetimeTab.style.border = '2px solid #e5e7eb';
+                onetimeTab.style.background = 'white';
+                onetimeTab.querySelector('div:first-child').style.color = '#374151';
+                // Show/hide content
+                subscriptionContent.style.display = 'block';
+                onetimeContent.style.display = 'none';
+            }
+        }
+        window.smNbSwitchPacbTab = smNbSwitchPacbTab;
+
+        // PACB Character Counter
+        function smNbUpdateCharCount(input, countId) {
+            var countEl = document.getElementById(countId);
+            if (countEl) {
+                countEl.textContent = input.value.length;
+            }
+        }
+        window.smNbUpdateCharCount = smNbUpdateCharCount;
+
+        // PACB Compliance Toggle (UDF7 & UDF8)
+        function smNbTogglePacbCompliance(checkbox) {
+            var section = document.getElementById('sm_nb_pacb_compliance_section');
+            if (section) {
+                section.style.display = checkbox.checked ? 'block' : 'none';
+            }
+        }
+        window.smNbTogglePacbCompliance = smNbTogglePacbCompliance;
+
+        // PACB LRS Parameters Toggle
+        function smNbTogglePacbLrs(checkbox) {
+            var section = document.getElementById('sm_nb_pacb_lrs_section');
+            if (section) {
+                section.style.display = checkbox.checked ? 'block' : 'none';
+            }
+        }
+        window.smNbTogglePacbLrs = smNbTogglePacbLrs;
+
+        // PACB Merchant Category Info Update
+        function smNbUpdatePacbCategoryInfo(category) {
+            var infoDiv = document.getElementById('sm_nb_pacb_category_info');
+            var lrsCheckbox = document.getElementById('sm_nb_pacb_enable_lrs');
+            var complianceCheckbox = document.getElementById('sm_nb_pacb_enable_udf_compliance');
+            
+            if (!infoDiv) return;
+            
+            if (category === 'lrs_travel') {
+                infoDiv.style.background = '#e8f5e9';
+                infoDiv.innerHTML = '<strong>LRS Merchants (Travel & Education):</strong> All LRS-specific parameters (lrs_service_type, lrs_mandatory_limit_declaration, lrs_tnc, lrs_tcs_declaration_under_limit, UDF1 PAN, UDF3 DOB) are <strong>MANDATORY</strong>. Enable LRS params below.';
+                // Auto-enable LRS params for LRS merchants
+                if (lrsCheckbox && !lrsCheckbox.checked) {
+                    lrsCheckbox.checked = true;
+                    smNbTogglePacbLrs(lrsCheckbox);
+                }
+            } else if (category === 'digital_services') {
+                infoDiv.style.background = '#e0f2fe';
+                infoDiv.innerHTML = '<strong>Digital Services (PACB-Import only):</strong> LRS parameters are <strong>NOT required</strong>. UDF1 (PAN) and UDF3 (DOB) are only needed if AD bank requests. UDF5 (Invoice ID) is <strong>MANDATORY</strong> for all cross-border transactions.';
+                // Auto-disable LRS params for non-LRS merchants
+                if (lrsCheckbox && lrsCheckbox.checked) {
+                    lrsCheckbox.checked = false;
+                    smNbTogglePacbLrs(lrsCheckbox);
+                }
+            } else if (category === 'physical_goods') {
+                infoDiv.style.background = '#fef3c7';
+                infoDiv.innerHTML = '<strong>Physical Goods (PACB-Import only):</strong> LRS parameters are <strong>NOT required</strong>. Consider enabling UDF Params (UDF7 & UDF8) for Import/Export Code and Airway Bill Number. UDF5 (Invoice ID) is <strong>MANDATORY</strong>.';
+                // Auto-disable LRS params
+                if (lrsCheckbox && lrsCheckbox.checked) {
+                    lrsCheckbox.checked = false;
+                    smNbTogglePacbLrs(lrsCheckbox);
+                }
+                // Suggest enabling compliance params for physical goods
+                if (complianceCheckbox && !complianceCheckbox.checked) {
+                    complianceCheckbox.checked = true;
+                    smNbTogglePacbCompliance(complianceCheckbox);
+                }
+            }
+        }
+        window.smNbUpdatePacbCategoryInfo = smNbUpdatePacbCategoryInfo;
+
+        function smNbBuildPacbPayload() {
+            var key = document.getElementById('sm_nb_pacb_key').value;
+            var salt = document.getElementById('sm_nb_pacb_salt').value;
+            var txnid = document.getElementById('sm_nb_pacb_txnid').value || 'PACB_' + Date.now();
+            var amount = document.getElementById('sm_nb_pacb_amount').value;
+            var productinfo = document.getElementById('sm_nb_pacb_productinfo').value;
+            var firstname = document.getElementById('sm_nb_pacb_firstname').value;
+            var lastname = document.getElementById('sm_nb_pacb_lastname') ? document.getElementById('sm_nb_pacb_lastname').value : '';
+            var email = document.getElementById('sm_nb_pacb_email').value;
+            var phone = document.getElementById('sm_nb_pacb_phone').value;
+            var bankcode = document.getElementById('sm_nb_pacb_bankcode').value;
+            var surl = document.getElementById('sm_nb_pacb_surl').value;
+            var furl = document.getElementById('sm_nb_pacb_furl').value;
+            var clientIp = document.getElementById('sm_nb_pacb_client_ip') ? document.getElementById('sm_nb_pacb_client_ip').value : '10.200.12.12';
+            var deviceInfo = document.getElementById('sm_nb_pacb_device_info') ? document.getElementById('sm_nb_pacb_device_info').value : navigator.userAgent;
+            
+            // Address Parameters (Required for S2S)
+            var address1 = document.getElementById('sm_nb_pacb_address1') ? document.getElementById('sm_nb_pacb_address1').value : '';
+            var address2 = document.getElementById('sm_nb_pacb_address2') ? document.getElementById('sm_nb_pacb_address2').value : '';
+            var city = document.getElementById('sm_nb_pacb_city') ? document.getElementById('sm_nb_pacb_city').value : '';
+            var state = document.getElementById('sm_nb_pacb_state') ? document.getElementById('sm_nb_pacb_state').value : '';
+            var country = document.getElementById('sm_nb_pacb_country') ? document.getElementById('sm_nb_pacb_country').value : 'IN';
+            var zipcode = document.getElementById('sm_nb_pacb_zipcode') ? document.getElementById('sm_nb_pacb_zipcode').value : '';
+            
+            // Buyer Type (B2B indicator)
+            var buyerType = document.getElementById('sm_nb_pacb_buyer_type') ? document.getElementById('sm_nb_pacb_buyer_type').value : '0';
+            
+            // UDF Fields
+            var udf1 = document.getElementById('sm_nb_pacb_udf1') ? document.getElementById('sm_nb_pacb_udf1').value : '';
+            var udf2 = document.getElementById('sm_nb_pacb_udf2') ? document.getElementById('sm_nb_pacb_udf2').value : '';
+            var udf3 = document.getElementById('sm_nb_pacb_udf3') ? document.getElementById('sm_nb_pacb_udf3').value : '';
+            var udf4 = document.getElementById('sm_nb_pacb_udf4') ? document.getElementById('sm_nb_pacb_udf4').value : '';
+            var udf5 = document.getElementById('sm_nb_pacb_udf5') ? document.getElementById('sm_nb_pacb_udf5').value : '';
+
+            document.getElementById('sm_nb_pacb_txnid').value = txnid;
+
+            // Hash formula: sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)
+            var hashString = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var payload = {
+                key: key, txnid: txnid, amount: amount, productinfo: productinfo,
+                firstname: firstname, lastname: lastname, email: email, phone: phone, 
+                pg: 'NB', bankcode: bankcode, surl: surl, furl: furl, hash: hash,
+                txn_s2s_flow: '4', pre_authorize: '1', api_version: '6',
+                s2s_client_ip: clientIp, s2s_device_info: deviceInfo,
+                // Address Parameters
+                address1: address1, address2: address2, city: city, state: state, country: country, zipcode: zipcode,
+                // UDF Fields
+                udf1: udf1, udf2: udf2, udf3: udf3, udf4: udf4, udf5: udf5,
+                // B2B Indicator
+                buyer_type_business: buyerType
+            };
+            
+            // Cross-Border Compliance Parameters (UDF7 & UDF8)
+            var complianceEnabled = document.getElementById('sm_nb_pacb_enable_udf_compliance');
+            if (complianceEnabled && complianceEnabled.checked) {
+                var udf7 = document.getElementById('sm_nb_pacb_udf7') ? document.getElementById('sm_nb_pacb_udf7').value : '';
+                var udf8 = document.getElementById('sm_nb_pacb_udf8') ? document.getElementById('sm_nb_pacb_udf8').value : '';
+                if (udf7 || udf8) {
+                    payload.udf_params = JSON.stringify({udf7: udf7, udf8: udf8});
+                }
+            }
+            
+            // LRS Parameters (Travel & Education merchants only)
+            var lrsEnabled = document.getElementById('sm_nb_pacb_enable_lrs');
+            if (lrsEnabled && lrsEnabled.checked) {
+                var lrsServiceType = document.getElementById('sm_nb_pacb_lrs_service_type') ? document.getElementById('sm_nb_pacb_lrs_service_type').value : '';
+                var tcsAmount = document.getElementById('sm_nb_pacb_tcs_amount') ? document.getElementById('sm_nb_pacb_tcs_amount').value : '0';
+                var lrsLimitDecl = document.getElementById('sm_nb_pacb_lrs_limit_declaration') ? document.getElementById('sm_nb_pacb_lrs_limit_declaration').value : '1';
+                var lrsTnc = document.getElementById('sm_nb_pacb_lrs_tnc') ? document.getElementById('sm_nb_pacb_lrs_tnc').value : '1';
+                var lrsTcsDecl = document.getElementById('sm_nb_pacb_lrs_tcs_declaration') ? document.getElementById('sm_nb_pacb_lrs_tcs_declaration').value : '0';
+                
+                if (lrsServiceType) payload.lrs_service_type = lrsServiceType;
+                payload.tcs_amount = tcsAmount;
+                payload.lrs_mandatory_limit_declaration = lrsLimitDecl;
+                payload.lrs_tnc = lrsTnc;
+                payload.lrs_tcs_declaration_under_limit = lrsTcsDecl;
+            }
+            
+            return payload;
+        }
+
+        function smNbPreviewPacbRequest() {
+            var data = smNbBuildPacbPayload();
+            document.getElementById('smNbPacbReqRes').style.display = 'block';
+            document.getElementById('smNbPacbRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbPacbResponseView').textContent = '// Response will appear here after sending';
+            document.getElementById('smNbPacbStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbPacbStatusBadge').textContent = 'Pending';
+            document.getElementById('smNbPacbResponseGuide').style.display = 'none';
+            document.getElementById('smNbPacbOpenBankBtn').style.display = 'none';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/_payment' \\\n  -H 'Content-Type: application/x-www-form-urlencoded' \\\n";
+            for (var k in data) {
+                curlCmd += "  -d '" + k + "=" + encodeURIComponent(data[k]) + "' \\\n";
+            }
+            document.getElementById('smNbPacbCurlView').textContent = curlCmd.replace(/ \\\n$/, '');
+        }
+        window.smNbPreviewPacbRequest = smNbPreviewPacbRequest;
+
+        function smNbSendPacbRequest() {
+            var data = smNbBuildPacbPayload();
+            document.getElementById('smNbPacbReqRes').style.display = 'block';
+            document.getElementById('smNbPacbRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbPacbStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbPacbStatusBadge').textContent = 'Sending...';
+
+            if (_smNbPacbSimMode) {
+                setTimeout(function() {
+                    var simMihpayid = '4039937' + Date.now();
+                    _smNbPacbSimMihpayid = simMihpayid;
+                    var simResult = {
+                        http_code: 200,
+                        response: {
+                            mihpayid: simMihpayid,
+                            status: 'pending',
+                            unmappedstatus: 'auth',
+                            txnid: data.txnid,
+                            amount: data.amount,
+                            mode: 'NB',
+                            bankcode: data.bankcode,
+                            bank_ref_num: 'SIM' + Date.now(),
+                            error_code: 'E000',
+                            error_Message: 'No Error',
+                            net_amount_debit: '0.00',
+                            pre_authorize: '1',
+                            _simulation: true,
+                            _note: 'This is a simulated response. In production with PACB enabled, unmappedstatus would be "auth" indicating funds are blocked.'
+                        }
+                    };
+                    smNbDisplayPacbResponse(simResult, data);
+
+                    document.getElementById('sm_nb_capture_mihpayid').value = simMihpayid;
+                    document.getElementById('sm_nb_capture_amount').value = data.amount;
+                }, 800);
+                return;
+            }
+
+            var payload = { endpoint: 'payment', method: 'POST', params: data };
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                smNbDisplayPacbResponse(result, data);
+            })
+            .catch(function(err) {
+                document.getElementById('smNbPacbStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbPacbStatusBadge').textContent = 'Error';
+                document.getElementById('smNbPacbResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendPacbRequest = smNbSendPacbRequest;
+
+        function smNbDisplayPacbResponse(result, data) {
+            var badge = document.getElementById('smNbPacbStatusBadge');
+            var respView = document.getElementById('smNbPacbResponseView');
+            var guide = document.getElementById('smNbPacbResponseGuide');
+            var explain = document.getElementById('smNbPacbResponseExplain');
+            var bankBtn = document.getElementById('smNbPacbOpenBankBtn');
+
+            if (result.http_code === 200) {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'HTTP 200 OK';
+            } else {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + (result.http_code || 'Error');
+            }
+
+            respView.textContent = JSON.stringify(result.response || result, null, 2);
+
+            var resp = result.response;
+            
+            // Check for acsTemplate in different possible locations
+            var acsTemplate = null;
+            if (resp) {
+                if (resp.acsTemplate) {
+                    acsTemplate = resp.acsTemplate;
+                } else if (resp.result && resp.result.acsTemplate) {
+                    acsTemplate = resp.result.acsTemplate;
+                } else if (resp.data && resp.data.acsTemplate) {
+                    acsTemplate = resp.data.acsTemplate;
+                }
+            }
+
+            if (resp && resp._simulation && resp.unmappedstatus === 'auth') {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'SIMULATED — HTTP 200 OK';
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div style="border-left:4px solid #7c4dff; padding:1rem; background:rgba(124,77,255,0.06); border-radius:0 8px 8px 0; margin-bottom:1rem;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#7c4dff;">&#127919; Simulation Mode Active</p>' +
+                    '<p style="margin:0; color:rgba(255,255,255,0.7); font-size:0.85rem;">This response is simulated to demonstrate a successful PACB pre-authorization.</p></div>' +
+                    '<div style="border-left:4px solid #4caf50; padding:1rem; background:rgba(76,175,80,0.06); border-radius:0 8px 8px 0; margin-bottom:1rem;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#4caf50;">&#10003; Pre-Authorization Successful (auth)</p>' +
+                    '<p style="margin:0; color:rgba(255,255,255,0.7);">Funds of <strong>&#8377;' + (data.amount || resp.amount) + '</strong> are <strong>blocked</strong> in the customer\'s bank account.</p>' +
+                    '<p style="margin:0.5rem 0 0; color:rgba(255,255,255,0.7);">Status: <code style="background:rgba(76,175,80,0.2);color:#4caf50;padding:2px 8px;border-radius:4px;">unmappedstatus = auth</code></p>' +
+                    '<p style="margin:0.5rem 0 0; color:rgba(255,255,255,0.7);">mihpayid: <code style="background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:4px;">' + resp.mihpayid + '</code></p></div>' +
+                    '<div style="border-left:4px solid #2196f3; padding:1rem; background:rgba(33,150,243,0.06); border-radius:0 8px 8px 0;">' +
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#2196f3;">&#128073; Next Step: Capture the Funds</p>' +
+                    '<p style="margin:0; color:rgba(255,255,255,0.7);">The <strong>mihpayid</strong> and <strong>amount</strong> have been auto-filled in the Capture form. Click the button below to proceed.</p></div>';
+                bankBtn.style.display = 'none';
+            } else if (acsTemplate) {
+                _smNbPacbAcsTemplate = acsTemplate;
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>&#10003; Pre-Authorization Initiated!</strong></p>' +
+                    '<p>Click the button below to open the bank page. After authentication, funds will be <strong>blocked</strong> (not debited) in customer\'s account.</p>' +
+                    '<div class="sm-info-box warning" style="margin-top:1rem;">' +
+                    '<strong>&#9888; Important:</strong> After completing bank authentication, verify the transaction status. ' +
+                    'If <code>unmappedstatus</code> shows <strong>"captured"</strong> instead of <strong>"auth"</strong>, ' +
+                    'it means <strong>NB PACB is not enabled</strong> on your merchant account. Contact your PayU KAM to activate it.</div>' +
+                    '<p style="margin-top:0.5rem;"><strong>Next Step:</strong> After successful pre-auth, use "Capture Transaction" to debit the blocked funds.</p>';
+                bankBtn.style.display = 'inline-block';
+            } else if (resp && resp.status === 0 && resp.error) {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>&#10007; Error:</strong> ' + resp.error + '</p>';
+                bankBtn.style.display = 'none';
+            } else if (resp && resp.status === -1 && resp.msg) {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>&#10007; Error:</strong> ' + resp.msg + '</p>';
+                bankBtn.style.display = 'none';
+            } else {
+                guide.style.display = 'block';
+                explain.innerHTML = '<p><strong>Note:</strong> Check the response JSON for details.</p>';
+                bankBtn.style.display = 'none';
+            }
+            
+            console.log('PACB Response:', resp);
+        }
+
+        var _smNbPacbBankPageOpened = false;
+        function smNbPacbOpenBankPage() {
+            if (_smNbPacbBankPageOpened) {
+                alert('Bank page already opened. Please complete the payment in the bank window or start a new transaction.');
+                return;
+            }
+            if (!_smNbPacbAcsTemplate) return alert('No acsTemplate available');
+            
+            _smNbPacbBankPageOpened = true;
+            var html = atob(_smNbPacbAcsTemplate);
+            
+            // Use blob URL approach for better compatibility with PayU's security
+            var blob = new Blob([html], { type: 'text/html' });
+            var blobUrl = URL.createObjectURL(blob);
+            var win = window.open(blobUrl, '_blank');
+            
+            // Revoke blob URL after a short delay to free memory
+            setTimeout(function() {
+                URL.revokeObjectURL(blobUrl);
+            }, 5000);
+            
+            _smNbPacbAcsTemplate = ''; // Clear to prevent reuse
+
+            var bankBtn = document.getElementById('smNbPacbOpenBankBtn');
+            bankBtn.disabled = true;
+            bankBtn.textContent = '\u2705 Bank Page Opened';
+            bankBtn.style.opacity = '0.6';
+
+            var postDiv = document.getElementById('smNbPacbPostBank');
+            if (!postDiv) {
+                postDiv = document.createElement('div');
+                postDiv.id = 'smNbPacbPostBank';
+                postDiv.style.cssText = 'margin-top:1rem; padding:1rem; border-radius:8px; background:#f0fff4; border:1px solid #9ae6b4;';
+                postDiv.innerHTML =
+                    '<p style="margin:0 0 0.5rem; font-weight:700; color:#276749;">&#10003; Bank page opened in new tab</p>' +
+                    '<p style="margin:0 0 0.75rem; color:#2d3748; font-size:0.88rem;">Complete the pre-authorization in the bank simulator. Then proceed to capture.</p>' +
+                    '<button class="button sm-btn-primary" onclick="smNbNavTo(document.querySelector(\'[data-section=sm-nb-capture]\'),\'sm-nb-capture\')" style="font-size:0.88rem;">Proceed to Capture &rarr;</button>';
+                bankBtn.parentNode.insertBefore(postDiv, bankBtn.nextSibling);
+            }
+        }
+        window.smNbPacbOpenBankPage = smNbPacbOpenBankPage;
+
+        // ============================================
+        // NET BANKING CAPTURE FUNCTIONS
+        // ============================================
+
+        function smNbPreviewCaptureRequest() {
+            var key = document.getElementById('sm_nb_capture_key').value;
+            var salt = document.getElementById('sm_nb_capture_salt').value;
+            var mihpayid = document.getElementById('sm_nb_capture_mihpayid').value;
+            var amount = document.getElementById('sm_nb_capture_amount').value;
+            var tokenId = 'CAP_' + Date.now(); // Unique request identifier
+
+            // Hash formula: key|command|var1|salt
+            var hashString = key + '|capture_transaction|' + mihpayid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { 
+                key: key, 
+                command: 'capture_transaction', 
+                var1: mihpayid,      // PayU transaction ID
+                var2: tokenId,        // Unique request identifier
+                var3: amount,         // Amount to capture
+                hash: hash 
+            };
+
+            document.getElementById('smNbCaptureReqRes').style.display = 'block';
+            document.getElementById('smNbCaptureRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbCaptureResponseView').textContent = '// Response will appear here';
+            document.getElementById('smNbCaptureStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbCaptureStatusBadge').textContent = 'Pending';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/merchant/postservice?form=2' \\\n" +
+                "  -d 'key=" + key + "' \\\n" +
+                "  -d 'command=capture_transaction' \\\n" +
+                "  -d 'var1=" + mihpayid + "' \\\n" +
+                "  -d 'var2=" + tokenId + "' \\\n" +
+                "  -d 'var3=" + amount + "' \\\n" +
+                "  -d 'hash=" + hash + "'";
+            document.getElementById('smNbCaptureCurlView').textContent = curlCmd;
+        }
+        window.smNbPreviewCaptureRequest = smNbPreviewCaptureRequest;
+
+        function smNbSendCaptureRequest() {
+            var key = document.getElementById('sm_nb_capture_key').value;
+            var salt = document.getElementById('sm_nb_capture_salt').value;
+            var mihpayid = document.getElementById('sm_nb_capture_mihpayid').value;
+            var amount = document.getElementById('sm_nb_capture_amount').value;
+            var tokenId = 'CAP_' + Date.now();
+            var isSimulated = document.getElementById('sm_nb_capture_simulate') && document.getElementById('sm_nb_capture_simulate').checked;
+
+            if (!mihpayid) {
+                alert('Please enter the mihpayid from the pre-authorization response');
+                return;
+            }
+            if (!amount) {
+                alert('Please enter the amount to capture');
+                return;
+            }
+
+            var hashString = key + '|capture_transaction|' + mihpayid + '|' + salt;
+            var hash = CryptoJS.SHA512(hashString).toString();
+
+            var data = { 
+                key: key, 
+                command: 'capture_transaction', 
+                var1: mihpayid,
+                var2: tokenId,
+                var3: amount,
+                hash: hash 
+            };
+
+            document.getElementById('smNbCaptureReqRes').style.display = 'block';
+            document.getElementById('smNbCaptureRequestView').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('smNbCaptureStatusBadge').className = 'sm-status-badge pending';
+            document.getElementById('smNbCaptureStatusBadge').textContent = 'Sending...';
+
+            if (isSimulated) {
+                setTimeout(function() {
+                    var simResult = {
+                        http_code: 200,
+                        response: {
+                            status: 1,
+                            msg: 'Transaction Captured Successfully',
+                            mihpayid: mihpayid,
+                            bank_ref_num: 'SIMCAP' + Date.now(),
+                            amount: amount,
+                            unmappedstatus: 'captured',
+                            request_id: tokenId,
+                            _simulation: true,
+                            _note: 'Simulated successful capture. In production with PACB enabled, this confirms the blocked funds have been debited.'
+                        }
+                    };
+                    var badge = document.getElementById('smNbCaptureStatusBadge');
+                    var guide = document.getElementById('smNbCaptureResponseGuide');
+                    var explain = document.getElementById('smNbCaptureResponseExplain');
+
+                    document.getElementById('smNbCaptureResponseView').textContent = JSON.stringify(simResult.response, null, 2);
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'SIMULATED — Capture Successful';
+                    guide.style.display = 'block';
+                    explain.innerHTML =
+                        '<div style="border-left:4px solid #7c4dff; padding:1rem; background:rgba(124,77,255,0.06); border-radius:0 8px 8px 0; margin-bottom:1rem;">' +
+                        '<p style="margin:0 0 0.5rem; font-weight:700; color:#7c4dff;">&#127919; Simulation Mode Active</p>' +
+                        '<p style="margin:0; color:rgba(255,255,255,0.7); font-size:0.85rem;">This response is simulated to demonstrate a successful capture.</p></div>' +
+                        '<div style="border-left:4px solid #4caf50; padding:1rem; background:rgba(76,175,80,0.06); border-radius:0 8px 8px 0; margin-bottom:1rem;">' +
+                        '<p style="margin:0 0 0.5rem; font-weight:700; color:#4caf50;">&#10003; Capture Successful!</p>' +
+                        '<p style="margin:0; color:rgba(255,255,255,0.7);">The pre-authorized amount of <strong>&#8377;' + amount + '</strong> has been captured (debited) from the customer\'s bank account.</p>' +
+                        '<p style="margin:0.5rem 0 0; color:rgba(255,255,255,0.7);">Status changed: <code style="background:rgba(255,152,0,0.2);color:#ff9800;padding:2px 8px;border-radius:4px;">auth</code> &rarr; <code style="background:rgba(76,175,80,0.2);color:#4caf50;padding:2px 8px;border-radius:4px;">captured</code></p></div>' +
+                        '<div style="border-left:4px solid #2196f3; padding:1rem; background:rgba(33,150,243,0.06); border-radius:0 8px 8px 0;">' +
+                        '<p style="margin:0 0 0.5rem; font-weight:700; color:#2196f3;">&#127881; PACB Flow Complete</p>' +
+                        '<p style="margin:0; color:rgba(255,255,255,0.7);">The full Pre-Authorize → Bank Auth → Capture flow has been demonstrated successfully.</p>' +
+                        '<ol style="margin:0.75rem 0 0; padding-left:1.25rem; color:rgba(255,255,255,0.6); line-height:1.8; font-size:0.85rem;">' +
+                        '<li><s>Initiate PACB pre-authorization</s> &#10003;</li>' +
+                        '<li><s>Bank authenticates and blocks funds (unmappedstatus: auth)</s> &#10003;</li>' +
+                        '<li><s>Capture the blocked funds</s> &#10003;</li>' +
+                        '</ol></div>';
+                }, 600);
+                return;
+            }
+
+            var payload = { endpoint: 'postservice', method: 'POST', params: data };
+
+            fetch(getProxyUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                var badge = document.getElementById('smNbCaptureStatusBadge');
+                var guide = document.getElementById('smNbCaptureResponseGuide');
+                var explain = document.getElementById('smNbCaptureResponseExplain');
+
+                document.getElementById('smNbCaptureResponseView').textContent = JSON.stringify(result.response || result, null, 2);
+
+                var resp = result.response;
+                guide.style.display = 'block';
+
+                if (resp && resp.status === 1) {
+                    badge.className = 'sm-status-badge success';
+                    badge.textContent = 'HTTP ' + result.http_code + ' — Capture Successful';
+                    explain.innerHTML = '<p><strong>&#10003; Capture Successful!</strong></p>' +
+                        '<p>The pre-authorized funds have been captured (debited) from the customer\'s account.</p>';
+                } else if (resp && resp.msg && resp.msg.toLowerCase().indexOf('delayed capture not allowed') !== -1) {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'HTTP ' + result.http_code + ' — Capture Not Allowed';
+                    explain.innerHTML =
+                        '<div style="border-left:4px solid #f44336; padding:1rem; background:rgba(244,67,54,0.06); border-radius:0 8px 8px 0; margin-bottom:1rem;">' +
+                        '<p style="margin:0 0 0.75rem; font-weight:700; color:#d32f2f; font-size:1.05rem;">&#10007; Delayed Capture Not Allowed</p>' +
+                        '<p style="margin:0 0 0.75rem; color:#333;">The original transaction was <strong>immediately captured</strong> instead of being pre-authorized. This means <code>pre_authorize=1</code> was ignored by PayU.</p>' +
+                        '</div>' +
+                        '<div style="border-left:4px solid #ff9800; padding:1rem; background:rgba(255,152,0,0.06); border-radius:0 8px 8px 0; margin-bottom:1rem;">' +
+                        '<p style="margin:0 0 0.5rem; font-weight:700; color:#e65100;">&#9888; Why This Happens</p>' +
+                        '<ul style="margin:0; padding-left:1.25rem; color:#333; line-height:1.8;">' +
+                        '<li><strong>NB PACB is not enabled</strong> on your merchant account (<code>' + key + '</code>)</li>' +
+                        '<li>PayU requires explicit activation by your Key Account Manager (KAM)</li>' +
+                        '<li>The transaction was processed as a regular NB payment (status: <code>captured</code> instead of <code>auth</code>)</li>' +
+                        '</ul>' +
+                        '</div>' +
+                        '<div style="border-left:4px solid #1976d2; padding:1rem; background:rgba(25,118,210,0.06); border-radius:0 8px 8px 0;">' +
+                        '<p style="margin:0 0 0.5rem; font-weight:700; color:#1565c0;">&#128736; How to Fix</p>' +
+                        '<ol style="margin:0; padding-left:1.25rem; color:#333; line-height:1.8;">' +
+                        '<li>Contact PayU Support or your KAM</li>' +
+                        '<li>Request to enable <strong>Net Banking PACB (Pre-Authorize)</strong> on your merchant account</li>' +
+                        '<li>Once enabled, re-initiate a PACB transaction — the status should show <code>auth</code> instead of <code>captured</code></li>' +
+                        '<li>Then capture will work using this form</li>' +
+                        '</ol>' +
+                        '</div>';
+                } else if (resp && resp.msg) {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'HTTP ' + result.http_code + ' — Failed';
+                    explain.innerHTML = '<p><strong>&#10007; Capture Failed:</strong> ' + resp.msg + '</p>' +
+                        '<p style="margin-top:0.5rem; color:#666;">Ensure the mihpayid is from a <strong>pre-authorized</strong> transaction (unmappedstatus = "auth").</p>';
+                } else {
+                    badge.className = 'sm-status-badge pending';
+                    badge.textContent = 'HTTP ' + (result.http_code || '—');
+                    explain.innerHTML = '<p>Check the response JSON for details.</p>';
+                }
+            })
+            .catch(function(err) {
+                document.getElementById('smNbCaptureStatusBadge').className = 'sm-status-badge error';
+                document.getElementById('smNbCaptureStatusBadge').textContent = 'Error';
+                document.getElementById('smNbCaptureResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
+        window.smNbSendCaptureRequest = smNbSendCaptureRequest;
+
+        // ============================================
+        // END NET BANKING S2S FUNCTIONS
+        // ============================================
+
+        // popstate for seamless is handled by the main popstate listener at the top
+
+        function smInitPathRoute() {
+            var segs = window.location.pathname.split('/').filter(function(s) { return s !== ''; });
+            if (segs.length > 1 && segs[0].toLowerCase() === 'seamless') {
+                var section = segs[1].toLowerCase();
+                if (seamlessSectionIds.includes(section) && document.getElementById(section)) {
+                    _smNavSilent = true;
+                    if (section.startsWith('sm-nb-')) {
+                        openNbSeamlessFlow(section);
+                        history.replaceState({ flow: 'seamless', smMode: 'netbanking', section: section }, '', '/seamless/' + section);
+                    } else {
+                        openSeamlessFlow(section);
+                        history.replaceState({ flow: 'seamless', section: section }, '', '/seamless/' + section);
+                    }
+                    _smNavSilent = false;
+                }
+            }
+        }
+        window.smInitPathRoute = smInitPathRoute;
+        smInitPathRoute();
+
+        // Legacy compat
+        function showSeamlessMethod(method) { /* no-op: sidebar is always visible */ }
+        function backToSeamlessMethods() { goHome(); }
+        function backToUpiFlows() { /* no-op: sidebar is always visible */ }
+        function selectSeamlessMethod(method) { showSeamlessMethod(method); }
+        function backToMethodSelector() { goHome(); }
+
+        var seamlessSections = ['sm-overview','sm-payment','sm-upiflow','sm-otm','sm-mandate','sm-crossborder-s2s','sm-split-s2s','sm-validate-vpa','sm-hash','sm-capture','sm-verify','sm-cancel','sm-otm-status','sm-recurring','sm-udf-update','sm-check-status','sm-troubleshoot','sm-simulate'];
+
+        function showSeamlessSection(navItem, sectionId) {
+            smNavTo(navItem, sectionId);
         }
 
         function smCopyCode(btn) {
@@ -7047,12 +10741,30 @@ nodeCartDetailsUsage +
             });
         }
 
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        }
+
         function smSwitchUPITab(tab, tabId) {
             tab.parentElement.querySelectorAll('.sm-tab').forEach(function(t) { t.classList.remove('active'); });
             tab.classList.add('active');
             document.querySelectorAll('.sm-upi-tab-content').forEach(function(c) { c.classList.remove('active'); });
             var content = document.getElementById(tabId);
             if (content) content.classList.add('active');
+
+            if (tabId === 'upi-smart') {
+                var desktopNotice = document.getElementById('smart-intent-desktop-notice');
+                var mobileContent = document.getElementById('smart-intent-mobile-content');
+                if (desktopNotice && mobileContent) {
+                    if (isMobileDevice()) {
+                        desktopNotice.style.display = 'none';
+                        mobileContent.style.display = 'block';
+                    } else {
+                        desktopNotice.style.display = 'block';
+                        mobileContent.style.display = 'none';
+                    }
+                }
+            }
         }
 
         function smToggleAccordion(header) {
@@ -7222,7 +10934,7 @@ nodeCartDetailsUsage +
                 furl: surl.replace('success','failure'),
                 pg: 'UPI',
                 bankcode: bankcode,
-                txn_s2s_flow: '4',
+                txn_s2s_flow: document.getElementById('sm_sim_txn_s2s_flow') ? document.getElementById('sm_sim_txn_s2s_flow').value.trim() || '4' : '4',
                 hash: hash
             };
 
@@ -7412,7 +11124,7 @@ nodeCartDetailsUsage +
 
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-            fetch('proxy.php', {
+            fetch('/proxy.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -7442,7 +11154,9 @@ nodeCartDetailsUsage +
             var resp = result.response;
             responseView.textContent = JSON.stringify(resp, null, 2);
 
-            if (resp && (resp.status === 1 || resp.status === '1') && resp.isVPAValid === 1) {
+            var vpaSt = resp && resp.status;
+            var vpaOk = (vpaSt === 1 || vpaSt === '1' || (typeof vpaSt === 'string' && vpaSt.toLowerCase() === 'success')) && resp.isVPAValid === 1;
+            if (resp && vpaOk) {
                 badge.className = 'sm-status-badge success';
                 badge.textContent = 'HTTP ' + result.http_code + ' — VPA is Valid';
 
@@ -7455,7 +11169,11 @@ nodeCartDetailsUsage +
                     (resp.isAutoPayVPAValid !== undefined ?
                         '<div class="sm-response-field"><code>isAutoPayVPAValid</code> <span>= ' + resp.isAutoPayVPAValid + ' — Mandate support: ' + (resp.isAutoPayVPAValid === 1 ? 'Yes' : 'No') + '</span></div>'
                         : '') +
-                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Next step: Proceed to collect payment using this validated VPA.</p>';
+                    '<div class="sm-next-step-actions" style="margin-top:1rem">' +
+                    '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-payment]\'),\'sm-payment\')">Initiate UPI Payment &#8594;</button>' +
+                    '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-mandate]\'),\'sm-mandate\')">Register Mandate &#8594;</button>' +
+                    '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-otm]\'),\'sm-otm\')">OTM Pre-Auth &#8594;</button>' +
+                    '</div>';
             } else if (resp && resp.isVPAValid === 0) {
                 badge.className = 'sm-status-badge error';
                 badge.textContent = 'HTTP ' + result.http_code + ' — VPA is Invalid';
@@ -7524,10 +11242,10 @@ nodeCartDetailsUsage +
                 hash: hash,
                 pg: 'UPI',
                 bankcode: bankcode,
-                txn_s2s_flow: '4',
-                s2s_client_ip: clientIp,
-                s2s_device_info: deviceInfo
+                txn_s2s_flow: document.getElementById('sm_pay_txn_s2s_flow') ? document.getElementById('sm_pay_txn_s2s_flow').value.trim() || '4' : '4'
             };
+            if (clientIp) params.s2s_client_ip = clientIp;
+            if (deviceInfo) params.s2s_device_info = deviceInfo;
 
             return { params: params, hashStr: hashStr, hash: hash, key: key, txnid: txnid };
         }
@@ -7598,7 +11316,7 @@ nodeCartDetailsUsage +
 
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-            fetch('proxy.php', {
+            fetch('/proxy.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -7644,7 +11362,20 @@ nodeCartDetailsUsage +
                     '<div class="sm-response-field"><code>txnId</code> <span>= "' + (meta.txnId || data.txnid) + '"</span></div>' +
                     (intentData ? '<div class="sm-response-field"><code>intentURIData</code> <span>= Deeplink URL — Generate a QR code from this</span></div>' : '') +
                     '<div class="sm-response-field"><code>acsTemplate</code> <span>= ' + acsTemplate + '</span></div>' +
-                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Next: Show QR/deeplink to customer and poll check_payment for final status.</p>';
+                    '<div class="sm-next-step-actions" style="margin-top:1rem">' +
+                    '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-verify]\'),\'sm-verify\')">Verify Payment &#8594;</button>' +
+                    '</div>';
+
+                if (meta.txnId) {
+                    var vf = document.getElementById('sm_ver_txnid'); if (vf) vf.value = meta.txnId;
+                }
+                ['sm_cap_key','sm_hmac_key','sm_ver_key','sm_cnl_key','sm_udfu_key','sm_cas_key','sm_predebit_key','sm_si_key'].forEach(function(id) {
+                    var el = document.getElementById(id); if (el && data.key) el.value = data.key;
+                });
+                var srcSalt = document.getElementById('sm_pay_salt');
+                if (srcSalt) ['sm_cap_salt','sm_hmac_salt','sm_ver_salt','sm_cnl_salt','sm_udfu_salt','sm_cas_salt','sm_predebit_salt','sm_si_salt'].forEach(function(id) {
+                    var el = document.getElementById(id); if (el) el.value = srcSalt.value;
+                });
             } else if (unmapped === 'success') {
                 badge.className = 'sm-status-badge success';
                 badge.textContent = 'HTTP ' + result.http_code + ' — Payment Successful';
@@ -7653,7 +11384,10 @@ nodeCartDetailsUsage +
                 explain.innerHTML =
                     '<div class="sm-response-field"><code>unmappedStatus</code> <span>= "success" — Payment completed</span></div>' +
                     '<div class="sm-response-field"><code>mihpayid</code> <span>= "' + (meta.referenceId || 'N/A') + '" — PayU reference ID</span></div>' +
-                    '<p style="margin-top:1rem;font-size:0.85rem;color:var(--text-tertiary);">Transaction is complete. Store the mihpayid for future reference.</p>';
+                    '<div class="sm-next-step-actions" style="margin-top:1rem">' +
+                    '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-verify]\'),\'sm-verify\')">Verify Payment &#8594;</button>' +
+                    '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-cancel]\'),\'sm-cancel\')">Refund &#8594;</button>' +
+                    '</div>';
             } else if (unmapped === 'failure') {
                 badge.className = 'sm-status-badge error';
                 badge.textContent = 'HTTP ' + result.http_code + ' — Payment Failed';
@@ -7697,18 +11431,42 @@ nodeCartDetailsUsage +
             var freeTrial = document.getElementById('sm_mand_free_trial').value;
             var udf1 = document.getElementById('sm_mand_udf1').value.trim();
             var udf3 = document.getElementById('sm_mand_udf3').value.trim();
+            var lastname = document.getElementById('sm_mand_lastname') ? document.getElementById('sm_mand_lastname').value.trim() : '';
+            var address1 = document.getElementById('sm_mand_address1') ? document.getElementById('sm_mand_address1').value.trim() : '';
+            var city = document.getElementById('sm_mand_city') ? document.getElementById('sm_mand_city').value.trim() : '';
+            var state = document.getElementById('sm_mand_state') ? document.getElementById('sm_mand_state').value.trim() : '';
+            var country = document.getElementById('sm_mand_country') ? document.getElementById('sm_mand_country').value.trim() : '';
+            var zipcode = document.getElementById('sm_mand_zipcode') ? document.getElementById('sm_mand_zipcode').value.trim() : '';
+            var startDate = document.getElementById('sm_mand_paymentStartDate') ? document.getElementById('sm_mand_paymentStartDate').value : '';
+            var endDate = document.getElementById('sm_mand_paymentEndDate') ? document.getElementById('sm_mand_paymentEndDate').value : '';
             var siDetails = JSON.stringify({
                 billingAmount: document.getElementById('sm_mand_billingAmount').value.trim(),
                 billingCurrency: 'INR',
                 billingCycle: document.getElementById('sm_mand_billingCycle').value,
                 billingInterval: parseInt(document.getElementById('sm_mand_billingInterval').value) || 1,
-                paymentStartDate: document.getElementById('sm_mand_startDate').value,
-                paymentEndDate: document.getElementById('sm_mand_endDate').value
+                paymentStartDate: startDate,
+                paymentEndDate: endDate
             });
-            var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '||' + udf3 + '||||||||' + siDetails + '|' + salt;
+            var udf2 = '', udf4 = '', udf5 = '';
+            var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetails + '|' + salt;
             var hash = smSHA512(hashStr);
-            var params = { key: key, txnid: txnid, amount: amount, productinfo: productinfo, firstname: firstname, email: email, phone: phone, surl: surl, furl: furl, pg: 'UPI', bankcode: 'INTENT', txn_s2s_flow: '4', api_version: '7', si: '1', free_trial: freeTrial, si_details: siDetails, udf1: udf1, udf3: udf3, hash: hash };
-            return { params: params, hashStr: hashStr, hash: hash };
+            var txnS2sFlow = document.getElementById('sm_mand_txn_s2s_flow') ? document.getElementById('sm_mand_txn_s2s_flow').value.trim() || '4' : '4';
+            var params = {
+                key: key, txnid: txnid, amount: amount, productinfo: productinfo,
+                firstname: firstname, email: email, phone: phone,
+                surl: surl, furl: furl,
+                pg: 'UPI', bankcode: 'INTENT', txn_s2s_flow: txnS2sFlow,
+                api_version: '7', si: '1', free_trial: freeTrial,
+                si_details: siDetails, udf1: udf1, udf2: udf2, udf3: udf3,
+                hash: hash
+            };
+            if (lastname) params.lastname = lastname;
+            if (address1) params.address1 = address1;
+            if (city) params.city = city;
+            if (state) params.state = state;
+            if (country) params.country = country;
+            if (zipcode) params.zipcode = zipcode;
+            return { params: params, hashStr: hashStr, hash: hash, key: key, txnid: txnid };
         }
         function smPreviewMandateRequest() { smGenericPreview('Mand', smBuildMandatePayload, 'payment'); }
         function smSendMandateRequest() { smGenericSend('Mand', smBuildMandatePayload, 'payment'); }
@@ -7732,15 +11490,35 @@ nodeCartDetailsUsage +
             var surl = document.getElementById('sm_otm_surl').value.trim();
             var furl = document.getElementById('sm_otm_furl').value.trim();
             var captureType = document.getElementById('sm_otm_captureType').value;
-            var siObj = { paymentStartDate: document.getElementById('sm_otm_startDate').value, paymentEndDate: document.getElementById('sm_otm_endDate').value };
-            if (captureType === 'multi') siObj.multiCapture = 'Y';
+            var startDate = document.getElementById('sm_otm_paymentStartDate').value;
+            var endDate = document.getElementById('sm_otm_paymentEndDate').value;
+            if (!startDate || !endDate) { alert('Payment Start Date and End Date are required.'); return null; }
+            var siObj = { paymentStartDate: startDate, paymentEndDate: endDate };
+            if (captureType.toLowerCase() === 'multi') siObj.multiCapture = 'Y';
             var siDetails = JSON.stringify(siObj);
-            var udf1 = 'udf1', udf2 = 'udf2', udf3 = 'udf3', udf4 = 'udf4', udf5 = 'udf5';
+            var udf1 = document.getElementById('sm_otm_udf1') ? document.getElementById('sm_otm_udf1').value.trim() : '';
+            var udf2 = document.getElementById('sm_otm_udf2') ? document.getElementById('sm_otm_udf2').value.trim() : '';
+            var udf3 = document.getElementById('sm_otm_udf3') ? document.getElementById('sm_otm_udf3').value.trim() : '';
+            var udf4 = document.getElementById('sm_otm_udf4') ? document.getElementById('sm_otm_udf4').value.trim() : '';
+            var udf5 = document.getElementById('sm_otm_udf5') ? document.getElementById('sm_otm_udf5').value.trim() : '';
             var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetails + '|' + salt;
             var hash = smSHA512(hashStr);
-            var clientIp = document.getElementById('sm_otm_client_ip') ? document.getElementById('sm_otm_client_ip').value.trim() : '127.0.0.1';
-            var deviceInfo = document.getElementById('sm_otm_device_info') ? document.getElementById('sm_otm_device_info').value.trim() : 'Mozilla/5.0';
-            var params = { key: key, txnid: txnid, amount: amount, productinfo: productinfo, firstname: firstname, email: email, phone: phone, surl: surl, furl: furl, pg: 'UPI', bankcode: 'INTENT', txn_s2s_flow: '4', api_version: '7', pre_authorize: '1', si_details: siDetails, s2s_client_ip: clientIp, s2s_device_info: deviceInfo, udf1: udf1, udf2: udf2, udf3: udf3, udf4: udf4, udf5: udf5, hash: hash };
+            var clientIp = document.getElementById('sm_otm_client_ip') ? document.getElementById('sm_otm_client_ip').value.trim() : '';
+            var deviceInfo = document.getElementById('sm_otm_device_info') ? document.getElementById('sm_otm_device_info').value.trim() : '';
+            var txnS2sFlow = document.getElementById('sm_otm_txn_s2s_flow') ? document.getElementById('sm_otm_txn_s2s_flow').value.trim() || '4' : '4';
+            var params = {
+                key: key, txnid: txnid, amount: amount, productinfo: productinfo,
+                firstname: firstname, email: email, phone: phone, surl: surl, furl: furl,
+                pg: 'UPI', bankcode: 'INTENT', txn_s2s_flow: txnS2sFlow,
+                api_version: '7', pre_authorize: '1', si_details: siDetails, hash: hash
+            };
+            if (udf1) params.udf1 = udf1;
+            if (udf2) params.udf2 = udf2;
+            if (udf3) params.udf3 = udf3;
+            if (udf4) params.udf4 = udf4;
+            if (udf5) params.udf5 = udf5;
+            if (clientIp) params.s2s_client_ip = clientIp;
+            if (deviceInfo) params.s2s_device_info = deviceInfo;
             return { params: params, hashStr: hashStr, hash: hash };
         }
         function smPreviewOtmRequest() { smGenericPreview('Otm', smBuildOtmPayload, 'payment'); }
@@ -7821,7 +11599,7 @@ nodeCartDetailsUsage +
         function smBuildOtmStatusPayload() {
             var key = document.getElementById('sm_hmac_key').value.trim();
             var salt = document.getElementById('sm_hmac_salt').value.trim();
-            var payuid = document.getElementById('sm_hmac_payuid').value.trim();
+            var payuid = document.getElementById('sm_hmac_payuId').value.trim();
             if (!key || !salt || !payuid) { alert('Fill Key, Salt and PayU ID.'); return null; }
             var requestBody = '';
             var bodyHash = CryptoJS.SHA256(requestBody);
@@ -7831,7 +11609,7 @@ nodeCartDetailsUsage +
             var signature = CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA256(signatureString, salt));
             var auth = 'hmac username="' + key + '", algorithm="hmac-sha256", headers="date digest", signature="' + signature + '"';
             return {
-                params: { requestId: payuid },
+                params: { payuId: payuid },
                 headers: { 'Date': date, 'Digest': digest, 'Authorization': auth },
                 hmacInfo: { date: date, digest: digest, auth: auth, payuid: payuid }
             };
@@ -7872,7 +11650,7 @@ nodeCartDetailsUsage +
             var curl = 'curl --location \\\n  "https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId=' + data.hmacInfo.payuid + '" \\\n  --header "date: ' + data.hmacInfo.date + '" \\\n  --header "digest: ' + data.hmacInfo.digest + '" \\\n  --header \'Authorization: ' + data.hmacInfo.auth + '\'';
             document.getElementById('smHmacCurlView').textContent = curl;
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetch('proxy.php', {
+            fetch('/proxy.php', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ endpoint: 'otm_status', method: 'GET', params: data.params, headers: data.headers })
             }).then(function(r) { return r.json(); }).then(function(result) {
@@ -7901,7 +11679,7 @@ nodeCartDetailsUsage +
                 requestId: requestId,
                 debitDate: document.getElementById('sm_predebit_debitDate').value,
                 amount: document.getElementById('sm_predebit_amount').value.trim(),
-                invoiceDisplayNumber: document.getElementById('sm_predebit_invoiceNum').value.trim() || (authPayuId + '_inv1')
+                invoiceDisplayNumber: document.getElementById('sm_predebit_invoiceDisplayNumber').value.trim() || (authPayuId + '_inv1')
             });
             var command = 'pre_debit_SI';
             var hashStr = key + '|' + command + '|' + var1 + '|' + salt;
@@ -7943,6 +11721,365 @@ nodeCartDetailsUsage +
         function smSendSiTxnRequest() { smGenericSend('SiTxn', smBuildSiTxnPayload, 'postservice'); }
         window.smPreviewSiTxnRequest = smPreviewSiTxnRequest;
         window.smSendSiTxnRequest = smSendSiTxnRequest;
+
+        // ========================
+        // Cross Border One-Time (S2S)
+        // ========================
+        function smBuildCbOnetimePayload() {
+            var key = document.getElementById('sm_cbs_key').value.trim();
+            var salt = document.getElementById('sm_cbs_salt').value.trim();
+            var amount = document.getElementById('sm_cbs_amount').value.trim();
+            var productinfo = document.getElementById('sm_cbs_productinfo').value.trim();
+            var firstname = document.getElementById('sm_cbs_firstname').value.trim();
+            var email = document.getElementById('sm_cbs_email').value.trim();
+            var phone = document.getElementById('sm_cbs_phone').value.trim();
+            if (!key || !salt || !amount || !firstname || !email) { alert('Fill required fields.'); return null; }
+            var txnid = document.getElementById('sm_cbs_txnid').value.trim() || ('CBS_' + Date.now());
+            document.getElementById('sm_cbs_txnid').value = txnid;
+            var surl = document.getElementById('sm_cbs_surl').value.trim();
+            var furl = document.getElementById('sm_cbs_furl').value.trim();
+            var bankcode = document.getElementById('sm_cbs_bankcode').value;
+            var txnS2sFlow = document.getElementById('sm_cbs_txn_s2s_flow').value.trim() || '4';
+            var clientIp = document.getElementById('sm_cbs_client_ip').value.trim();
+            var deviceInfo = document.getElementById('sm_cbs_device_info').value.trim();
+            var buyerType = document.getElementById('sm_cbs_buyer_type').value;
+            var enforce = document.getElementById('sm_cbs_enforce').value.trim();
+            var udf7 = document.getElementById('sm_cbs_udf7').value.trim();
+            var udf8 = document.getElementById('sm_cbs_udf8').value.trim();
+            var udf1='',udf2='',udf3='',udf4='',udf5='';
+            var udfParamsJson = '';
+            if (udf7 || udf8) {
+                var obj = {};
+                if (udf7) obj.udf7 = udf7;
+                if (udf8) obj.udf8 = udf8;
+                udfParamsJson = JSON.stringify(obj);
+            }
+            var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + salt;
+            if (udfParamsJson && buyerType !== '') hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + salt + '|' + udfParamsJson + '|' + buyerType;
+            else if (udfParamsJson) hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + salt + '|' + udfParamsJson;
+            else if (buyerType !== '') hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + salt + '|' + buyerType;
+            var hash = smSHA512(hashStr);
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:furl, pg:'UPI', bankcode:bankcode, txn_s2s_flow:txnS2sFlow, hash:hash };
+            if (clientIp) params.s2s_client_ip = clientIp;
+            if (deviceInfo) params.s2s_device_info = deviceInfo;
+            if (enforce) params.enforce_paymethod = enforce;
+            if (udfParamsJson) params.udf_params = udfParamsJson;
+            if (buyerType !== '') params.buyer_type_business = buyerType;
+            return { params:params, hashStr:hashStr, hash:hash };
+        }
+        function smPreviewCbOnetimeRequest() { smGenericPreview('CbOnetime', smBuildCbOnetimePayload, 'payment'); }
+        function smSendCbOnetimeRequest() { smGenericSend('CbOnetime', smBuildCbOnetimePayload, 'payment'); }
+        window.smPreviewCbOnetimeRequest = smPreviewCbOnetimeRequest;
+        window.smSendCbOnetimeRequest = smSendCbOnetimeRequest;
+
+        // ========================
+        // Cross Border Subscription (S2S)
+        // ========================
+        function smBuildCbSubPayload() {
+            var key = document.getElementById('sm_cbsub_key').value.trim();
+            var salt = document.getElementById('sm_cbsub_salt').value.trim();
+            var amount = document.getElementById('sm_cbsub_amount').value.trim();
+            var productinfo = document.getElementById('sm_cbsub_productinfo').value.trim();
+            var firstname = document.getElementById('sm_cbsub_firstname').value.trim();
+            var email = document.getElementById('sm_cbsub_email').value.trim();
+            var phone = document.getElementById('sm_cbsub_phone').value.trim();
+            if (!key || !salt || !amount || !firstname || !email) { alert('Fill required fields.'); return null; }
+            var txnid = document.getElementById('sm_cbsub_txnid').value.trim() || ('CBSUB_' + Date.now());
+            document.getElementById('sm_cbsub_txnid').value = txnid;
+            var surl = document.getElementById('sm_cbsub_surl').value.trim();
+            var furl = document.getElementById('sm_cbsub_furl').value.trim();
+            var txnS2sFlow = document.getElementById('sm_cbsub_txn_s2s_flow').value.trim() || '4';
+            var clientIp = document.getElementById('sm_cbsub_client_ip').value.trim();
+            var deviceInfo = document.getElementById('sm_cbsub_device_info') ? document.getElementById('sm_cbsub_device_info').value.trim() : '';
+            var buyerType = document.getElementById('sm_cbsub_buyer_type').value;
+            var billingAmount = document.getElementById('sm_cbsub_billingAmount').value.trim();
+            var billingCycle = document.getElementById('sm_cbsub_billingCycle').value;
+            var billingInterval = parseInt(document.getElementById('sm_cbsub_billingInterval').value.trim()) || 1;
+            var startDate = document.getElementById('sm_cbsub_startDate').value;
+            var endDate = document.getElementById('sm_cbsub_endDate').value;
+            var udf7 = document.getElementById('sm_cbsub_udf7').value.trim();
+            var udf8 = document.getElementById('sm_cbsub_udf8').value.trim();
+            var udf1='',udf2='',udf3='',udf4='',udf5='';
+            var siObj = { billingAmount:billingAmount, billingCurrency:'INR', billingCycle:billingCycle, billingInterval:billingInterval, paymentStartDate:startDate };
+            if (endDate) siObj.paymentEndDate = endDate;
+            var siDetails = JSON.stringify(siObj);
+            var udfParamsJson = '';
+            if (udf7 || udf8) {
+                var obj = {};
+                if (udf7) obj.udf7 = udf7;
+                if (udf8) obj.udf8 = udf8;
+                udfParamsJson = JSON.stringify(obj);
+            }
+            var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetails + '|' + salt;
+            if (udfParamsJson && buyerType !== '') hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetails + '|' + salt + '|' + udfParamsJson + '|' + buyerType;
+            else if (udfParamsJson) hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetails + '|' + salt + '|' + udfParamsJson;
+            else if (buyerType !== '') hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetails + '|' + salt + '|' + buyerType;
+            var hash = smSHA512(hashStr);
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:furl, pg:'UPI', bankcode:'INTENT', txn_s2s_flow:txnS2sFlow, api_version:'7', si:'1', si_details:siDetails, hash:hash };
+            if (clientIp) params.s2s_client_ip = clientIp;
+            if (deviceInfo) params.s2s_device_info = deviceInfo;
+            if (udfParamsJson) params.udf_params = udfParamsJson;
+            if (buyerType !== '') params.buyer_type_business = buyerType;
+            return { params:params, hashStr:hashStr, hash:hash };
+        }
+        function smPreviewCbSubRequest() { smGenericPreview('CbSub', smBuildCbSubPayload, 'payment'); }
+        function smSendCbSubRequest() { smGenericSend('CbSub', smBuildCbSubPayload, 'payment'); }
+        window.smPreviewCbSubRequest = smPreviewCbSubRequest;
+        window.smSendCbSubRequest = smSendCbSubRequest;
+
+        // ========================
+        // Split Settlement (S2S)
+        // ========================
+        function smBuildSplitRequestJsonS2S() {
+            var splitType = document.getElementById('sm_spl_splitType').value;
+            var rows = document.querySelectorAll('#smSplitRows .sm-split-row');
+            var splitInfo = {};
+            var hasValid = false;
+            rows.forEach(function(row) {
+                var childKey = row.querySelector('.sm-spl-child-key').value.trim();
+                var childTxnId = row.querySelector('.sm-spl-child-txnid').value.trim() || ('child_' + Date.now() + '_' + Math.floor(Math.random()*1000));
+                row.querySelector('.sm-spl-child-txnid').value = childTxnId;
+                var childAmt = row.querySelector('.sm-spl-child-amount').value.trim() || '0';
+                var childCharges = row.querySelector('.sm-spl-child-charges').value.trim() || '0.00';
+                if (childKey) {
+                    splitInfo[childKey] = { aggregatorSubTxnId:childTxnId, aggregatorSubAmt:childAmt, aggregatorCharges:childCharges };
+                    hasValid = true;
+                }
+            });
+            if (!hasValid) return null;
+            return JSON.stringify({ type:splitType, splitInfo:splitInfo });
+        }
+
+        function smAddSplitRow() {
+            var container = document.getElementById('smSplitRows');
+            var row = document.createElement('div');
+            row.className = 'sm-split-row sm-form-row';
+            row.style.alignItems = 'flex-end';
+            row.innerHTML = '<div class="sm-form-group"><label>Child Merchant Key</label><input type="text" class="sm-spl-child-key" placeholder="Child key"></div>'
+                + '<div class="sm-form-group"><label>Child Txn ID</label><input type="text" class="sm-spl-child-txnid" placeholder="Auto"></div>'
+                + '<div class="sm-form-group"><label>Amount / %</label><input type="text" class="sm-spl-child-amount" value="0.00"></div>'
+                + '<div class="sm-form-group"><label>Charges</label><input type="text" class="sm-spl-child-charges" value="0.00"></div>'
+                + '<button type="button" class="button sm-btn-secondary" onclick="this.parentElement.remove()" style="margin-bottom:0.5rem;padding:0.4rem 0.8rem;font-size:0.8rem;">Remove</button>';
+            container.appendChild(row);
+        }
+
+        function smBuildSplitPayload() {
+            var key = document.getElementById('sm_spl_key').value.trim();
+            var salt = document.getElementById('sm_spl_salt').value.trim();
+            var amount = document.getElementById('sm_spl_amount').value.trim();
+            var productinfo = document.getElementById('sm_spl_productinfo').value.trim();
+            var firstname = document.getElementById('sm_spl_firstname').value.trim();
+            var email = document.getElementById('sm_spl_email').value.trim();
+            var phone = document.getElementById('sm_spl_phone').value.trim();
+            if (!key || !salt || !amount || !firstname || !email) { alert('Fill required fields.'); return null; }
+            var txnid = document.getElementById('sm_spl_txnid').value.trim() || ('SPL_' + Date.now());
+            document.getElementById('sm_spl_txnid').value = txnid;
+            var surl = document.getElementById('sm_spl_surl').value.trim();
+            var furl = document.getElementById('sm_spl_furl').value.trim();
+            var txnS2sFlow = document.getElementById('sm_spl_txn_s2s_flow').value.trim() || '4';
+            var splitRequestJson = smBuildSplitRequestJsonS2S();
+            if (!splitRequestJson) { alert('Add at least one child merchant with a key.'); return null; }
+            var udf1='',udf2='',udf3='',udf4='',udf5='';
+            var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + salt + '|' + splitRequestJson;
+            var hash = smSHA512(hashStr);
+            var clientIp = document.getElementById('sm_spl_client_ip') ? document.getElementById('sm_spl_client_ip').value.trim() : '';
+            var deviceInfo = document.getElementById('sm_spl_device_info') ? document.getElementById('sm_spl_device_info').value.trim() : '';
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:furl, pg:'UPI', bankcode:'INTENT', txn_s2s_flow:txnS2sFlow, splitRequest:splitRequestJson, hash:hash };
+            if (clientIp) params.s2s_client_ip = clientIp;
+            if (deviceInfo) params.s2s_device_info = deviceInfo;
+            return { params:params, hashStr:hashStr, hash:hash };
+        }
+        function smPreviewSplitRequest() { smGenericPreview('Spl', smBuildSplitPayload, 'payment'); }
+        function smSendSplitRequest() { smGenericSend('Spl', smBuildSplitPayload, 'payment'); }
+        window.smPreviewSplitRequest = smPreviewSplitRequest;
+        window.smSendSplitRequest = smSendSplitRequest;
+        window.smAddSplitRow = smAddSplitRow;
+
+        // ========================
+        // UDF Update
+        // ========================
+        function smBuildUdfUpdatePayload() {
+            var key = document.getElementById('sm_udfu_key').value.trim();
+            var salt = document.getElementById('sm_udfu_salt').value.trim();
+            var mihpayid = document.getElementById('sm_udfu_mihpayid').value.trim();
+            if (!key || !salt || !mihpayid) { alert('Fill Key, Salt, and mihpayid.'); return null; }
+            var command = 'udf_update';
+            var hashStr = key + '|' + command + '|' + mihpayid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var udf1 = document.getElementById('sm_udfu_udf1').value.trim();
+            var udf2 = document.getElementById('sm_udfu_udf2').value.trim();
+            var udf3 = document.getElementById('sm_udfu_udf3').value.trim();
+            var udf4 = document.getElementById('sm_udfu_udf4').value.trim();
+            var udf5 = document.getElementById('sm_udfu_udf5').value.trim();
+            var params = { key:key, command:command, var1:mihpayid, hash:hash };
+            if (udf1) params.var2 = udf1;
+            if (udf2) params.var3 = udf2;
+            if (udf3) params.var4 = udf3;
+            if (udf4) params.var5 = udf4;
+            if (udf5) params.var6 = udf5;
+            return { params:params, hashStr:hashStr, hash:hash };
+        }
+        function smPreviewUdfUpdateRequest() { smGenericPreview('Udfu', smBuildUdfUpdatePayload, 'postservice'); }
+        function smSendUdfUpdateRequest() { smGenericSend('Udfu', smBuildUdfUpdatePayload, 'postservice'); }
+        window.smPreviewUdfUpdateRequest = smPreviewUdfUpdateRequest;
+        window.smSendUdfUpdateRequest = smSendUdfUpdateRequest;
+
+        // ========================
+        // Check Action Status
+        // ========================
+        function smBuildCheckStatusPayload() {
+            var key = document.getElementById('sm_cas_key').value.trim();
+            var salt = document.getElementById('sm_cas_salt').value.trim();
+            var requestId = document.getElementById('sm_cas_request_id').value.trim();
+            if (!key || !salt || !requestId) { alert('Fill Key, Salt, and Request ID.'); return null; }
+            var command = 'check_action_status';
+            var hashStr = key + '|' + command + '|' + requestId + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key:key, command:command, var1:requestId, hash:hash };
+            return { params:params, hashStr:hashStr, hash:hash };
+        }
+        function smPreviewCheckStatusRequest() { smGenericPreview('Cas', smBuildCheckStatusPayload, 'postservice'); }
+        function smSendCheckStatusRequest() { smGenericSend('Cas', smBuildCheckStatusPayload, 'postservice'); }
+        window.smPreviewCheckStatusRequest = smPreviewCheckStatusRequest;
+        window.smSendCheckStatusRequest = smSendCheckStatusRequest;
+
+        // ========================
+        // Fill Sample Data
+        // ========================
+        function smFillSampleData(formType) {
+            var ts = Date.now();
+            var sets = {
+                pay: {
+                    sm_pay_key: 'PRiQvJ', sm_pay_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_pay_txnid: 'TXN_' + ts, sm_pay_amount: '2.00', sm_pay_productinfo: 'TestProduct',
+                    sm_pay_firstname: 'Payu-Admin', sm_pay_email: 'test@example.com', sm_pay_phone: '9876543210',
+                    sm_pay_surl: 'https://test.payu.in/admin/test_response', sm_pay_furl: 'https://test.payu.in/admin/test_response',
+                    sm_pay_bankcode: 'INTENT', sm_pay_txn_s2s_flow: '4',
+                    sm_pay_client_ip: '10.200.12.12', sm_pay_device_info: 'Mozilla/5.0'
+                },
+                vpa: {
+                    sm_vpa_key: 'PRiQvJ', sm_vpa_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_vpa_address: '9999999999@upi'
+                },
+                mandate: {
+                    sm_mand_key: 'PRiQvJ', sm_mand_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_mand_txnid: 'my_order_' + ts, sm_mand_amount: '2.00', sm_mand_productinfo: 'my_order_' + ts,
+                    sm_mand_firstname: 'sudhanshu', sm_mand_lastname: 'kumar',
+                    sm_mand_email: 'test@test.com', sm_mand_phone: '9999999999',
+                    sm_mand_address1: '308 third floor', sm_mand_city: 'Gurugram',
+                    sm_mand_state: 'UP', sm_mand_country: 'India', sm_mand_zipcode: '122018',
+                    sm_mand_surl: 'https://test.payu.in/admin/test_response', sm_mand_furl: 'https://test.payu.in/admin/test_response',
+                    sm_mand_billingAmount: '200.00', sm_mand_billingCycle: 'MONTHLY', sm_mand_billingInterval: '1',
+                    sm_mand_paymentStartDate: '2026-04-01', sm_mand_paymentEndDate: '2026-12-01',
+                    sm_mand_udf1: 'ABCDE1234F||1990-01-01', sm_mand_udf3: 'INV123456||MerchantName',
+                    sm_mand_txn_s2s_flow: '4', sm_mand_free_trial: '1'
+                },
+                otm: {
+                    sm_otm_key: 'PRiQvJ', sm_otm_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_otm_txnid: 'OTM_' + ts, sm_otm_amount: '18000', sm_otm_productinfo: 'OTMProduct',
+                    sm_otm_firstname: 'Payu-Admin', sm_otm_email: 'test@example.com', sm_otm_phone: '9876543210',
+                    sm_otm_surl: 'https://test.payu.in/admin/test_response', sm_otm_furl: 'https://test.payu.in/admin/test_response',
+                    sm_otm_txn_s2s_flow: '4', sm_otm_client_ip: '10.200.12.12', sm_otm_device_info: 'Mozilla/5.0'
+                },
+                cap: {
+                    sm_cap_key: 'PRiQvJ', sm_cap_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_cap_captureAmount: '15000', sm_cap_captureOrderId: 'cap_' + ts
+                },
+                ver: {
+                    sm_ver_key: 'PRiQvJ', sm_ver_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ'
+                },
+                cnl: {
+                    sm_cnl_key: 'PRiQvJ', sm_cnl_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_cnl_cancelType: 'cancel_refund_transaction', sm_cnl_cancelTokenId: 'cnl_' + ts,
+                    sm_cnl_cancelAmount: '18000'
+                },
+                hmac: {
+                    sm_hmac_key: 'PRiQvJ', sm_hmac_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ'
+                },
+                predebit: {
+                    sm_predebit_key: 'PRiQvJ', sm_predebit_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_predebit_requestId: 'PREDEBIT_' + ts,
+                    sm_predebit_debitDate: new Date(Date.now() + 86400000*3).toISOString().split('T')[0],
+                    sm_predebit_amount: '200.00',
+                    sm_predebit_invoiceDisplayNumber: 'INV_' + ts
+                },
+                si: {
+                    sm_si_key: 'PRiQvJ', sm_si_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_si_txnid: 'SI_' + ts, sm_si_amount: '200.00',
+                    sm_si_firstname: 'Payu-Admin', sm_si_email: 'test@example.com',
+                    sm_si_udf1: 'ABCDE1234F||01-01-1990', sm_si_udf3: 'INV' + ts + '||MerchantName'
+                },
+                cbs: {
+                    sm_cbs_key: 'PRiQvJ', sm_cbs_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_cbs_txnid: 'CBS_' + ts, sm_cbs_amount: '100.00', sm_cbs_productinfo: 'InternationalService',
+                    sm_cbs_firstname: 'John', sm_cbs_email: 'test@example.com', sm_cbs_phone: '9876543210',
+                    sm_cbs_surl: 'https://test.payu.in/admin/test_response', sm_cbs_furl: 'https://test.payu.in/admin/test_response',
+                    sm_cbs_bankcode: 'INTENT', sm_cbs_txn_s2s_flow: '4',
+                    sm_cbs_client_ip: '10.200.12.12', sm_cbs_device_info: 'Mozilla/5.0',
+                    sm_cbs_enforce: 'upi', sm_cbs_udf7: 'S0802', sm_cbs_udf8: '100'
+                },
+                cbsub: {
+                    sm_cbsub_key: 'PRiQvJ', sm_cbsub_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_cbsub_txnid: 'CBSUB_' + ts, sm_cbsub_amount: '2.00', sm_cbsub_productinfo: 'MonthlyPlanCB',
+                    sm_cbsub_firstname: 'John', sm_cbsub_email: 'test@example.com', sm_cbsub_phone: '9876543210',
+                    sm_cbsub_surl: 'https://test.payu.in/admin/test_response', sm_cbsub_furl: 'https://test.payu.in/admin/test_response',
+                    sm_cbsub_billingAmount: '200.00', sm_cbsub_billingCycle: 'MONTHLY', sm_cbsub_billingInterval: '1',
+                    sm_cbsub_startDate: '2026-04-01', sm_cbsub_endDate: '2026-12-01',
+                    sm_cbsub_txn_s2s_flow: '4', sm_cbsub_client_ip: '10.200.12.12', sm_cbsub_device_info: 'Mozilla/5.0',
+                    sm_cbsub_udf7: 'S0802', sm_cbsub_udf8: '100'
+                },
+                spl: {
+                    sm_spl_key: 'PRiQvJ', sm_spl_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_spl_txnid: 'SPL_' + ts, sm_spl_amount: '100.00', sm_spl_productinfo: 'SplitOrder',
+                    sm_spl_firstname: 'Test', sm_spl_email: 'test@example.com', sm_spl_phone: '9876543210',
+                    sm_spl_surl: 'https://test.payu.in/admin/test_response', sm_spl_furl: 'https://test.payu.in/admin/test_response',
+                    sm_spl_txn_s2s_flow: '4', sm_spl_splitType: 'absolute',
+                    sm_spl_client_ip: '10.200.12.12', sm_spl_device_info: 'Mozilla/5.0'
+                },
+                udfu: {
+                    sm_udfu_key: 'PRiQvJ', sm_udfu_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_udfu_udf1: 'UpdatedUdf1', sm_udfu_udf4: 'INV123456'
+                },
+                cas: {
+                    sm_cas_key: 'PRiQvJ', sm_cas_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ'
+                },
+                hash: {
+                    sm_hash_key: 'PRiQvJ', sm_hash_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_hash_txnid: 'SM_' + ts, sm_hash_amount: '10.00', sm_hash_productinfo: 'TestProduct',
+                    sm_hash_firstname: 'Payu-Admin', sm_hash_email: 'test@example.com'
+                },
+                sim: {
+                    sm_sim_key: 'PRiQvJ', sm_sim_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_sim_txnid: 'SIM_' + ts, sm_sim_amount: '10.00', sm_sim_productinfo: 'TestProduct',
+                    sm_sim_firstname: 'Payu-Admin', sm_sim_email: 'test@example.com', sm_sim_phone: '9876543210',
+                    sm_sim_bankcode: 'INTENT', sm_sim_surl: 'https://test.payu.in/admin/test_response'
+                }
+            };
+            var data = sets[formType];
+            if (!data) return;
+            var gKey = document.getElementById('sm_global_key') ? document.getElementById('sm_global_key').value.trim() : '';
+            var gSalt = document.getElementById('sm_global_salt') ? document.getElementById('sm_global_salt').value.trim() : '';
+            for (var id in data) {
+                var val = data[id];
+                if (gKey && id.match(/_key$/) && id !== 'sm_global_key') val = gKey;
+                if (gSalt && id.match(/_salt$/) && id !== 'sm_global_salt') val = gSalt;
+                var el = document.getElementById(id);
+                if (el) {
+                    if (el.tagName === 'SELECT') {
+                        for (var i = 0; i < el.options.length; i++) {
+                            if (el.options[i].value === val) { el.selectedIndex = i; break; }
+                        }
+                    } else {
+                        el.value = val;
+                        el.style.transition = 'background 0.3s';
+                        el.style.background = '#dcfce7';
+                        (function(e) { setTimeout(function() { e.style.background = ''; }, 800); })(el);
+                    }
+                }
+            }
+            if (typeof computeUpiOtmLiveHash === 'function' && formType === 'otm') computeUpiOtmLiveHash();
+        }
+        window.smFillSampleData = smFillSampleData;
 
         // ========================
         // Generic Preview/Send/Display helpers
@@ -7999,7 +12136,7 @@ nodeCartDetailsUsage +
             document.getElementById('sm' + prefix + 'ResponseView').textContent = 'Waiting for response...';
             document.getElementById('sm' + prefix + 'CurlView').textContent = smBuildCurl(data.params, endpoint);
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetch('proxy.php', {
+            fetch('/proxy.php', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ endpoint: endpoint, params: data.params })
             }).then(function(r) { return r.json(); }).then(function(result) {
@@ -8019,7 +12156,8 @@ nodeCartDetailsUsage +
             var resp = result.response;
             responseView.textContent = JSON.stringify(resp, null, 2);
             var httpCode = result.http_code || 0;
-            var isSuccess = (resp && (resp.status === 1 || resp.status === '1' || resp.status === 'success'));
+            var st = resp && resp.status;
+            var isSuccess = (st === 1 || st === '1' || (typeof st === 'string' && st.toLowerCase() === 'success'));
             if (httpCode >= 200 && httpCode < 300 && isSuccess) {
                 badge.className = 'sm-status-badge success';
                 badge.textContent = 'HTTP ' + httpCode + ' — Success';
@@ -8044,6 +12182,157 @@ nodeCartDetailsUsage +
                 if (!html) html = '<p>Response is empty or could not be parsed.</p>';
                 explain.innerHTML = html;
             }
+
+            var mihpayid = null;
+            var requestId = resp && resp.request_id;
+            var txnIdFromMeta = resp && resp.metaData && resp.metaData.txnId;
+
+            if (resp && resp.mihpayid) mihpayid = resp.mihpayid;
+            if (resp && resp.payuMoneyId) mihpayid = resp.payuMoneyId;
+
+            if (!mihpayid && resp && resp.transaction_details && typeof resp.transaction_details === 'object') {
+                for (var txKey in resp.transaction_details) {
+                    if (resp.transaction_details.hasOwnProperty(txKey)) {
+                        var td = resp.transaction_details[txKey];
+                        if (td && td.mihpayid) { mihpayid = td.mihpayid; break; }
+                    }
+                }
+            }
+
+            if (mihpayid) {
+                ['sm_cap_mihpayid','sm_cnl_mihpayid','sm_udfu_mihpayid','sm_predebit_authPayuId','sm_si_authpayuid'].forEach(function(id) {
+                    var el = document.getElementById(id); if (el) el.value = mihpayid;
+                });
+                var hmacField = document.getElementById('sm_hmac_payuId');
+                if (hmacField) hmacField.value = mihpayid;
+            }
+
+            if (txnIdFromMeta) {
+                var verField = document.getElementById('sm_ver_txnid');
+                if (verField && !verField.value) verField.value = txnIdFromMeta;
+            }
+
+            if (requestId) {
+                var casField = document.getElementById('sm_cas_request_id');
+                if (casField) casField.value = requestId;
+            }
+
+            var srcPrefixMap = { Otm:'sm_otm', Pay:'sm_pay', Mand:'sm_mand', CbOnetime:'sm_cbs', CbSub:'sm_cbsub', Spl:'sm_spl' };
+            var srcFormPrefix = srcPrefixMap[prefix];
+            if (srcFormPrefix) {
+                var srcKey = document.getElementById(srcFormPrefix + '_key');
+                var srcSalt = document.getElementById(srcFormPrefix + '_salt');
+                var downstreamKeyIds = ['sm_cap_key','sm_hmac_key','sm_ver_key','sm_cnl_key','sm_udfu_key','sm_cas_key','sm_predebit_key','sm_si_key'];
+                var downstreamSaltIds = ['sm_cap_salt','sm_hmac_salt','sm_ver_salt','sm_cnl_salt','sm_udfu_salt','sm_cas_salt','sm_predebit_salt','sm_si_salt'];
+                if (srcKey && srcKey.value) {
+                    downstreamKeyIds.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = srcKey.value; });
+                }
+                if (srcSalt && srcSalt.value) {
+                    downstreamSaltIds.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = srcSalt.value; });
+                }
+            }
+
+            smShowNextStep(prefix, resp, httpCode, isSuccess);
+        }
+
+        function smShowNextStep(prefix, resp, httpCode, isSuccess) {
+            var existingBanner = document.getElementById('sm' + prefix + 'NextStep');
+            if (existingBanner) existingBanner.remove();
+            if (httpCode < 200 || httpCode >= 300) return;
+
+            var container = document.getElementById('sm' + prefix + 'ReqRes');
+            if (!container) return;
+            var banner = document.createElement('div');
+            banner.id = 'sm' + prefix + 'NextStep';
+            banner.className = 'sm-next-step-banner';
+            var html = '';
+
+            var paymentPrefixes = ['Pay','Mand','Otm','CbOnetime','CbSub','Spl','Sim'];
+            var isPaymentInit = paymentPrefixes.indexOf(prefix) !== -1;
+            var hasAcsTemplate = resp && resp.result && resp.result.acsTemplate;
+            var hasIntentUrl = resp && resp.result && (resp.result.paymentId || resp.result.intentUrl || resp.result.upiIntentUrl || resp.result.deepLink);
+            var hasQr = resp && resp.result && resp.result.qrData;
+
+            if (isPaymentInit && isSuccess && (hasAcsTemplate || hasIntentUrl || hasQr)) {
+                html += '<div class="sm-next-step-title">Payment Initiated Successfully</div>';
+                if (hasAcsTemplate) {
+                    html += '<p>The response contains an <code>acsTemplate</code> (base64-encoded HTML). On mobile, decode and render this to show the UPI intent chooser or QR code to the customer.</p>';
+                }
+                if (hasIntentUrl) {
+                    var intentUrl = (resp.result.paymentId || resp.result.intentUrl || resp.result.upiIntentUrl || resp.result.deepLink || '');
+                    html += '<p>Intent URL: <code style="word-break:break-all;font-size:0.75rem">' + intentUrl + '</code></p>';
+                }
+                if (hasQr) {
+                    html += '<p>QR data received — display as a QR code for the customer to scan.</p>';
+                }
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-verify]\'),\'sm-verify\')">Step 2: Verify Payment &#8594;</button>';
+                if (prefix === 'Otm') {
+                    html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-otm-status]\'),\'sm-otm-status\')">OTM Status Check &#8594;</button>';
+                    html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-capture]\'),\'sm-capture\')">Capture Transaction &#8594;</button>';
+                }
+                if (prefix === 'Mand' || prefix === 'CbSub') {
+                    html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-recurring]\'),\'sm-recurring\')">Pre-Debit Notification &#8594;</button>';
+                }
+                html += '</div>';
+            } else if (isPaymentInit && !isSuccess) {
+                html += '<div class="sm-next-step-title sm-next-step-error">Payment API returned an error</div>';
+                html += '<p>Check the response for error details. Common issues: invalid hash, missing required params, inactive payment mode on merchant key.</p>';
+                if (resp && resp.result) html += '<p><strong>Error:</strong> ' + (typeof resp.result === 'string' ? resp.result : JSON.stringify(resp.result)) + '</p>';
+            } else if (prefix === 'Ver' && isSuccess) {
+                html += '<div class="sm-next-step-title">Payment Verified</div>';
+                var txStatus = '';
+                if (resp && resp.transaction_details) {
+                    for (var k in resp.transaction_details) {
+                        if (resp.transaction_details[k]) { txStatus = resp.transaction_details[k].status || ''; break; }
+                    }
+                }
+                if (txStatus) html += '<p>Transaction status: <strong>' + txStatus + '</strong></p>';
+                html += '<div class="sm-next-step-actions">';
+                if (txStatus === 'auth' || txStatus === 'userCancelled' || txStatus === 'pending') {
+                    html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-capture]\'),\'sm-capture\')">Step 3: Capture Transaction &#8594;</button>';
+                }
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-cancel]\'),\'sm-cancel\')">Cancel / Refund &#8594;</button>';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-udf-update]\'),\'sm-udf-update\')">UDF Update &#8594;</button>';
+                html += '</div>';
+            } else if (prefix === 'Cap' && isSuccess) {
+                html += '<div class="sm-next-step-title">Capture Successful</div>';
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-verify]\'),\'sm-verify\')">Verify Captured Payment &#8594;</button>';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-check-status]\'),\'sm-check-status\')">Check Action Status &#8594;</button>';
+                html += '</div>';
+            } else if (prefix === 'Cnl' && isSuccess) {
+                html += '<div class="sm-next-step-title">Cancel/Refund Initiated</div>';
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-check-status]\'),\'sm-check-status\')">Check Action Status &#8594;</button>';
+                html += '</div>';
+            } else if (prefix === 'PreDebit' && isSuccess) {
+                html += '<div class="sm-next-step-title">Pre-Debit Notification Sent</div>';
+                html += '<p>Wait for the pre-debit notification to be acknowledged (usually within 24-48 hours before debit date). Then execute the SI Transaction below.</p>';
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="document.getElementById(\'smSiTxnForm\') && document.getElementById(\'smSiTxnForm\').scrollIntoView({behavior:\'smooth\'})">Scroll to SI Transaction Form &#8595;</button>';
+                html += '</div>';
+            } else if (prefix === 'SiTxn') {
+                html += '<div class="sm-next-step-title">' + (isSuccess ? 'SI Transaction Executed' : 'SI Transaction Response') + '</div>';
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-verify]\'),\'sm-verify\')">Verify SI Payment &#8594;</button>';
+                html += '</div>';
+            } else if (prefix === 'Vpa' && isSuccess) {
+                html += '<div class="sm-next-step-title">VPA Validated</div>';
+                var isAutoPaySupported = resp && resp.isAutoPayVPAValid;
+                if (isAutoPaySupported === 'YES') html += '<p style="color:#16a34a"><strong>This VPA supports AutoPay (mandate/subscription).</strong></p>';
+                else if (isAutoPaySupported === 'NO') html += '<p style="color:#dc2626"><strong>This VPA does NOT support AutoPay.</strong></p>';
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-payment]\'),\'sm-payment\')">Proceed to Payment &#8594;</button>';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-mandate]\'),\'sm-mandate\')">Mandate Registration &#8594;</button>';
+                html += '</div>';
+            }
+
+            if (html) {
+                banner.innerHTML = html;
+                container.appendChild(banner);
+                banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         }
 
         // Expose seamless functions globally
@@ -8054,7 +12343,35 @@ nodeCartDetailsUsage +
         window.backToSeamlessMethods = backToSeamlessMethods;
         window.openSeamlessFlow = openSeamlessFlow;
         window.backToUpiFlows = backToUpiFlows;
+        function smToggleNavGroup(label) {
+            label.classList.toggle('collapsed');
+            var isCollapsed = label.classList.contains('collapsed');
+            var sibling = label.nextElementSibling;
+            while (sibling && sibling.classList.contains('seamless-nav-sub')) {
+                if (isCollapsed) sibling.classList.add('nav-hidden');
+                else sibling.classList.remove('nav-hidden');
+                sibling = sibling.nextElementSibling;
+            }
+        }
+        window.smToggleNavGroup = smToggleNavGroup;
+        window.smNavTo = smNavTo;
         window.smCopyCode = smCopyCode;
+
+        (function initGuideAccordions() {
+            document.querySelectorAll('.sm-step-guide').forEach(function(guide) {
+                if (guide.querySelector('.sm-step-guide-toggle')) return;
+                guide.classList.add('collapsed');
+                var toggle = document.createElement('div');
+                toggle.className = 'sm-step-guide-toggle';
+                toggle.innerHTML = 'API Guide &amp; Prerequisites <span class="guide-arrow">&#9660;</span>';
+                toggle.addEventListener('click', function() { guide.classList.toggle('collapsed'); });
+                var body = document.createElement('div');
+                body.className = 'sm-step-guide-body';
+                while (guide.firstChild) body.appendChild(guide.firstChild);
+                guide.appendChild(toggle);
+                guide.appendChild(body);
+            });
+        })();
         window.smSwitchCodeTab = smSwitchCodeTab;
         window.smSwitchUPITab = smSwitchUPITab;
         window.smToggleAccordion = smToggleAccordion;
@@ -8076,7 +12393,8 @@ nodeCartDetailsUsage +
             var udf1='',udf2='',udf3='',udf4='',udf5='';
             var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|'+udf1+'|'+udf2+'|'+udf3+'|'+udf4+'|'+udf5+'||||||'+salt;
             var hash = smSHA512(hashStr);
-            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'UPI', bankcode:bankcode, txn_s2s_flow:'4', hash:hash };
+            var simTxnS2sFlow = document.getElementById('sm_sim_txn_s2s_flow') ? document.getElementById('sm_sim_txn_s2s_flow').value.trim() || '4' : '4';
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'UPI', bankcode:bankcode, txn_s2s_flow:simTxnS2sFlow, hash:hash };
             var panel = document.getElementById('smSimReqRes');
             panel.style.display = 'block';
             document.getElementById('smSimRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
@@ -8085,7 +12403,7 @@ nodeCartDetailsUsage +
             badge.innerHTML='<span class="sm-loading-spinner"></span> Sending to PayU Test...';
             document.getElementById('smSimResponseView').textContent='Waiting...';
             panel.scrollIntoView({behavior:'smooth',block:'start'});
-            fetch('proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+            fetch('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
             .then(function(r){return r.json();})
             .then(function(result){smGenericDisplay('Sim',result);})
             .catch(function(err){badge.className='sm-status-badge error';badge.textContent='Failed';document.getElementById('smSimResponseView').textContent='Error: '+err.message;});
@@ -8094,3 +12412,2482 @@ nodeCartDetailsUsage +
         window.smSendSimulation = smSendSimulation;
         window.smSimulatePayment = smSimulatePayment;
         window.smSwitchOtmTab = smSwitchOtmTab;
+
+        /* ── Credential Guide Modal ── */
+        var credCurrentStep = 1;
+        var credTotalSteps = 4;
+
+        function openCredentialGuide() {
+            credCurrentStep = 1;
+            renderCredStep();
+            document.getElementById('credentialGuideModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCredentialGuide(e) {
+            if (e && e.target !== e.currentTarget && !e.target.closest('.cred-modal-close')) return;
+            document.getElementById('credentialGuideModal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function credStepNav(dir) {
+            credCurrentStep = Math.max(1, Math.min(credTotalSteps, credCurrentStep + dir));
+            renderCredStep();
+        }
+
+        function renderCredStep() {
+            for (var i = 1; i <= credTotalSteps; i++) {
+                var el = document.getElementById('credStep' + i);
+                if (el) el.style.display = i === credCurrentStep ? 'block' : 'none';
+            }
+            var dots = document.querySelectorAll('.cred-step-dot');
+            dots.forEach(function(dot) {
+                var s = parseInt(dot.getAttribute('data-step'));
+                dot.className = 'cred-step-dot' + (s === credCurrentStep ? ' active' : (s < credCurrentStep ? ' done' : ''));
+            });
+            document.getElementById('credPrevBtn').style.display = credCurrentStep > 1 ? 'inline-flex' : 'none';
+            var nextBtn = document.getElementById('credNextBtn');
+            if (credCurrentStep >= credTotalSteps) {
+                nextBtn.textContent = 'Done ✓';
+                nextBtn.onclick = function() { closeCredentialGuide(); };
+            } else {
+                nextBtn.innerHTML = 'Next Step &rarr;';
+                nextBtn.onclick = function() { credStepNav(1); };
+            }
+        }
+
+        window.openCredentialGuide = openCredentialGuide;
+        window.closeCredentialGuide = closeCredentialGuide;
+        window.credStepNav = credStepNav;
+
+        function smApplyGlobalConfig() {
+            var gKey = document.getElementById('sm_global_key').value.trim();
+            var gSalt = document.getElementById('sm_global_salt').value.trim();
+            if (!gKey || !gSalt) { alert('Please enter both Key and Salt.'); return; }
+            var keyFields = document.querySelectorAll('input[id$="_key"]');
+            var saltFields = document.querySelectorAll('input[id$="_salt"]');
+            keyFields.forEach(function(f) {
+                if (f.id.indexOf('sm_') === 0 && f.id !== 'sm_global_key') f.value = gKey;
+            });
+            saltFields.forEach(function(f) {
+                if (f.id.indexOf('sm_') === 0 && f.id !== 'sm_global_salt') f.value = gSalt;
+            });
+            var btn = document.querySelector('.sm-global-apply-btn');
+            if (btn) {
+                btn.textContent = 'Applied!';
+                btn.style.background = '#16a34a';
+                setTimeout(function() { btn.textContent = 'Apply to All Forms'; btn.style.background = ''; }, 1500);
+            }
+        }
+        window.smApplyGlobalConfig = smApplyGlobalConfig;
+
+
+        // ============================================
+        // CARDS SEAMLESS INTEGRATION FUNCTIONS
+        // ============================================
+
+        function openCardsFlow(sectionId) {
+            cardsNavTo(document.querySelector('#cardsNav .cards-nav-item[data-section="' + sectionId + '"]'), sectionId);
+        }
+
+        function backToCardsFlows() {
+            cardsNavTo(document.querySelector('#cardsNav .cards-nav-item[data-section="cards-overview"]'), 'cards-overview');
+        }
+
+        function cardsNavTo(navItem, sectionId, phase, model, sub) {
+            document.querySelectorAll('#cardsNav .cards-nav-item').forEach(function(n) { n.classList.remove('active'); });
+            if (navItem) navItem.classList.add('active');
+
+            var content = document.getElementById('cardsContentArea');
+            document.querySelectorAll('#cardsContentArea > .seamless-section, #seamlessCardsDetailContent > .seamless-section').forEach(function(s) { s.classList.remove('active'); });
+
+            if (sectionId === 'cards-overview') {
+                var overview = document.getElementById('cards-overview');
+                if (overview) overview.classList.add('active');
+            } else {
+                var section = document.getElementById(sectionId);
+                if (section) section.classList.add('active');
+
+                if (sectionId === 'sm-cards-token') {
+                    var sel = document.getElementById('tokModelSelect');
+                    var m2 = document.getElementById('tokModel2Detail');
+                    var m3 = document.getElementById('tokModel3Detail');
+                    if (model === 'm3') {
+                        if (sel) sel.style.display = 'none';
+                        if (m2) m2.style.display = 'none';
+                        if (m3) m3.style.display = 'block';
+                        var m3cs = document.getElementById('tokM3CustomerSelect');
+                        var m3fw = document.getElementById('sm-tok-m3');
+                        if (m3cs) m3cs.style.display = 'block';
+                        if (m3fw) m3fw.style.display = 'none';
+                    } else if (model === 'm2') {
+                        if (sel) sel.style.display = 'none';
+                        if (m2) m2.style.display = 'block';
+                        if (m3) m3.style.display = 'none';
+                        var m2cs = document.getElementById('tokM2CustomerSelect');
+                        var m2fw = document.getElementById('sm-tok-m2');
+                        if (m2cs) m2cs.style.display = 'block';
+                        if (m2fw) m2fw.style.display = 'none';
+                    } else {
+                        if (sel) sel.style.display = 'block';
+                        if (m2) m2.style.display = 'none';
+                        if (m3) m3.style.display = 'none';
+                    }
+                }
+                if (sectionId === 'sm-cards-pacb') {
+                    var pSel = document.getElementById('pacbFlowSelect');
+                    var pOt = document.getElementById('pacbOneTimeDetail');
+                    var pSub = document.getElementById('pacbSubsDetail');
+                    if (sub === 'sub') {
+                        if (pSel) pSel.style.display = 'none';
+                        if (pOt) pOt.style.display = 'none';
+                        if (pSub) pSub.style.display = 'block';
+                    } else {
+                        if (pSel) pSel.style.display = 'block';
+                        if (pOt) pOt.style.display = 'none';
+                        if (pSub) pSub.style.display = 'none';
+                    }
+                }
+                if (phase) {
+                    var tabPrefix = '';
+                    if (sectionId === 'sm-cards-normal') tabPrefix = 'cards-normal';
+                    else if (sectionId === 'sm-cards-preauth') tabPrefix = 'cards-preauth';
+                    else if (sectionId === 'sm-cards-subs') tabPrefix = 'cards-subs';
+                    if (tabPrefix) {
+                        var matchingTab = document.querySelector('.sm-phase-tab[onclick*="smSwitchCardPhase"][onclick*="\'' + tabPrefix + '\'"][onclick*="\'' + phase + '\'"]');
+                        if (matchingTab) smSwitchCardPhase(matchingTab, tabPrefix, phase, true);
+                    }
+                }
+            }
+
+            smAutoFillCardTxnIds();
+            if (content) content.scrollTo(0, 0);
+        }
+
+        function cardsNavToApi(navItem, sectionId, phase, targetId, model, customerType) {
+            document.querySelectorAll('#cardsNav .cards-nav-item').forEach(function(n) { n.classList.remove('active'); });
+            if (navItem) navItem.classList.add('active');
+
+            document.querySelectorAll('#cardsContentArea > .seamless-section, #seamlessCardsDetailContent > .seamless-section').forEach(function(s) { s.classList.remove('active'); });
+            var section = document.getElementById(sectionId);
+            if (section) section.classList.add('active');
+
+            if (sectionId === 'sm-cards-token' && model) {
+                var sel = document.getElementById('tokModelSelect');
+                var m2 = document.getElementById('tokModel2Detail');
+                var m3 = document.getElementById('tokModel3Detail');
+                if (sel) sel.style.display = 'none';
+                if (m2) m2.style.display = model === 'm2' ? 'block' : 'none';
+                if (m3) m3.style.display = model === 'm3' ? 'block' : 'none';
+
+                if (customerType) {
+                    smSelectCustomerType(model, customerType, true);
+                } else {
+                    var prefix = model === 'm2' ? 'tokM2' : 'tokM3';
+                    var flowId = model === 'm2' ? 'tok-m2' : 'tok-m3';
+                    var custSelect = document.getElementById(prefix + 'CustomerSelect');
+                    var flowWrapper = document.getElementById('sm-' + flowId);
+                    if (custSelect) custSelect.style.display = 'none';
+                    if (flowWrapper) flowWrapper.style.display = 'block';
+                }
+
+                var flowId = model === 'm2' ? 'tok-m2' : 'tok-m3';
+                if (phase) {
+                    var phaseTab = document.querySelector('#sm-' + flowId + ' .sm-phase-tab[onclick*="\'' + phase + '\'"]');
+                    if (phaseTab) smSwitchCardPhase(phaseTab, flowId, phase, true);
+                }
+            } else if (phase) {
+                var tabPrefix = '';
+                if (sectionId === 'sm-cards-normal') tabPrefix = 'cards-normal';
+                else if (sectionId === 'sm-cards-preauth') tabPrefix = 'cards-preauth';
+                if (tabPrefix) {
+                    var matchingTab = document.querySelector('.sm-phase-tab[onclick*="smSwitchCardPhase"][onclick*="\'' + tabPrefix + '\'"][onclick*="\'' + phase + '\'"]');
+                    if (matchingTab) smSwitchCardPhase(matchingTab, tabPrefix, phase, true);
+                }
+            }
+
+            smAutoFillCardTxnIds();
+
+            _cardsNavScrollLock = true;
+            setTimeout(function() {
+                var target = document.getElementById(targetId);
+                if (target) {
+                    var contentArea = document.getElementById('cardsContentArea');
+                    if (contentArea) {
+                        var containerRect = contentArea.getBoundingClientRect();
+                        var targetRect = target.getBoundingClientRect();
+                        contentArea.scrollTo({ top: contentArea.scrollTop + (targetRect.top - containerRect.top) - 20, behavior: 'smooth' });
+                    } else {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+                setTimeout(function() { _cardsNavScrollLock = false; }, 600);
+            }, 150);
+        }
+
+        function cardsToggleNavGroup(label) {
+            label.classList.toggle('collapsed');
+            var next = label.nextElementSibling;
+            while (next && next.classList.contains('cards-nav-sub')) {
+                next.classList.toggle('cards-nav-hidden');
+                next = next.nextElementSibling;
+            }
+        }
+
+        function cardsToggleSubGroup(modelLabel) {
+            modelLabel.classList.toggle('collapsed');
+            var modelGroup = modelLabel.dataset.modelGroup || '';
+            var next = modelLabel.nextElementSibling;
+            while (next && !next.classList.contains('cards-nav-model-label') && !next.classList.contains('cards-nav-group-label')) {
+                if (next.classList.contains('cards-nav-sub')) {
+                    next.classList.toggle('cards-nav-hidden');
+                }
+                next = next.nextElementSibling;
+            }
+        }
+
+        function cardsToggleApiGroup(custLabel) {
+            custLabel.classList.toggle('collapsed');
+            var next = custLabel.nextElementSibling;
+            while (next && next.classList.contains('cards-nav-api')) {
+                next.classList.toggle('cards-nav-hidden');
+                next = next.nextElementSibling;
+            }
+        }
+
+        function cardsApplyGlobalConfig() {
+            var key = document.getElementById('cards_global_key').value;
+            var salt = document.getElementById('cards_global_salt').value;
+            var content = document.getElementById('cardsContentArea');
+            if (!content) return;
+            content.querySelectorAll('input').forEach(function(inp) {
+                var id = (inp.id || '').toLowerCase();
+                var nm = (inp.name || '').toLowerCase();
+                if (id.indexOf('key') > -1 || nm.indexOf('key') > -1) {
+                    if (id !== 'cards_global_key') inp.value = key;
+                }
+                if (id.indexOf('salt') > -1 || nm.indexOf('salt') > -1) {
+                    if (id !== 'cards_global_salt') inp.value = salt;
+                }
+            });
+            var toast = document.createElement('div');
+            toast.textContent = 'Key & Salt applied to all card forms!';
+            toast.style.cssText = 'position:fixed;top:1rem;right:1rem;background:#166534;color:#fff;padding:0.75rem 1.5rem;border-radius:8px;z-index:9999;font-size:0.85rem;box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+            document.body.appendChild(toast);
+            setTimeout(function(){ toast.remove(); }, 2500);
+        }
+
+        var _cardsNavScrollLock = false;
+        var _cardsNavScrollTimer = null;
+        function cardsInitScrollSync() {
+            var contentArea = document.getElementById('cardsContentArea');
+            if (!contentArea) return;
+            contentArea.addEventListener('scroll', function() {
+                if (_cardsNavScrollLock) return;
+                if (_cardsNavScrollTimer) return;
+                _cardsNavScrollTimer = setTimeout(function() { _cardsNavScrollTimer = null; }, 100);
+                var steps = contentArea.querySelectorAll('.sm-timeline-item[id]');
+                var best = null;
+                var bestDist = Infinity;
+                var areaTop = contentArea.getBoundingClientRect().top;
+                for (var i = 0; i < steps.length; i++) {
+                    var rect = steps[i].getBoundingClientRect();
+                    if (steps[i].offsetParent === null) continue;
+                    var dist = Math.abs(rect.top - areaTop - 40);
+                    if (rect.top <= areaTop + 150 && dist < bestDist) {
+                        bestDist = dist;
+                        best = steps[i];
+                    }
+                }
+                if (!best) {
+                    for (var j = 0; j < steps.length; j++) {
+                        if (steps[j].offsetParent === null) continue;
+                        var r = steps[j].getBoundingClientRect();
+                        if (r.top >= areaTop && r.top <= areaTop + 300) { best = steps[j]; break; }
+                    }
+                }
+                if (best) {
+                    var targetId = best.id;
+                    var navItems = document.querySelectorAll('#cardsNav .cards-nav-item');
+                    var matched = null;
+                    var fallback = null;
+                    var activeCustGroup = '';
+                    var curActive = document.querySelector('#cardsNav .cards-nav-item.active');
+                    if (curActive) activeCustGroup = curActive.getAttribute('data-cust-group') || '';
+                    for (var k = 0; k < navItems.length; k++) {
+                        var oc = navItems[k].getAttribute('onclick') || '';
+                        if (oc.indexOf("'" + targetId + "'") !== -1) {
+                            if (!fallback) fallback = navItems[k];
+                            var cg = navItems[k].getAttribute('data-cust-group') || '';
+                            if (activeCustGroup && cg === activeCustGroup) { matched = navItems[k]; break; }
+                            if (!activeCustGroup && !cg) { matched = navItems[k]; break; }
+                        }
+                    }
+                    if (!matched) matched = fallback;
+                    if (matched && !matched.classList.contains('active')) {
+                        navItems.forEach(function(n) { n.classList.remove('active'); });
+                        matched.classList.add('active');
+                        if (matched.scrollIntoViewIfNeeded) matched.scrollIntoViewIfNeeded(false);
+                        else matched.scrollIntoView({ block: 'nearest' });
+                    }
+                }
+            });
+        }
+        setTimeout(cardsInitScrollSync, 500);
+
+        function smAutoFillCardTxnIds() {
+            var fields = ['sc_pay_txnid','sc_pa_pay_txnid','sc_tok_pay_txnid'];
+            fields.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && !el.value) el.value = 'CARD_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+            });
+        }
+
+        function smSwitchCardPhase(tab, flowId, phase, skipScroll) {
+            var flowEl = document.getElementById('sm-' + flowId);
+            if (!flowEl) return;
+            flowEl.querySelectorAll('.sm-phase-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            flowEl.querySelectorAll('.sm-phase-content').forEach(function(c) { c.classList.remove('active'); });
+            var content = document.getElementById(flowId + '-' + phase);
+            if (content) content.classList.add('active');
+
+            if (!skipScroll) {
+                var phaseTabs = flowEl.querySelector('.sm-phase-tabs');
+                if (phaseTabs) {
+                    var contentArea = document.getElementById('cardsContentArea');
+                    if (contentArea) {
+                        var tabsTop = phaseTabs.offsetTop - contentArea.offsetTop - 10;
+                        contentArea.scrollTo({ top: tabsTop, behavior: 'smooth' });
+                    } else {
+                        phaseTabs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            }
+        }
+
+        function smShowTokenModel(model) {
+            var selector = document.getElementById('tokModelSelect');
+            var m2 = document.getElementById('tokModel2Detail');
+            var m3 = document.getElementById('tokModel3Detail');
+            if (selector) selector.style.display = 'none';
+            if (m2) m2.style.display = 'none';
+            if (m3) m3.style.display = 'none';
+            if (model === 'm2' && m2) {
+                m2.style.display = 'block';
+            } else if (model === 'm3' && m3) {
+                m3.style.display = 'block';
+            }
+            var prefix = model === 'm2' ? 'tokM2' : 'tokM3';
+            var flowId = model === 'm2' ? 'tok-m2' : 'tok-m3';
+            var custSelect = document.getElementById(prefix + 'CustomerSelect');
+            var flowWrapper = document.getElementById('sm-' + flowId);
+            if (custSelect) custSelect.style.display = 'block';
+            if (flowWrapper) flowWrapper.style.display = 'none';
+            var counter = 1;
+            ['pre', 'pay', 'post'].forEach(function(phase) {
+                var panel = document.getElementById(flowId + '-' + phase);
+                if (!panel) return;
+                panel.querySelectorAll('.sm-timeline-item').forEach(function(item) {
+                    item.style.display = '';
+                    var marker = item.querySelector('.sm-timeline-marker');
+                    if (marker) marker.textContent = counter++;
+                });
+            });
+            var contentArea = document.getElementById('cardsContentArea');
+            if (contentArea) contentArea.scrollTo(0, 0);
+        }
+
+        function smBackToTokenModels() {
+            var selector = document.getElementById('tokModelSelect');
+            var m2 = document.getElementById('tokModel2Detail');
+            var m3 = document.getElementById('tokModel3Detail');
+            if (m2) m2.style.display = 'none';
+            if (m3) m3.style.display = 'none';
+            if (selector) selector.style.display = 'block';
+            var contentArea = document.getElementById('cardsContentArea');
+            if (contentArea) contentArea.scrollTo(0, 0);
+        }
+
+        function smTokBack(model) {
+            var prefix = model === 'm2' ? 'tokM2' : 'tokM3';
+            var flowId = model === 'm2' ? 'tok-m2' : 'tok-m3';
+            var flowWrapper = document.getElementById('sm-' + flowId);
+            if (flowWrapper && flowWrapper.style.display !== 'none') {
+                smBackToCustomerType(model);
+                var lbl = document.getElementById(prefix + 'BackLabel');
+                if (lbl) lbl.textContent = 'Back to Model Selection';
+            } else {
+                smBackToTokenModels();
+            }
+        }
+
+        var customerTypeHidePatterns = {
+            'm2': {
+                'first': ['Get User Cards', 'Repeat Customer'],
+                'repeat': ['Get BIN Info', 'First-Time Customer']
+            },
+            'm3': {
+                'first': ['Get User Cards API Repeat', 'Get User Cards API PayU', 'Get Payment Instrument', 'Get Cryptogram', 'Repeat with PayU', 'Repeat Customer', 'Delete Payment Instrument'],
+                'repeat': ['Get BIN Info', 'Get User Cards API Repeat', 'First-Time', 'Repeat with PayU', 'Save Payment Instrument']
+            }
+        };
+
+        var customerTypeLabels = {
+            'm2': {
+                'first': 'First-Time Customer Flow \u2014 Card is auto-tokenized by PayU after successful payment (store_card=1)',
+                'repeat': 'Repeat Customer Flow \u2014 Using previously saved card token + CVV'
+            },
+            'm3': {
+                'first': 'First-Time Customer Flow \u2014 Token created explicitly via save_payment_instrument after payment',
+                'repeat': 'Repeat Customer Flow \u2014 Using PayU Token / Network Token / Issuer Token for payment'
+            }
+        };
+
+        function smSelectCustomerType(model, type, skipPhaseReset) {
+            var prefix = model === 'm2' ? 'tokM2' : 'tokM3';
+            var flowId = model === 'm2' ? 'tok-m2' : 'tok-m3';
+
+            var selector = document.getElementById(prefix + 'CustomerSelect');
+            var flowWrapper = document.getElementById('sm-' + flowId);
+            if (selector) selector.style.display = 'none';
+            if (flowWrapper) flowWrapper.style.display = 'block';
+
+            var backLbl = document.getElementById(prefix + 'BackLabel');
+            if (backLbl) backLbl.textContent = 'Back to Customer Selection';
+
+            var label = document.getElementById(prefix + 'FlowLabel');
+            if (label) label.textContent = customerTypeLabels[model][type] || '';
+
+            var patterns = customerTypeHidePatterns[model][type] || [];
+            var flowEl = document.getElementById('sm-' + flowId);
+            if (!flowEl) return;
+
+            flowEl.querySelectorAll('.sm-timeline-item').forEach(function(item) {
+                var titleEl = item.querySelector('strong');
+                if (!titleEl) { item.style.display = ''; return; }
+                var title = titleEl.textContent;
+                var shouldHide = false;
+                for (var i = 0; i < patterns.length; i++) {
+                    if (title.indexOf(patterns[i]) !== -1) {
+                        shouldHide = true;
+                        break;
+                    }
+                }
+                item.style.display = shouldHide ? 'none' : '';
+            });
+
+            var counter = 1;
+            ['pre', 'pay', 'post'].forEach(function(phase) {
+                var panel = document.getElementById(flowId + '-' + phase);
+                if (!panel) return;
+                panel.querySelectorAll('.sm-timeline-item').forEach(function(item) {
+                    if (item.style.display !== 'none') {
+                        var marker = item.querySelector('.sm-timeline-marker');
+                        if (marker) marker.textContent = counter++;
+                    }
+                });
+            });
+
+            if (!skipPhaseReset) {
+                var firstTab = flowEl.querySelector('.sm-phase-tab');
+                if (firstTab) smSwitchCardPhase(firstTab, flowId, 'pre');
+
+                var contentArea = document.getElementById('cardsContentArea');
+                if (contentArea) contentArea.scrollTo(0, 0);
+            }
+        }
+
+        function smBackToCustomerType(model) {
+            var prefix = model === 'm2' ? 'tokM2' : 'tokM3';
+            var flowId = model === 'm2' ? 'tok-m2' : 'tok-m3';
+
+            var selector = document.getElementById(prefix + 'CustomerSelect');
+            var flowWrapper = document.getElementById('sm-' + flowId);
+            if (selector) selector.style.display = 'block';
+            if (flowWrapper) flowWrapper.style.display = 'none';
+
+            var counter = 1;
+            ['pre', 'pay', 'post'].forEach(function(phase) {
+                var panel = document.getElementById(flowId + '-' + phase);
+                if (!panel) return;
+                panel.querySelectorAll('.sm-timeline-item').forEach(function(item) {
+                    item.style.display = '';
+                    var marker = item.querySelector('.sm-timeline-marker');
+                    if (marker) marker.textContent = counter++;
+                });
+            });
+
+            var contentArea = document.getElementById('cardsContentArea');
+            if (contentArea) contentArea.scrollTo(0, 0);
+        }
+
+        function smSwitchTokenTab(tab, tabId) {
+            tab.parentElement.querySelectorAll('.sm-code-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            document.querySelectorAll('.sm-token-tab-content').forEach(function(c) { c.classList.remove('active'); });
+            var content = document.getElementById(tabId);
+            if (content) content.classList.add('active');
+        }
+
+        function smCardBuildCurl(url, params) {
+            var lines = ['curl -X POST "' + url + '" \\'];
+            lines.push('  -H "Content-Type: application/x-www-form-urlencoded" \\');
+            var keys = Object.keys(params);
+            keys.forEach(function(k, i) {
+                var line = '  -d "' + k + '=' + params[k] + '"';
+                if (i < keys.length - 1) line += ' \\';
+                lines.push(line);
+            });
+            return lines.join('\n');
+        }
+
+        function smCardGenericDisplay(prefix, result, flowSuffix) {
+            var p = flowSuffix ? prefix + flowSuffix : prefix;
+            var badge = document.getElementById(p + 'StatusBadge');
+            var respView = document.getElementById(p + 'ResponseView');
+            if (!badge || !respView) return;
+            if (result && result.http_code) {
+                badge.className = 'sm-status-badge ' + (result.http_code >= 200 && result.http_code < 300 ? 'success' : 'error');
+                badge.textContent = 'HTTP ' + result.http_code;
+            } else if (result && result.error) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'Error';
+            }
+            respView.textContent = JSON.stringify(result.response || result, null, 2);
+        }
+
+        function smRenderVerifyStatus(elPrefix, result) {
+            var box = document.getElementById(elPrefix + 'TxnStatus');
+            if (!box) return;
+            var resp = result.response || result;
+            var txnDetails = resp && resp.transaction_details ? resp.transaction_details : null;
+            var txn = txnDetails ? Object.values(txnDetails)[0] : null;
+            if (!txn) { box.style.display = 'none'; return; }
+
+            var status = (txn.status || '').toLowerCase();
+            var unmapped = (txn.unmappedstatus || '').toLowerCase();
+            var isSuccess = status === 'success' || unmapped === 'captured';
+            var isPending = unmapped === 'auth' || status === 'pending';
+            var isFailed = status === 'failure' || unmapped === 'failed' || unmapped === 'usercancelled';
+
+            var color = isSuccess ? '#16a34a' : isPending ? '#d97706' : '#dc2626';
+            var bg = isSuccess ? '#f0fdf4' : isPending ? '#fffbeb' : '#fef2f2';
+            var border = isSuccess ? '#22c55e' : isPending ? '#f59e0b' : '#ef4444';
+            var icon = isSuccess ? '&#10004;' : isPending ? '&#9888;' : '&#10008;';
+            var label = unmapped ? unmapped.charAt(0).toUpperCase() + unmapped.slice(1) : (status.charAt(0).toUpperCase() + status.slice(1));
+
+            var rows = [
+                { k: 'Status', v: '<span style="font-weight:700;color:' + color + ';">' + label + '</span>' },
+                { k: 'Transaction ID (txnid)', v: txn.txnid || txn.transaction_id || '-' },
+                { k: 'PayU ID (mihpayid)', v: txn.mihpayid || '-' },
+                { k: 'Amount', v: txn.transaction_amount || txn.amt || txn.request_amount || '-' },
+                { k: 'Mode', v: txn.mode || '-' },
+                { k: 'Payment Gateway', v: txn.PG_TYPE || txn.pg_TYPE || '-' },
+                { k: 'Bank Ref Num', v: txn.bank_ref_num || '-' },
+                { k: 'Card Number', v: txn.cardnum || txn.card_no || '-' }
+            ];
+            if (txn.error_Message || txn.field9) rows.push({ k: 'Error', v: txn.error_Message || txn.field9 });
+            if (txn.addedon) rows.push({ k: 'Added On', v: txn.addedon });
+
+            var html = '<div style="border:2px solid ' + border + ';border-radius:12px;overflow:hidden;background:' + bg + ';">';
+            html += '<div style="padding:0.85rem 1.25rem;background:' + border + ';display:flex;align-items:center;gap:0.6rem;">';
+            html += '<span style="font-size:1.4rem;color:#fff;">' + icon + '</span>';
+            html += '<span style="font-size:1.1rem;font-weight:700;color:#fff;">Transaction ' + label + '</span>';
+            html += '</div>';
+            html += '<div style="padding:0.75rem 1.25rem;">';
+            html += '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">';
+            for (var i = 0; i < rows.length; i++) {
+                html += '<tr style="border-bottom:1px solid ' + border + '33;">';
+                html += '<td style="padding:0.45rem 0.5rem 0.45rem 0;font-weight:600;color:#374151;width:180px;white-space:nowrap;">' + rows[i].k + '</td>';
+                html += '<td style="padding:0.45rem 0;color:#111;font-family:monospace;word-break:break-all;">' + rows[i].v + '</td>';
+                html += '</tr>';
+            }
+            html += '</table></div></div>';
+
+            box.innerHTML = html;
+            box.style.display = 'block';
+        }
+
+        // --- getBinInfo shared helpers ---
+        function smBinVar1Changed(prefix) {
+            var var1El = document.getElementById(prefix + 'var1');
+            if (!var1El) return;
+            var val = var1El.value;
+            var var2Group = document.getElementById(prefix + 'var2_group');
+            var var2Hint = document.getElementById(prefix + 'var2_hint');
+            var var2Input = document.getElementById(prefix + 'value');
+            if (val === '1') {
+                if (var2Group) var2Group.style.display = '';
+                if (var2Hint) var2Hint.textContent = 'BIN number (first 6\u20139 digits) for single lookup';
+                if (var2Input) { var2Input.placeholder = 'e.g. 550690'; var2Input.maxLength = 9; }
+            } else if (val === '2') {
+                if (var2Group) var2Group.style.display = '';
+                if (var2Hint) var2Hint.textContent = '1 = ATM PIN support, 2 = OTP-on-the-fly support';
+                if (var2Input) { var2Input.placeholder = '1 or 2'; var2Input.value = '1'; var2Input.maxLength = 1; }
+            } else if (val === '3') {
+                if (var2Group) var2Group.style.display = '';
+                if (var2Hint) var2Hint.textContent = 'Leave empty for all BINs (paginated)';
+                if (var2Input) { var2Input.placeholder = '(leave empty)'; var2Input.value = ''; var2Input.maxLength = 9; }
+            }
+        }
+        window.smBinVar1Changed = smBinVar1Changed;
+
+        function smBinBuildParams(prefix) {
+            var keyEl = document.getElementById(prefix + 'key');
+            var saltEl = document.getElementById(prefix + 'salt');
+            var key = keyEl ? keyEl.value.trim() : 'a4vGC2';
+            var salt = saltEl ? saltEl.value.trim() : 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli';
+            var var1El = document.getElementById(prefix + 'var1');
+            var var1 = var1El ? var1El.value : '1';
+            var binEl = document.getElementById(prefix + 'value');
+            var bin = binEl ? binEl.value.trim() : '';
+            var var3El = document.getElementById(prefix + 'var3');
+            var var3 = var3El ? var3El.value.trim() : '0';
+            var var4El = document.getElementById(prefix + 'var4');
+            var var4 = var4El ? var4El.value.trim() : '0';
+            var var5El = document.getElementById(prefix + 'var5');
+            var var5 = var5El ? var5El.value : '1';
+            if (!key || !salt) { alert('Fill Merchant Key and Salt'); return null; }
+            if (var1 === '1' && !bin) { alert('Enter Card BIN for single BIN lookup'); return null; }
+            if (var1 === '2' && !bin) { alert('Enter feature code (1=ATM PIN, 2=OTP) for feature-based query'); return null; }
+            var hashStr = key + '|getBinInfo|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'getBinInfo', var1: var1, hash: hash };
+            if (bin) params.var2 = bin;
+            if (var3 && var3 !== '0') params.var3 = var3;
+            if (var4 && var4 !== '0') params.var4 = var4;
+            if (var5 && var5 !== '0') params.var5 = var5;
+            return params;
+        }
+
+        function smRenderBinSummary(panelId, result) {
+            var summaryId = panelId.replace('ReqRes','') + 'Summary';
+            var box = document.getElementById(summaryId);
+            if (!box) return;
+            var resp = result;
+            if (typeof resp === 'string') { try { resp = JSON.parse(resp); } catch(e) {} }
+            var status = resp.status || (resp.response ? resp.response.status : undefined);
+            if (status === undefined && resp.data) status = 1;
+            var data = resp.data || (resp.response ? resp.response.data : null);
+            if (!data || status != 1) { box.style.display = 'none'; return; }
+            var bd = data.bins_data || data;
+            if (!bd) { box.style.display = 'none'; return; }
+
+            function flag(val) { return val == 1 ? '<span style="color:#16a34a;font-weight:700;">&#10004; Yes</span>' : '<span style="color:#dc2626;font-weight:700;">&#10008; No</span>'; }
+            function chip(label, val, goodVal) {
+                var isGood = (val == goodVal);
+                var bg = isGood ? '#e8f5e9' : '#fff3e0'; var clr = isGood ? '#2e7d32' : '#e65100'; var bdr = isGood ? '#a5d6a7' : '#ffcc80';
+                return '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.78rem;font-weight:600;background:'+bg+';color:'+clr+';border:1px solid '+bdr+';margin:2px 4px 2px 0;">'+label+': '+(val == goodVal ? 'Yes' : (val === undefined ? 'N/A' : 'No'))+'</span>';
+            }
+
+            var html = '<div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.75rem;">';
+            if (bd.issuing_bank) html += '<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:0.5rem 0.85rem;min-width:120px;"><div style="font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em;">Issuing Bank</div><div style="font-size:1.05rem;font-weight:700;color:#212529;">'+bd.issuing_bank+'</div></div>';
+            if (bd.bin) html += '<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:0.5rem 0.85rem;min-width:100px;"><div style="font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em;">BIN</div><div style="font-size:1.05rem;font-weight:700;color:#212529;font-family:monospace;">'+bd.bin+'</div></div>';
+            if (bd.card_type) html += '<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:0.5rem 0.85rem;min-width:100px;"><div style="font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em;">Card Network</div><div style="font-size:1.05rem;font-weight:700;color:#212529;">'+bd.card_type+'</div></div>';
+            if (bd.category) html += '<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:0.5rem 0.85rem;min-width:120px;"><div style="font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em;">Category</div><div style="font-size:1.05rem;font-weight:700;color:'+(bd.category==='creditcard'?'#1565c0':'#6a1b9a')+';">'+bd.category+'</div></div>';
+            var isDom = bd.is_domestic !== undefined ? bd.is_domestic : bd.isDomestic;
+            if (isDom !== undefined) html += '<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:0.5rem 0.85rem;min-width:120px;"><div style="font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em;">Domestic</div><div style="font-size:1.05rem;font-weight:700;color:'+(isDom==1?'#2e7d32':'#e65100')+';">'+(isDom==1?'Yes (Domestic)':'No (International)')+'</div></div>';
+            html += '</div>';
+
+            html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:0.5rem;">';
+            html += chip('Native OTP (OTP on the fly)', bd.is_otp_on_the_fly, 1);
+            html += chip('ATM PIN', bd.is_atmpin_card, 1);
+            if (bd.is_zero_redirect_supported !== undefined) html += chip('Zero Redirect', bd.is_zero_redirect_supported, 1);
+            if (bd.is_si_supported !== undefined) html += chip('SI (Standing Instruction)', bd.is_si_supported, 1);
+            html += '</div>';
+
+            var flowContext = '';
+            if (panelId.indexOf('scBin') === 0) {
+                flowContext = bd.is_otp_on_the_fly == 1
+                    ? '<strong style="color:#2e7d32;">&#10004; This card supports Native OTP.</strong> In Step 5 (Handle 3DS), both <em>Native OTP</em> and <em>3DS Redirect</em> options will be available.'
+                    : '<strong style="color:#e65100;">&#9888; This card does NOT support Native OTP.</strong> In Step 5 (Handle 3DS), only <em>Pay on Bank Page (3DS Redirect)</em> will be available.';
+            } else if (panelId.indexOf('scPaBin') === 0) {
+                flowContext = bd.is_otp_on_the_fly == 1
+                    ? '<strong style="color:#2e7d32;">&#10004; This card supports Native OTP for Pre-Auth.</strong> In Step 4 (Handle 3DS), both authentication options will be available.'
+                    : '<strong style="color:#e65100;">&#9888; This card does NOT support Native OTP.</strong> Only 3DS Redirect is available for pre-auth authentication in Step 4.';
+                if (bd.category === 'debitcard') flowContext += '<br><span style="color:#d32f2f;font-weight:600;">&#9888; Debit card detected &mdash; pre-auth support may be limited. Verify with your bank/PayU KAM.</span>';
+            } else if (panelId.indexOf('scM2Bin') === 0) {
+                flowContext = bd.is_otp_on_the_fly == 1
+                    ? '<strong style="color:#2e7d32;">&#10004; This card supports Native OTP.</strong> After <code>_payment</code> with <code>store_card=1</code>, both Native OTP and 3DS Redirect will be available in Step 4.'
+                    : '<strong style="color:#e65100;">&#9888; This card does NOT support Native OTP.</strong> After payment, only 3DS Redirect will be available. <code>pureS2SSupported</code> will be <code>false</code>.';
+            } else if (panelId.indexOf('scM3Bin') === 0) {
+                var ct = (bd.card_type || '').toUpperCase();
+                var tokenTypeHint = '';
+                if (ct === 'DINR' || ct === 'DINER') tokenTypeHint = 'This is a <strong>Diners</strong> card &rarr; use <strong>Issuer Token</strong> (<code>storecard_token_type=2</code>) for repeat payments.';
+                else if (ct === 'VISA' || ct === 'MAST') tokenTypeHint = 'This is a <strong>'+ct+'</strong> card &rarr; use <strong>Network Token</strong> (<code>storecard_token_type=1</code>) for repeat payments.';
+                else tokenTypeHint = 'Card network: <strong>'+ct+'</strong>. Use <strong>PayU Token</strong> (<code>storecard_token_type=0</code>) or check with PayU for token type support.';
+                flowContext = tokenTypeHint + '<br>';
+                flowContext += bd.is_otp_on_the_fly == 1
+                    ? '<strong style="color:#2e7d32;">&#10004; Native OTP supported.</strong> Both authentication options will be available in the Handle 3DS step.'
+                    : '<strong style="color:#e65100;">&#9888; Native OTP NOT supported.</strong> Only 3DS Redirect available for authentication.';
+            }
+
+            if (flowContext) html += '<div style="padding:0.6rem 0.85rem;background:linear-gradient(135deg,#f8f9fa,#e3f2fd);border-radius:8px;border:1px solid #bbdefb;font-size:0.85rem;line-height:1.5;">' + flowContext + '</div>';
+
+            box.innerHTML = html;
+            box.style.display = 'block';
+        }
+
+        function smBinSendRequest(prefix, panelId) {
+            var params = smBinBuildParams(prefix);
+            if (!params) return;
+            var panel = document.getElementById(panelId);
+            panel.style.display = 'block';
+            var reqView = document.getElementById(panelId.replace('ReqRes','') + 'RequestView');
+            if (reqView) reqView.textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
+            var curlView = document.getElementById(panelId.replace('ReqRes','') + 'CurlView');
+            if (curlView) curlView.textContent = smCardBuildCurl('https://test.payu.in/merchant/postservice.php?form=2', params);
+            var badgeId = panelId.replace('ReqRes','') + 'StatusBadge';
+            var badge = document.getElementById(badgeId);
+            if (badge) { badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...'; }
+            var respView = document.getElementById(panelId.replace('ReqRes','') + 'ResponseView');
+            if (respView) respView.textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            var displayPrefix = panelId.replace('ReqRes','');
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smCardGenericDisplay(displayPrefix, result); smRenderBinSummary(panelId, result); })
+                .catch(function(err) { if (badge) { badge.className = 'sm-status-badge error'; badge.textContent = 'Failed'; } if (respView) respView.textContent = 'Error: ' + err.message; });
+        }
+
+        function smBinPreviewRequest(prefix, panelId) {
+            var params = smBinBuildParams(prefix);
+            if (!params) return;
+            var panel = document.getElementById(panelId);
+            panel.style.display = 'block';
+            var reqView = document.getElementById(panelId.replace('ReqRes','') + 'RequestView');
+            if (reqView) reqView.textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
+            var curlView = document.getElementById(panelId.replace('ReqRes','') + 'CurlView');
+            if (curlView) curlView.textContent = smCardBuildCurl('https://test.payu.in/merchant/postservice.php?form=2', params);
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // --- Get BIN Info (Normal S2S) ---
+        function smCardGetBinInfo() { smBinSendRequest('sc_bin_', 'scBinReqRes'); }
+        function smCardGetBinInfoPreview() { smBinPreviewRequest('sc_bin_', 'scBinReqRes'); }
+        window.smCardGetBinInfoPreview = smCardGetBinInfoPreview;
+
+        // --- Get BIN Info (Pre-Auth) ---
+        function smCardGetBinInfoPreAuth() { smBinSendRequest('sc_pa_bin_', 'scPaBinReqRes'); }
+        function smCardGetBinInfoPreAuthPreview() { smBinPreviewRequest('sc_pa_bin_', 'scPaBinReqRes'); }
+        window.smCardGetBinInfoPreAuthPreview = smCardGetBinInfoPreAuthPreview;
+
+        // --- Check isDomestic ---
+        function smDomesticBuildParams() {
+            var keyEl = document.getElementById('sc_domestic_key');
+            var saltEl = document.getElementById('sc_domestic_salt');
+            var key = keyEl ? keyEl.value.trim() : (document.getElementById('sc_bin_key') ? document.getElementById('sc_bin_key').value.trim() : 'a4vGC2');
+            var salt = saltEl ? saltEl.value.trim() : (document.getElementById('sc_bin_salt') ? document.getElementById('sc_bin_salt').value.trim() : 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli');
+            var bin = document.getElementById('sc_domestic_bin').value.trim();
+            if (!key || !salt || !bin) { alert('Fill Merchant Key, Salt and Card BIN (6 digits)'); return null; }
+            if (bin.length !== 6 || !/^\d{6}$/.test(bin)) { alert('Card BIN must be exactly 6 digits'); return null; }
+            var hashStr = key + '|check_isDomestic|' + bin + '|' + salt;
+            var hash = smSHA512(hashStr);
+            return { key: key, command: 'check_isDomestic', var1: bin, hash: hash };
+        }
+        function smCardCheckDomestic() {
+            var params = smDomesticBuildParams();
+            if (!params) return;
+            var panel = document.getElementById('scDomesticReqRes');
+            panel.style.display = 'block';
+            var reqView = document.getElementById('scDomesticRequestView');
+            if (reqView) reqView.textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
+            var curlView = document.getElementById('scDomesticCurlView');
+            if (curlView) curlView.textContent = smCardBuildCurl('https://test.payu.in/merchant/postservice.php?form=2', params);
+            var badge = document.getElementById('scDomesticStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('scDomesticResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smCardGenericDisplay('scDomestic', result); })
+                .catch(function(err) { document.getElementById('scDomesticStatusBadge').className = 'sm-status-badge error'; document.getElementById('scDomesticStatusBadge').textContent = 'Failed'; document.getElementById('scDomesticResponseView').textContent = 'Error: ' + err.message; });
+        }
+        function smCardCheckDomesticPreview() {
+            var params = smDomesticBuildParams();
+            if (!params) return;
+            var panel = document.getElementById('scDomesticReqRes');
+            panel.style.display = 'block';
+            var reqView = document.getElementById('scDomesticRequestView');
+            if (reqView) reqView.textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
+            var curlView = document.getElementById('scDomesticCurlView');
+            if (curlView) curlView.textContent = smCardBuildCurl('https://test.payu.in/merchant/postservice.php?form=2', params);
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        window.smCardCheckDomesticPreview = smCardCheckDomesticPreview;
+
+        // --- Card Payment (Normal / PreAuth / Token) ---
+        function smCardBuildPaymentParams(flow) {
+            var prefix, key, salt, params;
+            if (flow === 'normal') {
+                prefix = 'sc_pay_';
+                key = document.getElementById(prefix + 'key').value.trim();
+                salt = document.getElementById(prefix + 'salt').value.trim();
+                var txnid = document.getElementById(prefix + 'txnid').value.trim() || ('CARD_' + Date.now());
+                document.getElementById(prefix + 'txnid').value = txnid;
+                var amount = document.getElementById(prefix + 'amount').value.trim();
+                var productinfo = document.getElementById(prefix + 'productinfo').value.trim();
+                var firstname = document.getElementById(prefix + 'firstname').value.trim();
+                var email = document.getElementById(prefix + 'email').value.trim();
+                var phone = document.getElementById(prefix + 'phone').value.trim();
+                var udf1='',udf2='',udf3='',udf4='',udf5='';
+                var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|'+udf1+'|'+udf2+'|'+udf3+'|'+udf4+'|'+udf5+'||||||'+salt;
+                var hash = smSHA512(hashStr);
+                var pg = document.getElementById(prefix + 'pg').value;
+                params = {
+                    key: key, txnid: txnid, amount: amount, productinfo: productinfo,
+                    firstname: firstname, email: email, phone: phone,
+                    pg: pg, bankcode: pg,
+                    ccnum: document.getElementById(prefix + 'ccnum').value.trim(),
+                    ccname: document.getElementById(prefix + 'ccname').value.trim(),
+                    ccexpmon: document.getElementById(prefix + 'ccexpmon').value.trim(),
+                    ccexpyr: document.getElementById(prefix + 'ccexpyr').value.trim(),
+                    ccvv: document.getElementById(prefix + 'ccvv').value.trim(),
+                    surl: document.getElementById(prefix + 'surl').value.trim() || (window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php'),
+                    furl: document.getElementById(prefix + 'furl').value.trim() || (window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php'),
+                    txn_s2s_flow: '4',
+                    hash: hash
+                };
+                var storec = document.getElementById(prefix + 'store_card').value;
+                if (storec === '1') {
+                    params.store_card = '1';
+                    var uc = document.getElementById(prefix + 'user_cred').value.trim();
+                    if (uc) params.user_credentials = uc;
+                }
+            } else if (flow === 'preauth') {
+                prefix = 'sc_pa_pay_';
+                key = document.getElementById(prefix + 'key').value.trim();
+                salt = document.getElementById(prefix + 'salt').value.trim();
+                var patxnid = document.getElementById(prefix + 'txnid').value.trim() || ('PREAUTH_' + Date.now());
+                document.getElementById(prefix + 'txnid').value = patxnid;
+                var paamount = document.getElementById(prefix + 'amount').value.trim();
+                var paproductinfo = document.getElementById(prefix + 'productinfo').value.trim();
+                var pafirstname = document.getElementById(prefix + 'firstname').value.trim();
+                var paemail = document.getElementById(prefix + 'email').value.trim();
+                var paphone = document.getElementById(prefix + 'phone').value.trim();
+                var paudf1='',paudf2='',paudf3='',paudf4='',paudf5='';
+                var pahashStr = key+'|'+patxnid+'|'+paamount+'|'+paproductinfo+'|'+pafirstname+'|'+paemail+'|'+paudf1+'|'+paudf2+'|'+paudf3+'|'+paudf4+'|'+paudf5+'||||||'+salt;
+                var pahash = smSHA512(pahashStr);
+                var paBasePath = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'');
+                var paSurl = paBasePath + '/callback.php';
+                params = {
+                    key: key, txnid: patxnid, amount: paamount, productinfo: paproductinfo,
+                    firstname: pafirstname, email: paemail, phone: paphone,
+                    pg: 'CC', bankcode: 'CC',
+                    ccnum: document.getElementById(prefix + 'ccnum').value.trim(),
+                    ccname: document.getElementById(prefix + 'ccname').value.trim(),
+                    ccexpmon: document.getElementById(prefix + 'ccexpmon').value.trim(),
+                    ccexpyr: document.getElementById(prefix + 'ccexpyr').value.trim(),
+                    ccvv: document.getElementById(prefix + 'ccvv').value.trim(),
+                    surl: paSurl,
+                    furl: paSurl,
+                    txn_s2s_flow: '4',
+                    pre_authorize: '1',
+                    hash: pahash
+                };
+            } else if (flow === 'token') {
+                prefix = 'sc_tok_pay_';
+                key = document.getElementById(prefix + 'key').value.trim();
+                salt = document.getElementById(prefix + 'salt').value.trim();
+                var toktxnid = document.getElementById(prefix + 'txnid').value.trim() || ('TOK_' + Date.now());
+                document.getElementById(prefix + 'txnid').value = toktxnid;
+                var tokamount = document.getElementById(prefix + 'amount').value.trim();
+                var tokproductinfo = document.getElementById(prefix + 'productinfo').value.trim();
+                var tokfirstname = document.getElementById(prefix + 'firstname').value.trim();
+                var tokemail = document.getElementById(prefix + 'email').value.trim();
+                var tokphone = document.getElementById(prefix + 'phone').value.trim();
+                var tokudf1='',tokudf2='',tokudf3='',tokudf4='',tokudf5='';
+                var tokhashStr = key+'|'+toktxnid+'|'+tokamount+'|'+tokproductinfo+'|'+tokfirstname+'|'+tokemail+'|'+tokudf1+'|'+tokudf2+'|'+tokudf3+'|'+tokudf4+'|'+tokudf5+'||||||'+salt;
+                var tokhash = smSHA512(tokhashStr);
+                var tokenVal = document.getElementById(prefix + 'token').value.trim();
+                var tokccvv = document.getElementById(prefix + 'ccvv').value.trim();
+                var tokuc = document.getElementById(prefix + 'user_cred').value.trim();
+                var tokSurl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
+                params = {
+                    key: key, txnid: toktxnid, amount: tokamount, productinfo: tokproductinfo,
+                    firstname: tokfirstname, email: tokemail, phone: tokphone,
+                    pg: 'CC', bankcode: 'CC',
+                    surl: tokSurl,
+                    furl: tokSurl,
+                    txn_s2s_flow: '4',
+                    store_card_token: tokenVal,
+                    ccvv: tokccvv,
+                    user_credentials: tokuc,
+                    hash: tokhash
+                };
+            }
+            return { params: params, key: key, salt: salt };
+        }
+
+        function smCardPreviewPayment(flow) {
+            var data = smCardBuildPaymentParams(flow);
+            if (!data || !data.params) return;
+            var elPrefix = flow === 'normal' ? 'scPay' : (flow === 'preauth' ? 'scPaPay' : 'scTokPay');
+            var panel = document.getElementById(elPrefix + 'ReqRes');
+            panel.style.display = 'block';
+            document.getElementById(elPrefix + 'RequestView').textContent = JSON.stringify({ endpoint: 'https://test.payu.in/_payment', method: 'POST', params: data.params }, null, 2);
+            var curlEl = document.getElementById(elPrefix + 'CurlView');
+            if (curlEl) curlEl.textContent = smCardBuildCurl('https://test.payu.in/_payment', data.params);
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function smCardSendPayment(flow) {
+            var data = smCardBuildPaymentParams(flow);
+            if (!data || !data.params) return;
+            var elPrefix = flow === 'normal' ? 'scPay' : (flow === 'preauth' ? 'scPaPay' : 'scTokPay');
+            var panel = document.getElementById(elPrefix + 'ReqRes');
+            panel.style.display = 'block';
+            document.getElementById(elPrefix + 'RequestView').textContent = JSON.stringify({ endpoint: 'https://test.payu.in/_payment', method: 'POST', params: data.params }, null, 2);
+            var curlEl = document.getElementById(elPrefix + 'CurlView');
+            if (curlEl) curlEl.textContent = smCardBuildCurl('https://test.payu.in/_payment', data.params);
+            var badge = document.getElementById(elPrefix + 'StatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending to PayU...';
+            document.getElementById(elPrefix + 'ResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'payment', params: data.params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    smCardGenericDisplay(elPrefix, result);
+                    if (result.response && result.response.metaData) {
+                        if (result.response.metaData.referenceId) {
+                            var otpField = document.getElementById(flow === 'normal' ? 'sc_otp_refid' : (flow === 'preauth' ? 'sc_pa_otp_refid' : 'sc_tok_otp_refid'));
+                            if (otpField) otpField.value = result.response.metaData.referenceId;
+                        }
+                        if (result.response.metaData.txnId) {
+                            var verifyField = document.getElementById(flow === 'normal' ? 'sc_verify_txnid' : (flow === 'preauth' ? 'sc_pa_verify_txnid' : 'sc_tok_verify_txnid'));
+                            if (verifyField) verifyField.value = result.response.metaData.txnId;
+                        }
+                    }
+                    if (result.response) {
+                        if (flow === 'normal') smUpdateOtpS2sUI('scNOtp', result.response);
+                        if (flow === 'token') smUpdateOtpS2sUI('scM2Otp', result.response);
+                        if (flow === 'preauth') smUpdateOtpS2sUI('scPaOtp', result.response);
+                    }
+                })
+                .catch(function(err) { document.getElementById(elPrefix + 'StatusBadge').className = 'sm-status-badge error'; document.getElementById(elPrefix + 'StatusBadge').textContent = 'Failed'; document.getElementById(elPrefix + 'ResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // --- Decode ACS template (base64 or raw HTML) ---
+        function smExtractCardToken(resp) {
+            if (!resp) return null;
+            if (resp.user_cards && typeof resp.user_cards === 'object') {
+                var keys = Object.keys(resp.user_cards);
+                for (var i = 0; i < keys.length; i++) {
+                    var card = resp.user_cards[keys[i]];
+                    if (card && card.card_token) return card.card_token;
+                }
+            }
+            if (resp.card_token) return resp.card_token;
+            if (resp.payment_instrument_details) {
+                var d = Array.isArray(resp.payment_instrument_details) ? resp.payment_instrument_details[0] : resp.payment_instrument_details;
+                if (d && d.card_token) return d.card_token;
+            }
+            if (resp.result && typeof resp.result === 'object') {
+                if (resp.result.card_token) return resp.result.card_token;
+                if (resp.result.user_cards) {
+                    var rk = Object.keys(resp.result.user_cards);
+                    if (rk.length && resp.result.user_cards[rk[0]].card_token) return resp.result.user_cards[rk[0]].card_token;
+                }
+            }
+            return null;
+        }
+
+        function smExtractAllCardTokens(resp) {
+            var cards = [];
+            if (!resp) return cards;
+            if (resp.user_cards && typeof resp.user_cards === 'object') {
+                var keys = Object.keys(resp.user_cards);
+                for (var i = 0; i < keys.length; i++) {
+                    var c = resp.user_cards[keys[i]];
+                    if (c && typeof c === 'object' && c.card_token) {
+                        var masked = c.card_no || c.cardnum || c.card_number || '';
+                        var ctype = c.card_type || c.cardType || '';
+                        var cmode = c.card_mode || c.cardMode || '';
+                        var label = c.card_token.substring(0, 10) + '...';
+                        if (masked) label += ' | ' + masked;
+                        if (ctype) label += ' | ' + ctype;
+                        if (cmode) label += ' (' + cmode + ')';
+                        if (c.card_name) label += ' — ' + c.card_name;
+                        cards.push({ token: c.card_token, networkToken: '', issuerToken: '', label: label, masked: masked, type: ctype, mode: cmode, name: c.card_name || '' });
+                    }
+                }
+            }
+            if (resp.payment_instrument_details) {
+                var piList = Array.isArray(resp.payment_instrument_details) ? resp.payment_instrument_details : [resp.payment_instrument_details];
+                for (var j = 0; j < piList.length; j++) {
+                    var pi = piList[j];
+                    if (pi && pi.card_token) {
+                        var piMasked = pi.card_no || pi.cardnum || '';
+                        var piType = pi.card_type || '';
+                        var piMode = pi.card_mode || '';
+                        var piLabel = pi.card_token.substring(0, 10) + '...';
+                        if (piMasked) piLabel += ' | ' + piMasked;
+                        if (piType) piLabel += ' | ' + piType;
+                        if (piMode) piLabel += ' (' + piMode + ')';
+                        if (pi.card_name) piLabel += ' — ' + pi.card_name;
+                        var ntVal = (pi.network_token && pi.network_token.token_value) ? pi.network_token.token_value : '';
+                        var itVal = (pi.issuer_token && pi.issuer_token.token_value) ? pi.issuer_token.token_value : '';
+                        cards.push({ token: pi.card_token, networkToken: ntVal, issuerToken: itVal, label: piLabel, masked: piMasked, type: piType, mode: piMode, name: pi.card_name || '' });
+                    }
+                }
+            }
+            if (resp.result && typeof resp.result === 'object') {
+                if (resp.result.user_cards) {
+                    var sub = smExtractAllCardTokens(resp.result);
+                    cards = cards.concat(sub);
+                }
+            }
+            return cards;
+        }
+
+        function smPopulateTokenDropdown(selectId, inputId, cards) {
+            var sel = document.getElementById(selectId);
+            var inp = document.getElementById(inputId);
+            if (!sel) return;
+            sel.innerHTML = '';
+            if (!cards || cards.length === 0) {
+                sel.style.display = 'none';
+                return;
+            }
+            var def = document.createElement('option');
+            def.value = '';
+            def.textContent = '— Select a saved card (' + cards.length + ' found) —';
+            sel.appendChild(def);
+            for (var i = 0; i < cards.length; i++) {
+                var opt = document.createElement('option');
+                opt.value = cards[i].token;
+                opt.textContent = cards[i].label;
+                sel.appendChild(opt);
+            }
+            sel.style.display = 'block';
+            if (cards.length === 1) {
+                sel.value = cards[0].token;
+                if (inp) inp.value = cards[0].token;
+            }
+        }
+
+        var _m3ntPayuTokens = [];
+        var _m3ntNetworkTokens = [];
+        var _m3ntIssuerTokens = [];
+
+        function smPopulateM3NTTokenDropdown(cards) {
+            _m3ntPayuTokens = [];
+            for (var i = 0; i < cards.length; i++) {
+                if (cards[i].token) {
+                    _m3ntPayuTokens.push({ val: cards[i].token, label: cards[i].label });
+                }
+            }
+            smRefreshM3NTDropdown();
+        }
+
+        function smAddM3NTCryptogramToken(details) {
+            if (!details) return;
+            var cardNo = details.card_no || '';
+            var cardType = details.card_type || '';
+            var cardToken = details.card_token || '';
+            if (details.network_token && details.network_token.token_value) {
+                var ntVal = details.network_token.token_value;
+                var exists = false;
+                for (var i = 0; i < _m3ntNetworkTokens.length; i++) {
+                    if (_m3ntNetworkTokens[i].val === ntVal) { exists = true; break; }
+                }
+                if (!exists) {
+                    var lbl = ntVal.substring(0, 6) + '...' + ntVal.slice(-4);
+                    if (cardNo) lbl += ' | ' + cardNo;
+                    if (cardType) lbl += ' | ' + cardType;
+                    _m3ntNetworkTokens.push({ val: ntVal, label: lbl });
+                }
+            }
+            if (details.issuer_token && details.issuer_token.token_value) {
+                var itVal = details.issuer_token.token_value;
+                var itExists = false;
+                for (var j = 0; j < _m3ntIssuerTokens.length; j++) {
+                    if (_m3ntIssuerTokens[j].val === itVal) { itExists = true; break; }
+                }
+                if (!itExists) {
+                    var itLbl = itVal.substring(0, 6) + '...' + itVal.slice(-4);
+                    if (cardNo) itLbl += ' | ' + cardNo;
+                    if (cardType) itLbl += ' | ' + cardType;
+                    _m3ntIssuerTokens.push({ val: itVal, label: itLbl });
+                }
+            }
+            smRefreshM3NTDropdown();
+        }
+
+        function smRefreshM3NTDropdown() {
+            var sel = document.getElementById('sc_m3nt_ccnum_select');
+            var inp = document.getElementById('sc_m3nt_ccnum');
+            if (!sel) return;
+            var tokenTypeSel = document.getElementById('sc_m3nt_token_type');
+            var tokenType = tokenTypeSel ? tokenTypeSel.value : '1';
+            sel.innerHTML = '';
+            var tokens = [];
+            if (tokenType === '0') tokens = _m3ntPayuTokens;
+            else if (tokenType === '1') tokens = _m3ntNetworkTokens;
+            else if (tokenType === '2') tokens = _m3ntIssuerTokens;
+            if (!tokens || tokens.length === 0) { sel.style.display = 'none'; return; }
+            if (tokens.length === 1) {
+                sel.style.display = 'none';
+                if (inp) inp.value = tokens[0].val;
+                return;
+            }
+            var typeLabel = tokenType === '0' ? 'PayU' : (tokenType === '1' ? 'Network' : 'Issuer');
+            var def = document.createElement('option');
+            def.value = '';
+            def.textContent = '\u2014 Select ' + typeLabel + ' token (' + tokens.length + ' found) \u2014';
+            sel.appendChild(def);
+            for (var k = 0; k < tokens.length; k++) {
+                var opt = document.createElement('option');
+                opt.value = tokens[k].val;
+                opt.textContent = tokens[k].label;
+                sel.appendChild(opt);
+            }
+            sel.style.display = 'block';
+            sel.onchange = function() { if (inp) inp.value = sel.value; };
+        }
+
+        function smDecodeAcsTemplate(raw) {
+            if (!raw) return null;
+            if (raw.indexOf('<') !== -1 && (raw.indexOf('<form') !== -1 || raw.indexOf('<html') !== -1 || raw.indexOf('<body') !== -1 || raw.indexOf('<script') !== -1)) {
+                return raw;
+            }
+            try { var decoded = atob(raw); if (decoded.indexOf('<') !== -1) return decoded; } catch(e) {}
+            try { var decoded2 = decodeURIComponent(raw); if (decoded2.indexOf('<') !== -1) return decoded2; } catch(e2) {}
+            return raw;
+        }
+
+        var _acsHtmlStore = {};
+
+        function smRenderAcsInContainer(containerEl, frameEl, html, prefix) {
+            if (!containerEl || !html) return;
+            _acsHtmlStore[prefix || 'default'] = html;
+            containerEl.style.display = 'block';
+            if (frameEl) {
+                frameEl.innerHTML = '<div style="text-align:center;padding:2rem;">'
+                    + '<p style="margin:0 0 1rem;color:#333;font-size:0.95rem;">The bank&rsquo;s 3DS page cannot load inside this page due to security restrictions (<code>X-Frame-Options</code>).<br>Click the button below to open it in a new tab.</p>'
+                    + '<button onclick="smOpenAcsWindow(\'' + (prefix || 'default') + '\')" style="padding:0.85rem 2rem;background:linear-gradient(135deg,#ff9800,#f57c00);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(255,152,0,0.35);transition:all 0.2s;"'
+                    + ' onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 18px rgba(255,152,0,0.45)\'"'
+                    + ' onmouseout="this.style.transform=\'none\';this.style.boxShadow=\'0 4px 12px rgba(255,152,0,0.35)\'"'
+                    + '>&#128275; Open Bank\'s 3DS Page in New Tab</button>'
+                    + '<p style="margin:1rem 0 0;color:#888;font-size:0.82rem;">After completing OTP on the bank page, you will be redirected to the callback page.</p>'
+                    + '</div>';
+            }
+        }
+
+        function smOpenAcsWindow(prefix) {
+            var html = _acsHtmlStore[prefix || 'default'];
+            if (!html) { alert('No ACS template available. Send the payment request first.'); return; }
+            var w = window.open('', '_blank');
+            if (!w) { alert('Pop-up blocked! Please allow pop-ups for this site and try again.'); return; }
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+        }
+
+        // --- Extract acsTemplate from a payment response object ---
+        function smExtractAcsTemplate(response) {
+            var raw = null;
+            if (response.result && response.result.acsTemplate) {
+                raw = response.result.acsTemplate;
+            } else if (response.acsTemplate) {
+                raw = response.acsTemplate;
+            } else if (typeof response === 'string' && response.indexOf('<form') !== -1) {
+                raw = response;
+            }
+            return raw ? smDecodeAcsTemplate(raw) : null;
+        }
+
+        // --- ACS Template Decoder Tool ---
+        function smAcsDecoderDecode() {
+            var input = document.getElementById('acsDecoderInput');
+            var output = document.getElementById('acsDecoderOutput');
+            var errDiv = document.getElementById('acsDecoderError');
+            var errMsg = document.getElementById('acsDecoderErrorMsg');
+            var htmlView = document.getElementById('acsDecoderHtml');
+            var details = document.getElementById('acsDecoderDetails');
+
+            output.style.display = 'none';
+            errDiv.style.display = 'none';
+
+            var raw = (input.value || '').trim();
+            if (!raw) { errDiv.style.display = 'block'; errMsg.textContent = 'Please paste the acsTemplate value first.'; return; }
+
+            var decoded = smDecodeAcsTemplate(raw);
+            if (!decoded || decoded.indexOf('<') === -1) {
+                errDiv.style.display = 'block';
+                errMsg.textContent = 'Could not decode as valid HTML. Make sure you pasted the full base64 acsTemplate string.';
+                return;
+            }
+
+            _acsHtmlStore['decoder'] = decoded;
+            htmlView.textContent = decoded;
+            output.style.display = 'block';
+
+            var info = [];
+            var formMatch = decoded.match(/<form[^>]*action=["']([^"']+)["']/i);
+            if (formMatch) info.push({ label: 'Form Action URL', value: formMatch[1] });
+
+            var methodMatch = decoded.match(/<form[^>]*method=["']([^"']+)["']/i);
+            if (methodMatch) info.push({ label: 'Form Method', value: methodMatch[1].toUpperCase() });
+
+            var inputMatches = decoded.match(/<input[^>]*>/gi);
+            if (inputMatches) {
+                var hiddenFields = [];
+                inputMatches.forEach(function(inp) {
+                    var nameM = inp.match(/name=["']([^"']+)["']/i);
+                    var valM = inp.match(/value=["']([^"']*?)["']/i);
+                    var typeM = inp.match(/type=["']([^"']+)["']/i);
+                    if (nameM) {
+                        var val = valM ? valM[1] : '';
+                        if (val.length > 80) val = val.substring(0, 80) + '...';
+                        hiddenFields.push({ name: nameM[1], value: val, type: typeM ? typeM[1] : 'text' });
+                    }
+                });
+                if (hiddenFields.length > 0) {
+                    info.push({ label: 'Hidden Fields', value: hiddenFields.length + ' field(s)' });
+                }
+            }
+
+            var hasAutoSubmit = decoded.indexOf('.submit()') !== -1 || decoded.indexOf('autoSubmit') !== -1;
+            info.push({ label: 'Auto-Submit', value: hasAutoSubmit ? 'Yes (form submits automatically)' : 'No (manual submit may be needed)' });
+            info.push({ label: 'HTML Size', value: (decoded.length / 1024).toFixed(1) + ' KB (' + decoded.length + ' chars)' });
+
+            var detailHtml = '<table class="sm-table"><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody>';
+            info.forEach(function(i) { detailHtml += '<tr><td><strong>' + i.label + '</strong></td><td><code>' + i.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code></td></tr>'; });
+
+            if (inputMatches) {
+                var hiddenFields2 = [];
+                inputMatches.forEach(function(inp) {
+                    var nameM = inp.match(/name=["']([^"']+)["']/i);
+                    var valM = inp.match(/value=["']([^"']*?)["']/i);
+                    if (nameM) {
+                        var val = valM ? valM[1] : '';
+                        if (val.length > 60) val = val.substring(0, 60) + '...';
+                        hiddenFields2.push({ name: nameM[1], value: val });
+                    }
+                });
+                if (hiddenFields2.length > 0) {
+                    detailHtml += '<tr><td colspan="2" style="background:#f8fafc;"><strong>Form Fields</strong></td></tr>';
+                    hiddenFields2.forEach(function(f) { detailHtml += '<tr><td><code>' + f.name + '</code></td><td style="word-break:break-all;"><code>' + f.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code></td></tr>'; });
+                }
+            }
+            detailHtml += '</tbody></table>';
+            details.innerHTML = detailHtml;
+
+            output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function smAcsDecoderOpen() {
+            var input = document.getElementById('acsDecoderInput');
+            var raw = (input.value || '').trim();
+            if (!raw) { alert('Paste the acsTemplate first, then click Decode.'); return; }
+            var decoded = _acsHtmlStore['decoder'] || smDecodeAcsTemplate(raw);
+            if (!decoded) { alert('Could not decode. Click "Decode & Preview" first.'); return; }
+            var w = window.open('', '_blank');
+            if (!w) { alert('Pop-up blocked! Allow pop-ups for this site and try again.'); return; }
+            w.document.open();
+            w.document.write(decoded);
+            w.document.close();
+        }
+
+        function smAcsDecoderClear() {
+            document.getElementById('acsDecoderInput').value = '';
+            document.getElementById('acsDecoderOutput').style.display = 'none';
+            document.getElementById('acsDecoderError').style.display = 'none';
+        }
+
+        function smSwitchAcsCodeTab(tab, lang) {
+            tab.parentElement.querySelectorAll('.sm-phase-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            document.querySelectorAll('.acs-code-panel').forEach(function(p) { p.style.display = 'none'; });
+            var panel = document.getElementById('acsCode-' + lang);
+            if (panel) panel.style.display = 'block';
+        }
+
+        // --- pureS2SSupported UI toggle helper ---
+        function smUpdateOtpS2sUI(prefix, response) {
+            var statusBox = document.getElementById(prefix + 'S2sStatus');
+            var trueBox = document.getElementById(prefix + 'S2sTrue');
+            var falseBox = document.getElementById(prefix + 'S2sFalse');
+            var selector = document.getElementById(prefix + 'MethodSelector');
+            var waiting = document.getElementById(prefix + 'Waiting');
+            var btnA = document.getElementById(prefix + 'BtnA');
+            var btnB = document.getElementById(prefix + 'BtnB');
+            var nativeSection = document.getElementById(prefix + 'NativeSection');
+            var bankSection = document.getElementById(prefix + 'BankSection');
+            var acsContainer = document.getElementById(prefix + 'AcsContainer');
+            var acsFrame = document.getElementById(prefix + 'AcsFrame');
+            var acsEmpty = document.getElementById(prefix + 'AcsEmpty');
+            if (!response) return;
+
+            var s2sOk = false;
+            if (response.binData && typeof response.binData.pureS2SSupported !== 'undefined') {
+                s2sOk = response.binData.pureS2SSupported;
+            }
+
+            if (waiting) waiting.style.display = 'none';
+
+            if (statusBox) {
+                statusBox.style.display = 'block';
+                if (trueBox) trueBox.style.display = s2sOk ? 'block' : 'none';
+                if (falseBox) falseBox.style.display = s2sOk ? 'none' : 'block';
+            }
+
+            var acsHtml = smExtractAcsTemplate(response);
+            if (acsHtml && acsContainer) {
+                if (acsEmpty) acsEmpty.style.display = 'none';
+                smRenderAcsInContainer(acsContainer, acsFrame, acsHtml, prefix);
+            }
+
+            if (selector) {
+                selector.style.display = 'block';
+                if (s2sOk) {
+                    if (btnA) btnA.style.display = '';
+                    if (btnB) btnB.style.display = '';
+                    if (nativeSection) nativeSection.style.display = 'none';
+                    if (bankSection) bankSection.style.display = 'none';
+                } else {
+                    if (btnA) btnA.style.display = 'none';
+                    if (btnB) { btnB.style.display = ''; btnB.style.borderWidth = '3px'; btnB.style.background = 'rgba(255,152,0,0.06)'; }
+                    if (nativeSection) nativeSection.style.display = 'none';
+                    if (bankSection) bankSection.style.display = 'block';
+                }
+            }
+        }
+
+        function smNewTxnId(inputId, prefix) {
+            var id = prefix + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            document.getElementById(inputId).value = id;
+        }
+        window.smNewTxnId = smNewTxnId;
+
+        function smSelectOtpMethod(prefix, option) {
+            var btnA = document.getElementById(prefix + 'BtnA');
+            var btnB = document.getElementById(prefix + 'BtnB');
+            var nativeSection = document.getElementById(prefix + 'NativeSection');
+            var bankSection = document.getElementById(prefix + 'BankSection');
+
+            if (option === 'A') {
+                if (btnA) { btnA.style.borderWidth = '3px'; btnA.style.background = 'rgba(16,132,109,0.06)'; }
+                if (btnB) { btnB.style.borderWidth = '2px'; btnB.style.background = '#fff'; }
+                if (nativeSection) nativeSection.style.display = 'block';
+                if (bankSection) bankSection.style.display = 'none';
+            } else if (option === 'B') {
+                if (btnA) { btnA.style.borderWidth = '2px'; btnA.style.background = '#fff'; }
+                if (btnB) { btnB.style.borderWidth = '3px'; btnB.style.background = 'rgba(255,152,0,0.06)'; }
+                if (nativeSection) nativeSection.style.display = 'none';
+                if (bankSection) bankSection.style.display = 'block';
+            }
+        }
+
+        // --- Submit OTP ---
+        function smCardSubmitOtp(flow) {
+            var refField = flow === 'normal' ? 'sc_otp_refid' : (flow === 'preauth' ? 'sc_pa_otp_refid' : 'sc_tok_otp_refid');
+            var otpField = flow === 'normal' ? 'sc_otp_value' : (flow === 'preauth' ? 'sc_pa_otp_value' : 'sc_tok_otp_value');
+            var elPrefix = flow === 'normal' ? 'scNOtp' : (flow === 'preauth' ? 'scPaOtp' : 'scTokOtp');
+            var refId = document.getElementById(refField).value.trim();
+            var otp = document.getElementById(otpField).value.trim();
+            if (!refId || !otp) { alert('Fill Reference ID and OTP'); return; }
+            var params = { referenceId: refId, otp: otp, data: '{"payuPureS2S":"1"}' };
+            var panel = document.getElementById(elPrefix + 'ReqRes');
+            panel.style.display = 'block';
+            var badge = document.getElementById(elPrefix + 'StatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Submitting OTP...';
+            document.getElementById(elPrefix + 'ResponseView').textContent = 'Waiting...';
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'response_handler', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smCardGenericDisplay(elPrefix, result); })
+                .catch(function(err) { document.getElementById(elPrefix + 'StatusBadge').className = 'sm-status-badge error'; document.getElementById(elPrefix + 'StatusBadge').textContent = 'Failed'; document.getElementById(elPrefix + 'ResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        function smCardResendOtp(flow) {
+            var refField = flow === 'normal' ? 'sc_otp_refid' : (flow === 'preauth' ? 'sc_pa_otp_refid' : 'sc_tok_otp_refid');
+            var refId = document.getElementById(refField).value.trim();
+            if (!refId) { alert('Fill Reference ID'); return; }
+            var params = { referenceId: refId, resendOtp: '1', data: '{"payuPureS2S":"1"}' };
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'response_handler', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { alert('Resend OTP Response: ' + JSON.stringify(result.response || result)); })
+                .catch(function(err) { alert('Error: ' + err.message); });
+        }
+
+        // --- Verify Payment ---
+        function smCardVerifyPayment(flow) {
+            var keyField, saltField, txnidField, elPrefix;
+            if (flow === 'normal') {
+                keyField = 'sc_verify_key'; saltField = 'sc_verify_salt'; txnidField = 'sc_verify_txnid'; elPrefix = 'scVerify';
+            } else if (flow === 'preauth') {
+                keyField = 'sc_cap_key'; saltField = 'sc_cap_salt'; txnidField = 'sc_pa_verify_txnid'; elPrefix = 'scPaVerify';
+            } else {
+                keyField = 'sc_tok_uc_key'; saltField = 'sc_tok_uc_salt'; txnidField = 'sc_tok_verify_txnid'; elPrefix = 'scTokVerify';
+            }
+            var key = document.getElementById(keyField).value.trim();
+            var salt = document.getElementById(saltField).value.trim();
+            var txnid = document.getElementById(txnidField).value.trim();
+            if (!key || !salt || !txnid) { alert('Fill Key, Salt and Transaction ID'); return; }
+            var hashStr = key + '|verify_payment|' + txnid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'verify_payment', var1: txnid, hash: hash };
+            var panel = document.getElementById(elPrefix + 'ReqRes');
+            panel.style.display = 'block';
+            var badge = document.getElementById(elPrefix + 'StatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Verifying...';
+            document.getElementById(elPrefix + 'ResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    smCardGenericDisplay(elPrefix, result);
+                    smRenderVerifyStatus(elPrefix, result);
+                    if (flow !== 'preauth' && result.response && result.response.transaction_details) {
+                        var tokDetails = result.response.transaction_details;
+                        var tokFirstKey = Object.keys(tokDetails)[0];
+                        if (tokFirstKey) {
+                            var td = tokDetails[tokFirstKey];
+                            var ct = td.cardToken || td.card_token || td.store_card_token || '';
+                            if (ct) {
+                                var tokenPanel = document.getElementById('scM2TokenResult');
+                                if (tokenPanel) { tokenPanel.style.display = 'block'; }
+                                var tokenVal = document.getElementById('scM2TokenValue');
+                                if (tokenVal) tokenVal.textContent = ct;
+                                var tokenCard = document.getElementById('scM2TokenCardnum');
+                                if (tokenCard) tokenCard.textContent = td.cardnum || td.card_no || '';
+                                var rptTokenField = document.getElementById('sc_tok_pay_token');
+                                if (rptTokenField) rptTokenField.value = ct;
+                            }
+                        }
+                    }
+                    if (flow === 'preauth' && result.response && result.response.transaction_details) {
+                        var details = result.response.transaction_details;
+                        var firstKey = Object.keys(details)[0];
+                        if (firstKey && details[firstKey].mihpayid) {
+                            var capField = document.getElementById('sc_cap_payuid');
+                            if (capField) capField.value = details[firstKey].mihpayid;
+                            var reqField = document.getElementById('sc_cap_reqid');
+                            if (reqField && !reqField.value) reqField.value = details[firstKey].mihpayid + '_cap';
+                            var amtField = document.getElementById('sc_cap_amount');
+                            if (amtField && !amtField.value) {
+                                var origAmtEl = document.getElementById('sc_pa_pay_amount');
+                                amtField.value = (origAmtEl && origAmtEl.value.trim()) || details[firstKey].request_amount || details[firstKey].amt || '';
+                            }
+
+                            // Prefill related pre-auth operations (Cancel + Final Verify)
+                            var cancelPayuField = document.getElementById('sc_pa_cancel_payuid');
+                            if (cancelPayuField && !cancelPayuField.value) cancelPayuField.value = details[firstKey].mihpayid;
+                            var cancelTokenField = document.getElementById('sc_pa_cancel_tokenid');
+                            if (cancelTokenField && !cancelTokenField.value) cancelTokenField.value = txnid + '_cnl';
+                            var finalVerifyTxnidField = document.getElementById('sc_pa_final_verify_txnid');
+                            if (finalVerifyTxnidField && !finalVerifyTxnidField.value) finalVerifyTxnidField.value = txnid;
+                        }
+                    }
+                })
+                .catch(function(err) { document.getElementById(elPrefix + 'StatusBadge').className = 'sm-status-badge error'; document.getElementById(elPrefix + 'StatusBadge').textContent = 'Failed'; document.getElementById(elPrefix + 'ResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // --- Capture Transaction (Pre-Auth) ---
+        function smCardCaptureTransaction() {
+            var key = document.getElementById('sc_cap_key').value.trim();
+            var salt = document.getElementById('sc_cap_salt').value.trim();
+            var payuid = document.getElementById('sc_cap_payuid').value.trim();
+            var reqid = document.getElementById('sc_cap_reqid').value.trim();
+            var amount = document.getElementById('sc_cap_amount').value.trim();
+            if (!key || !salt || !payuid || !reqid || !amount) { alert('Fill all capture fields'); return; }
+            var hashStr = key + '|capture_transaction|' + payuid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'capture_transaction', var1: payuid, var2: reqid, var3: amount, hash: hash };
+            var panel = document.getElementById('scCapReqRes');
+            panel.style.display = 'block';
+            var badge = document.getElementById('scCapStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Capturing...';
+            document.getElementById('scCapResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smCardGenericDisplay('scCap', result); })
+                .catch(function(err) { document.getElementById('scCapStatusBadge').className = 'sm-status-badge error'; document.getElementById('scCapStatusBadge').textContent = 'Failed'; document.getElementById('scCapResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // --- Cancel Transaction (Pre-Auth) ---
+        function smCardPreviewCancelPreAuth() {
+            var key = document.getElementById('sc_pa_cancel_key').value.trim();
+            var salt = document.getElementById('sc_pa_cancel_salt').value.trim();
+            var payuId = document.getElementById('sc_pa_cancel_payuid').value.trim();
+            var token = document.getElementById('sc_pa_cancel_tokenid').value.trim();
+            if (!key || !salt || !payuId || !token) {
+                alert('Fill Key, Salt, PayU ID and Cancel Token');
+                return;
+            }
+
+            var command = 'cancel_transaction';
+            var hashStr = key + '|' + command + '|' + payuId + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: payuId, var2: token, hash: hash };
+
+            var panel = document.getElementById('scPaCancelReqRes');
+            panel.style.display = 'block';
+            document.getElementById('scPaCancelRequestView').textContent = JSON.stringify(
+                { endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params },
+                null,
+                2
+            );
+            document.getElementById('scPaCancelCurlView').textContent = smCardBuildCurl('https://test.payu.in/merchant/postservice.php?form=2', params);
+
+            var badge = document.getElementById('scPaCancelStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Preview Ready';
+            document.getElementById('scPaCancelResponseView').textContent = 'Preview only — click "Cancel Transaction" to send to PayU.';
+
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function smCardSendCancelPreAuth() {
+            var key = document.getElementById('sc_pa_cancel_key').value.trim();
+            var salt = document.getElementById('sc_pa_cancel_salt').value.trim();
+            var payuId = document.getElementById('sc_pa_cancel_payuid').value.trim();
+            var token = document.getElementById('sc_pa_cancel_tokenid').value.trim();
+            if (!key || !salt || !payuId || !token) {
+                alert('Fill Key, Salt, PayU ID and Cancel Token');
+                return;
+            }
+
+            var command = 'cancel_transaction';
+            var hashStr = key + '|' + command + '|' + payuId + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: payuId, var2: token, hash: hash };
+
+            var panel = document.getElementById('scPaCancelReqRes');
+            panel.style.display = 'block';
+
+            // Ensure request + cURL are visible even if user skips "Preview"
+            document.getElementById('scPaCancelRequestView').textContent = JSON.stringify(
+                { endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params },
+                null,
+                2
+            );
+            document.getElementById('scPaCancelCurlView').textContent = smCardBuildCurl(
+                'https://test.payu.in/merchant/postservice.php?form=2',
+                params
+            );
+
+            var badge = document.getElementById('scPaCancelStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Cancelling...';
+            document.getElementById('scPaCancelResponseView').textContent = 'Waiting...';
+
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smCardGenericDisplay('scPaCancel', result); })
+                .catch(function(err) { document.getElementById('scPaCancelStatusBadge').className = 'sm-status-badge error'; document.getElementById('scPaCancelStatusBadge').textContent = 'Failed'; document.getElementById('scPaCancelResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // --- Verify Final Status (After Capture) ---
+        function smCardPreviewVerifyPreAuthFinal() {
+            var key = document.getElementById('sc_pa_final_verify_key').value.trim();
+            var salt = document.getElementById('sc_pa_final_verify_salt').value.trim();
+            var txnid = document.getElementById('sc_pa_final_verify_txnid').value.trim();
+            if (!key || !salt || !txnid) {
+                alert('Fill Key, Salt and Transaction ID');
+                return;
+            }
+
+            var command = 'verify_payment';
+            var hashStr = key + '|' + command + '|' + txnid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: txnid, hash: hash };
+
+            var panel = document.getElementById('scPaFinalVerifyReqRes');
+            panel.style.display = 'block';
+            document.getElementById('scPaFinalVerifyRequestView').textContent = JSON.stringify(
+                { endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params },
+                null,
+                2
+            );
+            document.getElementById('scPaFinalVerifyCurlView').textContent = smCardBuildCurl('https://test.payu.in/merchant/postservice.php?form=2', params);
+
+            var badge = document.getElementById('scPaFinalVerifyStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Preview Ready';
+            document.getElementById('scPaFinalVerifyResponseView').textContent = 'Preview only — click "Verify Final Status" to send to PayU.';
+
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function smCardSendVerifyPreAuthFinal() {
+            var key = document.getElementById('sc_pa_final_verify_key').value.trim();
+            var salt = document.getElementById('sc_pa_final_verify_salt').value.trim();
+            var txnid = document.getElementById('sc_pa_final_verify_txnid').value.trim();
+            if (!key || !salt || !txnid) {
+                alert('Fill Key, Salt and Transaction ID');
+                return;
+            }
+
+            var command = 'verify_payment';
+            var hashStr = key + '|' + command + '|' + txnid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: txnid, hash: hash };
+
+            var panel = document.getElementById('scPaFinalVerifyReqRes');
+            panel.style.display = 'block';
+
+            // Ensure request + cURL are visible even if user skips "Preview"
+            document.getElementById('scPaFinalVerifyRequestView').textContent = JSON.stringify(
+                { endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params },
+                null,
+                2
+            );
+            document.getElementById('scPaFinalVerifyCurlView').textContent = smCardBuildCurl(
+                'https://test.payu.in/merchant/postservice.php?form=2',
+                params
+            );
+
+            var badge = document.getElementById('scPaFinalVerifyStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Verifying...';
+            document.getElementById('scPaFinalVerifyResponseView').textContent = 'Waiting...';
+
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smCardDisplayVerifyPreAuthFinal(result); })
+                .catch(function(err) { document.getElementById('scPaFinalVerifyStatusBadge').className = 'sm-status-badge error'; document.getElementById('scPaFinalVerifyStatusBadge').textContent = 'Failed'; document.getElementById('scPaFinalVerifyResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        function smCardDisplayVerifyPreAuthFinal(result) {
+            var badge = document.getElementById('scPaFinalVerifyStatusBadge');
+            var respView = document.getElementById('scPaFinalVerifyResponseView');
+            var guide = document.getElementById('scPaFinalVerifyResponseGuide');
+            var explain = document.getElementById('scPaFinalVerifyResponseExplain');
+
+            respView.textContent = JSON.stringify(result.response || result, null, 2);
+            smRenderVerifyStatus('scPaFinalVerify', result);
+
+            // Extract transaction details from verify_payment response
+            var resp = result.response || result;
+            var txnDetails = resp && resp.transaction_details ? resp.transaction_details : null;
+            var firstTxn = txnDetails ? Object.values(txnDetails)[0] : null;
+            var unmapped = firstTxn ? (firstTxn.unmappedstatus || '').toLowerCase() : '';
+            var status = firstTxn ? (firstTxn.status || '').toLowerCase() : '';
+
+            if (unmapped === 'captured') {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'Captured';
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-info-box" style="border-left:4px solid #22c55e;">' +
+                    '<strong>✓ Capture Confirmed</strong>' +
+                    '<p><code>unmappedstatus</code> = <strong>"captured"</strong> — Funds have been successfully captured from the customer\'s account.</p>' +
+                    '<p>The transaction lifecycle is complete. Store the <code>mihpayid</code> (<code>' + (firstTxn.mihpayid || 'N/A') + '</code>) for reconciliation.</p>' +
+                    '</div>';
+            } else if (unmapped === 'auth') {
+                badge.className = 'sm-status-badge warning';
+                badge.textContent = 'Still Auth';
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-info-box warning">' +
+                    '<strong>⚠ unmappedstatus is still "auth"</strong>' +
+                    '<p>The verify response shows <code>unmappedstatus: "auth"</code> even after capture. This is a known behaviour in the <strong>PayU UAT/sandbox environment</strong> — the sandbox does not always update <code>unmappedstatus</code> to <code>"captured"</code> after a capture call.</p>' +
+                    '<p><strong>In production</strong>, after a successful capture, <code>unmappedstatus</code> will correctly return <code>"captured"</code>.</p>' +
+                    '<p>To confirm the capture went through, check that your <strong>Capture API call returned a success response</strong> (status: 1, transaction_details with captured amount). That is the authoritative confirmation.</p>' +
+                    '</div>';
+            } else if (status === 'failure' || unmapped === 'failed') {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'Failed';
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-info-box" style="border-left:4px solid #ef4444;">' +
+                    '<strong>✗ Transaction Failed</strong>' +
+                    '<p><code>unmappedstatus</code> = <strong>"' + unmapped + '"</strong></p>' +
+                    '<p>Error: ' + (firstTxn ? (firstTxn.error_Message || firstTxn.field9 || 'N/A') : 'N/A') + '</p>' +
+                    '</div>';
+            } else if (result.http_code) {
+                badge.className = 'sm-status-badge ' + (result.http_code >= 200 && result.http_code < 300 ? 'success' : 'error');
+                badge.textContent = 'HTTP ' + result.http_code;
+            } else {
+                badge.className = 'sm-status-badge';
+                badge.textContent = unmapped || status || 'Unknown';
+            }
+        }
+
+        // --- Get User Cards (Tokenization) ---
+        function smCardGetUserCards() {
+            var key = document.getElementById('sc_tok_uc_key').value.trim();
+            var salt = document.getElementById('sc_tok_uc_salt').value.trim();
+            var var1 = document.getElementById('sc_tok_uc_var1').value.trim();
+            if (!key || !salt || !var1) { alert('Fill Key, Salt and User Credentials'); return; }
+            var hashStr = key + '|get_user_cards|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'get_user_cards', var1: var1, hash: hash };
+            var panel = document.getElementById('scTokUcReqRes');
+            panel.style.display = 'block';
+            var reqView = document.getElementById('scTokUcRequestView');
+            if (reqView) reqView.textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
+            var badge = document.getElementById('scTokUcStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
+            document.getElementById('scTokUcResponseView').textContent = 'Waiting...';
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    smCardGenericDisplay('scTokUc', result);
+                    if (result.response) {
+                        var allCards = smExtractAllCardTokens(result.response);
+                        smPopulateTokenDropdown('sc_tok_pay_token_select', 'sc_tok_pay_token', allCards);
+                        if (allCards.length > 0) {
+                            var tokenField = document.getElementById('sc_tok_pay_token');
+                            if (tokenField) tokenField.value = allCards[0].token;
+                        }
+                    }
+                })
+                .catch(function(err) { document.getElementById('scTokUcStatusBadge').className = 'sm-status-badge error'; document.getElementById('scTokUcStatusBadge').textContent = 'Failed'; document.getElementById('scTokUcResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // --- Get Payment Instrument (Tokenization) ---
+        function smCardGetPaymentInstrument() {
+            var keyEl = document.getElementById('sc_m3_gpi_key');
+            var saltEl = document.getElementById('sc_m3_gpi_salt');
+            var key = keyEl ? keyEl.value.trim() : (document.getElementById('sc_tok_uc_key') ? document.getElementById('sc_tok_uc_key').value.trim() : 'a4vGC2');
+            var salt = saltEl ? saltEl.value.trim() : (document.getElementById('sc_tok_uc_salt') ? document.getElementById('sc_tok_uc_salt').value.trim() : 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli');
+            var var1 = document.getElementById('sc_tok_gpi_var1').value.trim();
+            if (!key || !salt || !var1) { alert('Fill Key, Salt and User Credentials'); return; }
+            var hashStr = key + '|get_payment_instrument|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'get_payment_instrument', var1: var1, hash: hash };
+            var panel = document.getElementById('scTokGpiReqRes');
+            panel.style.display = 'block';
+            var badge = document.getElementById('scTokGpiStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
+            document.getElementById('scTokGpiResponseView').textContent = 'Waiting...';
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    smCardGenericDisplay('scTokGpi', result);
+                    if (result.response) {
+                        var allCards = smExtractAllCardTokens(result.response);
+                        smPopulateTokenDropdown('sc_m3_cry_var2_select', 'sc_m3_cry_var2', allCards);
+                        smPopulateM3NTTokenDropdown(allCards);
+                        smPopulateTokenDropdown('sc_m3rpt_token_select', 'sc_m3rpt_token', allCards);
+                        smPopulateTokenDropdown('sc_tok_del_var2_select', 'sc_tok_del_var2', allCards);
+                        var token = smExtractCardToken(result.response);
+                        if (token) {
+                            var cryVar2 = document.getElementById('sc_m3_cry_var2');
+                            if (cryVar2) cryVar2.value = token;
+                        }
+                    }
+                })
+                .catch(function(err) { document.getElementById('scTokGpiStatusBadge').className = 'sm-status-badge error'; document.getElementById('scTokGpiStatusBadge').textContent = 'Failed'; document.getElementById('scTokGpiResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // --- Delete Payment Instrument (Tokenization) ---
+        function smCardDeleteInstrument() {
+            var keyEl = document.getElementById('sc_m3_del_key');
+            var saltEl = document.getElementById('sc_m3_del_salt');
+            var key = keyEl ? keyEl.value.trim() : (document.getElementById('sc_tok_uc_key') ? document.getElementById('sc_tok_uc_key').value.trim() : 'a4vGC2');
+            var salt = saltEl ? saltEl.value.trim() : (document.getElementById('sc_tok_uc_salt') ? document.getElementById('sc_tok_uc_salt').value.trim() : 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli');
+            var var1 = document.getElementById('sc_tok_del_var1').value.trim();
+            var var2 = document.getElementById('sc_tok_del_var2').value.trim();
+            if (!key || !salt || !var1 || !var2) { alert('Fill all fields'); return; }
+            var hashStr = key + '|delete_payment_instrument|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'delete_payment_instrument', var1: var1, var2: var2, hash: hash };
+            var panel = document.getElementById('scTokDelReqRes');
+            panel.style.display = 'block';
+            var badge = document.getElementById('scTokDelStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Deleting...';
+            document.getElementById('scTokDelResponseView').textContent = 'Waiting...';
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smCardGenericDisplay('scTokDel', result); })
+                .catch(function(err) { document.getElementById('scTokDelStatusBadge').className = 'sm-status-badge error'; document.getElementById('scTokDelStatusBadge').textContent = 'Failed'; document.getElementById('scTokDelResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // Expose seamless functions globally
+        window.selectSeamlessMethod = selectSeamlessMethod;
+        window.backToMethodSelector = backToMethodSelector;
+        window.showSeamlessSection = showSeamlessSection;
+        window.showSeamlessMethod = showSeamlessMethod;
+        window.backToSeamlessMethods = backToSeamlessMethods;
+        window.openSeamlessFlow = openSeamlessFlow;
+        window.backToUpiFlows = backToUpiFlows;
+        window.smCopyCode = smCopyCode;
+        window.smSwitchCodeTab = smSwitchCodeTab;
+        window.smSwitchUPITab = smSwitchUPITab;
+        window.smToggleAccordion = smToggleAccordion;
+        window.smGenerateHash = smGenerateHash;
+        window.smVerifyResponseHash = smVerifyResponseHash;
+        // Cards functions
+        window.openCardsFlow = openCardsFlow;
+        window.backToCardsFlows = backToCardsFlows;
+        window.cardsNavTo = cardsNavTo;
+        window.cardsNavToApi = cardsNavToApi;
+        window.cardsToggleNavGroup = cardsToggleNavGroup;
+        window.cardsToggleSubGroup = cardsToggleSubGroup;
+        window.cardsToggleApiGroup = cardsToggleApiGroup;
+        window.cardsApplyGlobalConfig = cardsApplyGlobalConfig;
+        window.smSelectOtpMethod = smSelectOtpMethod;
+        window.smOpenAcsWindow = smOpenAcsWindow;
+        window.smAcsDecoderDecode = smAcsDecoderDecode;
+        window.smAcsDecoderOpen = smAcsDecoderOpen;
+        window.smAcsDecoderClear = smAcsDecoderClear;
+        window.smSwitchAcsCodeTab = smSwitchAcsCodeTab;
+        window.smSwitchCardPhase = smSwitchCardPhase;
+        window.smShowTokenModel = smShowTokenModel;
+        window.smBackToTokenModels = smBackToTokenModels;
+        window.smSelectCustomerType = smSelectCustomerType;
+        window.smBackToCustomerType = smBackToCustomerType;
+        window.smTokBack = smTokBack;
+        window.smSwitchTokenTab = smSwitchTokenTab;
+        window.smCardGetBinInfo = smCardGetBinInfo;
+        window.smCardGetBinInfoPreAuth = smCardGetBinInfoPreAuth;
+        window.smCardCheckDomestic = smCardCheckDomestic;
+        window.smCardPreviewPayment = smCardPreviewPayment;
+        window.smCardSendPayment = smCardSendPayment;
+        window.smCardSubmitOtp = smCardSubmitOtp;
+        window.smCardResendOtp = smCardResendOtp;
+        window.smCardVerifyPayment = smCardVerifyPayment;
+        window.smCardCaptureTransaction = smCardCaptureTransaction;
+        window.smCardPreviewCancelPreAuth = smCardPreviewCancelPreAuth;
+        window.smCardSendCancelPreAuth = smCardSendCancelPreAuth;
+        window.smCardPreviewVerifyPreAuthFinal = smCardPreviewVerifyPreAuthFinal;
+        window.smCardSendVerifyPreAuthFinal = smCardSendVerifyPreAuthFinal;
+        window.smCardDisplayVerifyPreAuthFinal = smCardDisplayVerifyPreAuthFinal;
+        // --- Model 2 getBinInfo ---
+        function smTokM2GetBinInfo() { smBinSendRequest('sc_m2_bin_', 'scM2BinReqRes'); }
+        function smTokM2GetBinInfoPreview() { smBinPreviewRequest('sc_m2_bin_', 'scM2BinReqRes'); }
+        window.smTokM2GetBinInfoPreview = smTokM2GetBinInfoPreview;
+
+        // --- Model 3 getBinInfo ---
+        function smTokM3GetBinInfo() { smBinSendRequest('sc_m3_bin_', 'scM3BinReqRes'); }
+        function smTokM3GetBinInfoPreview() { smBinPreviewRequest('sc_m3_bin_', 'scM3BinReqRes'); }
+        window.smTokM3GetBinInfoPreview = smTokM3GetBinInfoPreview;
+
+        // --- Model 3 Get User Cards ---
+        function smTokM3GetUserCards() {
+            var key = document.getElementById('sc_m3_uc_key').value.trim();
+            var salt = document.getElementById('sc_m3_uc_salt').value.trim();
+            var var1 = document.getElementById('sc_m3_uc_var1').value.trim();
+            if (!key || !salt || !var1) { alert('Fill Key, Salt and User Credentials'); return; }
+            var hashStr = key + '|get_user_cards|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'get_user_cards', var1: var1, hash: hash };
+            var panel = document.getElementById('scM3UcReqRes');
+            panel.style.display = 'block';
+            var reqView = document.getElementById('scM3UcRequestView');
+            if (reqView) reqView.textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
+            var curlView = document.getElementById('scM3UcCurlView');
+            if (curlView) curlView.textContent = smCardBuildCurl('https://test.payu.in/merchant/postservice.php?form=2', params);
+            var badge = document.getElementById('scM3UcStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
+            document.getElementById('scM3UcResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    smCardGenericDisplay('scM3Uc', result);
+                    if (result.response) {
+                        var allCards = smExtractAllCardTokens(result.response);
+                        smPopulateTokenDropdown('sc_m3_cry_var2_select', 'sc_m3_cry_var2', allCards);
+                        smPopulateM3NTTokenDropdown(allCards);
+                        smPopulateTokenDropdown('sc_m3rpt_token_select', 'sc_m3rpt_token', allCards);
+                        smPopulateTokenDropdown('sc_tok_del_var2_select', 'sc_tok_del_var2', allCards);
+                        var token = smExtractCardToken(result.response);
+                        if (token) {
+                            var cryVar2 = document.getElementById('sc_m3_cry_var2');
+                            if (cryVar2) cryVar2.value = token;
+                            var gpiVar1 = document.getElementById('sc_tok_gpi_var1');
+                            if (gpiVar1 && !gpiVar1.value) gpiVar1.value = var1;
+                        }
+                    }
+                })
+                .catch(function(err) { document.getElementById('scM3UcStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM3UcStatusBadge').textContent = 'Failed'; document.getElementById('scM3UcResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        function smM3GetUserCardsPayU() {
+            var key = document.getElementById('sc_m3_puc_key').value.trim();
+            var salt = document.getElementById('sc_m3_puc_salt').value.trim();
+            var var1 = document.getElementById('sc_m3_puc_var1').value.trim();
+            if (!key || !salt || !var1) { alert('Fill Key, Salt and User Credentials'); return; }
+            var hashStr = key + '|get_user_cards|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'get_user_cards', var1: var1, hash: hash };
+            var panel = document.getElementById('scM3PucReqRes');
+            panel.style.display = 'block';
+            var reqView = document.getElementById('scM3PucRequestView');
+            if (reqView) reqView.textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
+            var badge = document.getElementById('scM3PucStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
+            document.getElementById('scM3PucResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) {
+                    smCardGenericDisplay('scM3Puc', result);
+                    if (result.response) {
+                        var allCards = smExtractAllCardTokens(result.response);
+                        smPopulateTokenDropdown('sc_m3_cry_var2_select', 'sc_m3_cry_var2', allCards);
+                        smPopulateM3NTTokenDropdown(allCards);
+                        smPopulateTokenDropdown('sc_m3rpt_token_select', 'sc_m3rpt_token', allCards);
+                        smPopulateTokenDropdown('sc_tok_del_var2_select', 'sc_tok_del_var2', allCards);
+                        var token = smExtractCardToken(result.response);
+                        if (token) {
+                            var tokenField = document.getElementById('sc_m3nt_ccnum');
+                            if (tokenField) tokenField.value = token;
+                            var cryVar2 = document.getElementById('sc_m3_cry_var2');
+                            if (cryVar2) cryVar2.value = token;
+                        }
+                    }
+                })
+                .catch(function(err) { document.getElementById('scM3PucStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM3PucStatusBadge').textContent = 'Failed'; document.getElementById('scM3PucResponseView').textContent = 'Error: ' + err.message; });
+        }
+        window.smM3GetUserCardsPayU = smM3GetUserCardsPayU;
+
+        // --- Model 3 Save Payment Instrument ---
+        function smTokM3SaveInstrument() {
+            var key = document.getElementById('sc_m3_spi_key').value.trim();
+            var salt = document.getElementById('sc_m3_spi_salt').value.trim();
+            var var1 = document.getElementById('sc_m3_spi_var1').value.trim();
+            var var2 = document.getElementById('sc_m3_spi_var2').value.trim();
+            var var5 = document.getElementById('sc_m3_spi_var5').value.trim();
+            var var6 = document.getElementById('sc_m3_spi_var6').value.trim();
+            var var7 = document.getElementById('sc_m3_spi_var7').value.trim();
+            var var8 = document.getElementById('sc_m3_spi_var8').value.trim();
+            var var10 = document.getElementById('sc_m3_spi_var10').value;
+            var var11 = document.getElementById('sc_m3_spi_var11').value;
+            if (!key || !salt || !var1 || !var6) { alert('Fill Key, Salt, User Credentials and Card Number'); return; }
+            var hashStr = key + '|save_payment_instrument|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'save_payment_instrument', var1: var1, var2: var2, var3: 'CC', var4: 'CC', var5: var5, var6: var6, var7: var7, var8: var8, var10: var10, var11: var11, hash: hash };
+            var panel = document.getElementById('scM3SpiReqRes');
+            panel.style.display = 'block';
+            document.getElementById('scM3SpiRequestView').textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
+            var badge = document.getElementById('scM3SpiStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Saving...';
+            document.getElementById('scM3SpiResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smCardGenericDisplay('scM3Spi', result); })
+                .catch(function(err) { document.getElementById('scM3SpiStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM3SpiStatusBadge').textContent = 'Failed'; document.getElementById('scM3SpiResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // --- Model 3 Verify Payment ---
+        function smTokM3VerifyPayment() {
+            var key = document.getElementById('sc_m3_gpi_key') ? document.getElementById('sc_m3_gpi_key').value.trim() : 'a4vGC2';
+            var salt = document.getElementById('sc_m3_gpi_salt') ? document.getElementById('sc_m3_gpi_salt').value.trim() : 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli';
+            var txnid = document.getElementById('sc_m3_verify_txnid').value.trim();
+            if (!txnid) { alert('Enter Transaction ID'); return; }
+            var hashStr = key + '|verify_payment|' + txnid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'verify_payment', var1: txnid, hash: hash };
+            var panel = document.getElementById('scM3VerifyReqRes');
+            panel.style.display = 'block';
+            var badge = document.getElementById('scM3VerifyStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Verifying...';
+            document.getElementById('scM3VerifyResponseView').textContent = 'Waiting...';
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smCardGenericDisplay('scM3Verify', result); smRenderVerifyStatus('scM3Verify', result); })
+                .catch(function(err) { document.getElementById('scM3VerifyStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM3VerifyStatusBadge').textContent = 'Failed'; document.getElementById('scM3VerifyResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // --- Model 2: First-Time Payment with store_card ---
+        function smM2FTBuildParams() {
+            var key = document.getElementById('sc_m2ft_key').value.trim();
+            var salt = document.getElementById('sc_m2ft_salt').value.trim();
+            var txnid = document.getElementById('sc_m2ft_txnid').value.trim() || ('M2FT_' + Date.now() + '_' + Math.floor(Math.random()*1000));
+            document.getElementById('sc_m2ft_txnid').value = txnid;
+            var amount = document.getElementById('sc_m2ft_amount').value.trim();
+            var productinfo = document.getElementById('sc_m2ft_productinfo').value.trim();
+            var firstname = document.getElementById('sc_m2ft_firstname').value.trim();
+            var email = document.getElementById('sc_m2ft_email').value.trim();
+            var phone = document.getElementById('sc_m2ft_phone').value.trim();
+            var ccnum = document.getElementById('sc_m2ft_ccnum').value.trim();
+            var ccname = document.getElementById('sc_m2ft_ccname').value.trim();
+            var ccexpmon = document.getElementById('sc_m2ft_ccexpmon').value.trim();
+            var ccexpyr = document.getElementById('sc_m2ft_ccexpyr').value.trim();
+            var ccvv = document.getElementById('sc_m2ft_ccvv').value.trim();
+            var user_cred = document.getElementById('sc_m2ft_user_cred').value.trim();
+            if (!key || !salt || !ccnum || !ccvv) { alert('Fill Key, Salt, Card Number and CVV'); return null; }
+            var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|||||||||||'+salt;
+            var hash = smSHA512(hashStr);
+            var surl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
+            return { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'CC', bankcode:'CC', ccnum:ccnum, ccname:ccname, ccexpmon:ccexpmon, ccexpyr:ccexpyr, ccvv:ccvv, store_card:'1', user_credentials:user_cred, txn_s2s_flow:'4', hash:hash };
+        }
+        function smM2FTPreview() {
+            var params = smM2FTBuildParams(); if (!params) return;
+            var panel = document.getElementById('scM2FtReqRes'); panel.style.display = 'block';
+            document.getElementById('scM2FtRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
+            document.getElementById('scM2FtCurlView').textContent = smCardBuildCurl('https://test.payu.in/_payment',params);
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+        function smM2FTSend() {
+            var params = smM2FTBuildParams(); if (!params) return;
+            var panel = document.getElementById('scM2FtReqRes'); panel.style.display = 'block';
+            document.getElementById('scM2FtRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
+            document.getElementById('scM2FtCurlView').textContent = smCardBuildCurl('https://test.payu.in/_payment',params);
+            var badge = document.getElementById('scM2FtStatusBadge');
+            badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('scM2FtResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+            fetch('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+                .then(function(r){return r.json();}).then(function(result){
+                    smCardGenericDisplay('scM2Ft',result);
+                    if (result.response && result.response.metaData) {
+                        if (result.response.metaData.referenceId) {
+                            var otpRef = document.getElementById('sc_tok_otp_refid');
+                            if (otpRef) otpRef.value = result.response.metaData.referenceId;
+                        }
+                        if (result.response.metaData.txnId) {
+                            var verifyTxn = document.getElementById('sc_tok_verify_txnid');
+                            if (verifyTxn) verifyTxn.value = result.response.metaData.txnId;
+                        }
+                    }
+                    var srcKey = document.getElementById('sc_m2ft_key');
+                    var srcSalt = document.getElementById('sc_m2ft_salt');
+                    if (srcKey && srcSalt) {
+                        var dstKey = document.getElementById('sc_tok_uc_key');
+                        var dstSalt = document.getElementById('sc_tok_uc_salt');
+                        if (dstKey) dstKey.value = srcKey.value;
+                        if (dstSalt) dstSalt.value = srcSalt.value;
+                    }
+                    var srcUserCred = document.getElementById('sc_m2ft_user_cred');
+                    if (srcUserCred && srcUserCred.value.trim()) {
+                        var dstVar1 = document.getElementById('sc_tok_uc_var1');
+                        if (dstVar1) dstVar1.value = srcUserCred.value.trim();
+                        var dstRptCred = document.getElementById('sc_tok_pay_user_cred');
+                        if (dstRptCred) dstRptCred.value = srcUserCred.value.trim();
+                    }
+                    if (result.response) {
+                        smUpdateOtpS2sUI('scM2Otp', result.response);
+                    }
+                })
+                .catch(function(err){document.getElementById('scM2FtStatusBadge').className='sm-status-badge error';document.getElementById('scM2FtStatusBadge').textContent='Failed';document.getElementById('scM2FtResponseView').textContent='Error: '+err.message;});
+        }
+
+        // --- Model 3: First-Time Payment (plain card) ---
+        function smM3FTBuildParams() {
+            var key = document.getElementById('sc_m3ft_key').value.trim();
+            var salt = document.getElementById('sc_m3ft_salt').value.trim();
+            var txnid = document.getElementById('sc_m3ft_txnid').value.trim() || ('M3FT_' + Date.now() + '_' + Math.floor(Math.random()*1000));
+            document.getElementById('sc_m3ft_txnid').value = txnid;
+            var amount = document.getElementById('sc_m3ft_amount').value.trim();
+            var productinfo = document.getElementById('sc_m3ft_productinfo').value.trim();
+            var firstname = document.getElementById('sc_m3ft_firstname').value.trim();
+            var email = document.getElementById('sc_m3ft_email').value.trim();
+            var phone = document.getElementById('sc_m3ft_phone').value.trim();
+            var ccnum = document.getElementById('sc_m3ft_ccnum').value.trim();
+            var ccname = document.getElementById('sc_m3ft_ccname').value.trim();
+            var ccexpmon = document.getElementById('sc_m3ft_ccexpmon').value.trim();
+            var ccexpyr = document.getElementById('sc_m3ft_ccexpyr').value.trim();
+            var ccvv = document.getElementById('sc_m3ft_ccvv').value.trim();
+            if (!key || !salt || !ccnum || !ccvv) { alert('Fill Key, Salt, Card Number and CVV'); return null; }
+            var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|||||||||||'+salt;
+            var hash = smSHA512(hashStr);
+            var surl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
+            return { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'CC', bankcode:'CC', ccnum:ccnum, ccname:ccname, ccexpmon:ccexpmon, ccexpyr:ccexpyr, ccvv:ccvv, txn_s2s_flow:'4', hash:hash };
+        }
+        function smM3FTPreview() {
+            var params = smM3FTBuildParams(); if (!params) return;
+            var panel = document.getElementById('scM3FtReqRes'); panel.style.display = 'block';
+            document.getElementById('scM3FtRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
+            document.getElementById('scM3FtCurlView').textContent = smCardBuildCurl('https://test.payu.in/_payment',params);
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+        function smM3FTSend() {
+            var params = smM3FTBuildParams(); if (!params) return;
+            var panel = document.getElementById('scM3FtReqRes'); panel.style.display = 'block';
+            document.getElementById('scM3FtRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
+            document.getElementById('scM3FtCurlView').textContent = smCardBuildCurl('https://test.payu.in/_payment',params);
+            var badge = document.getElementById('scM3FtStatusBadge');
+            badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('scM3FtResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+            fetch('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+                .then(function(r){return r.json();}).then(function(result){
+                    smCardGenericDisplay('scM3Ft',result);
+                    if (result.response && result.response.metaData) {
+                        if (result.response.metaData.referenceId) {
+                            var otpRef = document.getElementById('sc_m3_otp_refid');
+                            if (otpRef) otpRef.value = result.response.metaData.referenceId;
+                        }
+                        if (result.response.metaData.txnId) {
+                            var verifyTxn = document.getElementById('sc_m3_verify_txnid');
+                            if (verifyTxn) verifyTxn.value = result.response.metaData.txnId;
+                        }
+                    }
+                    if (result.response) {
+                        smUpdateOtpS2sUI('scM3Otp', result.response);
+                    }
+                })
+                .catch(function(err){document.getElementById('scM3FtStatusBadge').className='sm-status-badge error';document.getElementById('scM3FtStatusBadge').textContent='Failed';document.getElementById('scM3FtResponseView').textContent='Error: '+err.message;});
+        }
+
+        // --- Model 3: Repeat with PayU Token ---
+        function smM3RPTBuildParams() {
+            var key = document.getElementById('sc_m3rpt_key').value.trim();
+            var salt = document.getElementById('sc_m3rpt_salt').value.trim();
+            var txnid = document.getElementById('sc_m3rpt_txnid').value.trim() || ('M3RPT_' + Date.now() + '_' + Math.floor(Math.random()*1000));
+            document.getElementById('sc_m3rpt_txnid').value = txnid;
+            var amount = document.getElementById('sc_m3rpt_amount').value.trim();
+            var productinfo = document.getElementById('sc_m3rpt_productinfo').value.trim();
+            var firstname = document.getElementById('sc_m3rpt_firstname').value.trim();
+            var email = document.getElementById('sc_m3rpt_email').value.trim();
+            var phone = document.getElementById('sc_m3rpt_phone').value.trim();
+            var token = document.getElementById('sc_m3rpt_token').value.trim();
+            var ccvv = document.getElementById('sc_m3rpt_ccvv').value.trim();
+            var user_cred = document.getElementById('sc_m3rpt_user_cred').value.trim();
+            if (!key || !salt || !token || !ccvv) { alert('Fill Key, Salt, Token and CVV'); return null; }
+            var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|||||||||||'+salt;
+            var hash = smSHA512(hashStr);
+            var surl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
+            return { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'CC', bankcode:'CC', store_card_token:token, user_credentials:user_cred, ccvv:ccvv, storecard_token_type:'0', txn_s2s_flow:'4', hash:hash };
+        }
+        function smM3RPTPreview() {
+            var params = smM3RPTBuildParams(); if (!params) return;
+            var panel = document.getElementById('scM3RptReqRes'); panel.style.display = 'block';
+            document.getElementById('scM3RptRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
+            document.getElementById('scM3RptCurlView').textContent = smCardBuildCurl('https://test.payu.in/_payment',params);
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+        function smM3RPTSend() {
+            var params = smM3RPTBuildParams(); if (!params) return;
+            var panel = document.getElementById('scM3RptReqRes'); panel.style.display = 'block';
+            document.getElementById('scM3RptRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
+            document.getElementById('scM3RptCurlView').textContent = smCardBuildCurl('https://test.payu.in/_payment',params);
+            var badge = document.getElementById('scM3RptStatusBadge');
+            badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('scM3RptResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+            fetch('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+                .then(function(r){return r.json();}).then(function(result){
+                    smCardGenericDisplay('scM3Rpt',result);
+                    if (result.response) {
+                        if (result.response.metaData && result.response.metaData.referenceId) {
+                            var otpRef = document.getElementById('sc_m3_otp_refid');
+                            if (otpRef) otpRef.value = result.response.metaData.referenceId;
+                        }
+                        smUpdateOtpS2sUI('scM3Otp', result.response);
+                    }
+                })
+                .catch(function(err){document.getElementById('scM3RptStatusBadge').className='sm-status-badge error';document.getElementById('scM3RptStatusBadge').textContent='Failed';document.getElementById('scM3RptResponseView').textContent='Error: '+err.message;});
+        }
+
+        // --- Model 3: Repeat with Network Token ---
+        function smM3TokenTypeChanged() {
+            var sel = document.getElementById('sc_m3nt_token_type');
+            var val = sel ? sel.value : '1';
+            var payuFields = document.getElementById('sc_m3nt_payu_fields');
+            var networkFields = document.getElementById('sc_m3nt_network_fields');
+            var issuerFields = document.getElementById('sc_m3nt_issuer_fields');
+            var tokenHint = document.getElementById('sc_m3nt_ccnum_hint');
+            var ucHint = document.getElementById('sc_m3nt_uc_hint');
+            if (payuFields) payuFields.style.display = val === '0' ? 'block' : 'none';
+            if (networkFields) networkFields.style.display = val === '1' ? 'block' : 'none';
+            if (issuerFields) issuerFields.style.display = val === '2' ? 'block' : 'none';
+            if (tokenHint) {
+                if (val === '0') tokenHint.textContent = 'PayU token (card_token) from Get User Cards API';
+                else if (val === '1') tokenHint.textContent = 'Network token DPAN from get_payment_details';
+                else tokenHint.textContent = 'Issuer token value from issuer response';
+            }
+            if (ucHint) {
+                ucHint.textContent = val === '0' ? 'Mandatory — must match value used during card storage' : 'Optional for Network/Issuer token';
+                ucHint.style.color = val === '0' ? '#d32f2f' : '';
+            }
+            smRefreshM3NTDropdown();
+        }
+        window.smM3TokenTypeChanged = smM3TokenTypeChanged;
+
+        function smM3NTBuildParams() {
+            var tokenType = document.getElementById('sc_m3nt_token_type').value;
+            var key = document.getElementById('sc_m3nt_key').value.trim();
+            var salt = document.getElementById('sc_m3nt_salt').value.trim();
+            var txnid = document.getElementById('sc_m3nt_txnid').value.trim() || ('M3_' + Date.now() + '_' + Math.floor(Math.random()*1000));
+            document.getElementById('sc_m3nt_txnid').value = txnid;
+            var amount = document.getElementById('sc_m3nt_amount').value.trim();
+            var productinfo = document.getElementById('sc_m3nt_productinfo').value.trim();
+            var firstname = document.getElementById('sc_m3nt_firstname').value.trim();
+            var email = document.getElementById('sc_m3nt_email').value.trim();
+            var phone = document.getElementById('sc_m3nt_phone').value.trim();
+            var storeCardToken = document.getElementById('sc_m3nt_ccnum').value.trim();
+            var userCred = document.getElementById('sc_m3nt_user_cred').value.trim();
+            if (!key || !salt || !storeCardToken) { alert('Fill Key, Salt and Store Card Token'); return null; }
+            if (tokenType === '0' && !userCred) { alert('User Credentials is mandatory for PayU Token (storecard_token_type=0)'); return null; }
+            var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|||||||||||'+salt;
+            var hash = smSHA512(hashStr);
+            var surl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'CC', bankcode:'CC', store_card_token:storeCardToken, storecard_token_type:tokenType, txn_s2s_flow:'4', s2s_client_ip:'10.200.12.12', s2s_device_info:navigator.userAgent, hash:hash };
+            if (userCred) params.user_credentials = userCred;
+            if (tokenType === '1') {
+                var ccexpmon = document.getElementById('sc_m3nt_ccexpmon').value.trim();
+                var ccexpyr = document.getElementById('sc_m3nt_ccexpyr').value.trim();
+                var last4 = document.getElementById('sc_m3nt_last4').value.trim();
+                var tavv = document.getElementById('sc_m3nt_tavv').value.trim();
+                var trid = (document.getElementById('sc_m3nt_trid') || {}).value || '';
+                var tokenRefNo = (document.getElementById('sc_m3nt_tokenrefno') || {}).value || '';
+                params.ccexpmon = ccexpmon; params.ccexpyr = ccexpyr;
+                var addlInfo = { last4Digits: last4, tavv: tavv };
+                if (trid.trim()) addlInfo.trid = trid.trim();
+                if (tokenRefNo.trim()) addlInfo.tokenRefNo = tokenRefNo.trim();
+                params.additional_info = JSON.stringify(addlInfo);
+            } else if (tokenType === '2') {
+                var iExpmon = document.getElementById('sc_m3nt_iss_ccexpmon').value.trim();
+                var iExpyr = document.getElementById('sc_m3nt_iss_ccexpyr').value.trim();
+                var iLast4 = document.getElementById('sc_m3nt_iss_last4').value.trim();
+                var iTrMerchantId = document.getElementById('sc_m3nt_iss_trmerchantid').value.trim();
+                var iTokenRefId = document.getElementById('sc_m3nt_iss_tokenrefid').value.trim();
+                var iTokenBank = document.getElementById('sc_m3nt_iss_tokenbank').value.trim();
+                if (!iExpmon || !iExpyr || !iLast4 || !iTrMerchantId || !iTokenRefId || !iTokenBank) {
+                    alert('For Issuer Token: ccexpmon, ccexpyr, last4Digits, trMerchantId, tokenReferenceId and tokenBank are all mandatory');
+                    return null;
+                }
+                params.ccexpmon = iExpmon; params.ccexpyr = iExpyr;
+                params.additional_info = JSON.stringify({ trMerchantId: iTrMerchantId, tokenReferenceId: iTokenRefId, tokenBank: iTokenBank, last4Digits: iLast4 });
+            }
+            return params;
+        }
+        function smM3NTPreview() {
+            var params = smM3NTBuildParams(); if (!params) return;
+            var panel = document.getElementById('scM3NtReqRes'); panel.style.display = 'block';
+            document.getElementById('scM3NtRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
+            document.getElementById('scM3NtCurlView').textContent = smCardBuildCurl('https://test.payu.in/_payment',params);
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+        function smM3NTSend() {
+            var params = smM3NTBuildParams(); if (!params) return;
+            var panel = document.getElementById('scM3NtReqRes'); panel.style.display = 'block';
+            document.getElementById('scM3NtRequestView').textContent = JSON.stringify({endpoint:'https://test.payu.in/_payment',method:'POST',params:params},null,2);
+            document.getElementById('scM3NtCurlView').textContent = smCardBuildCurl('https://test.payu.in/_payment',params);
+            var badge = document.getElementById('scM3NtStatusBadge');
+            var tokenType = document.getElementById('sc_m3nt_token_type').value;
+
+            if (tokenType === '2') {
+                var skeletonResp = {
+                    metaData: { message: null, referenceId: 'REF_' + Date.now(), statusCode: null, txnId: params.txnid || '', txnStatus: 'Enrolled', unmappedStatus: 'pending', resendOtp: { isSupported: true, attemptsLeft: 2 }, submitOtp: { attemptsLeft: 3 } },
+                    result: { otpPostUrl: 'https://test.payu.in/submitOtp', acsTemplate: '' },
+                    binData: { pureS2SSupported: true, issuingBank: 'HDFC', category: 'creditcard', cardType: 'DINR', isDomestic: false }
+                };
+                badge.className = 'sm-status-badge warning';
+                badge.innerHTML = '&#9888; Issuer Token &mdash; Skeletonized Response (UAT does not support issuer token payments)';
+                document.getElementById('scM3NtResponseView').textContent = JSON.stringify(skeletonResp, null, 2);
+                panel.scrollIntoView({behavior:'smooth',block:'start'});
+                var otpRef = document.getElementById('sc_m3_otp_refid');
+                if (otpRef) otpRef.value = skeletonResp.metaData.referenceId;
+                smUpdateOtpS2sUI('scM3Otp', skeletonResp);
+                return;
+            }
+
+            badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('scM3NtResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+            fetch('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+                .then(function(r){return r.json();}).then(function(result){
+                    smCardGenericDisplay('scM3Nt',result);
+                    if (result.response) {
+                        if (result.response.metaData && result.response.metaData.referenceId) {
+                            var otpRef = document.getElementById('sc_m3_otp_refid');
+                            if (otpRef) otpRef.value = result.response.metaData.referenceId;
+                        }
+                        smUpdateOtpS2sUI('scM3Otp', result.response);
+                    }
+                })
+                .catch(function(err){document.getElementById('scM3NtStatusBadge').className='sm-status-badge error';document.getElementById('scM3NtStatusBadge').textContent='Failed';document.getElementById('scM3NtResponseView').textContent='Error: '+err.message;});
+        }
+
+        // --- Model 3: Get Cryptogram ---
+        function smM3GetCryptogram() {
+            var key = document.getElementById('sc_m3_cry_key').value.trim();
+            var salt = document.getElementById('sc_m3_cry_salt').value.trim();
+            var var1 = document.getElementById('sc_m3_cry_var1').value.trim();
+            var var2 = document.getElementById('sc_m3_cry_var2').value.trim();
+            if (!key || !salt || !var1 || !var2) { alert('Fill Key, Salt, User Credentials and Token'); return; }
+            var hashStr = key + '|get_payment_details|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'get_payment_details', var1: var1, var2: var2, var3: '1', hash: hash };
+            var panel = document.getElementById('scM3CryReqRes'); panel.style.display = 'block';
+            document.getElementById('scM3CryRequestView').textContent = JSON.stringify({ endpoint:'https://test.payu.in/merchant/postservice.php?form=2', method:'POST', params:params }, null, 2);
+            var badge = document.getElementById('scM3CryStatusBadge');
+            badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
+            document.getElementById('scM3CryResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({behavior:'smooth',block:'start'});
+            fetch('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'postservice',params:params})})
+                .then(function(r){return r.json();}).then(function(result){
+                    smCardGenericDisplay('scM3Cry',result);
+                    if (result.response) {
+                        var resp = result.response;
+                        var d = resp.details || null;
+                        if (!d) {
+                            if (resp.payment_instrument_details) {
+                                d = Array.isArray(resp.payment_instrument_details) ? resp.payment_instrument_details[0] : resp.payment_instrument_details;
+                            } else if (resp.result && typeof resp.result === 'object' && !Array.isArray(resp.result)) {
+                                d = resp.result;
+                            } else if (resp.instrument_details) {
+                                d = Array.isArray(resp.instrument_details) ? resp.instrument_details[0] : resp.instrument_details;
+                            }
+                        }
+                        if (d) {
+                            var tavv = d.cryptogram || d.tavv || d.TAVV || '';
+                            var ntObj = d.network_token || null;
+                            var itObj = d.issuer_token || null;
+                            var networkTokenVal = '';
+                            var ntExpYr = '';
+                            var ntExpMon = '';
+                            var issuerTokenVal = '';
+                            var itExpYr = '';
+                            var itExpMon = '';
+                            if (ntObj && typeof ntObj === 'object') {
+                                networkTokenVal = ntObj.token_value || '';
+                                ntExpYr = ntObj.token_exp_yr || '';
+                                ntExpMon = ntObj.token_exp_mon || '';
+                            }
+                            if (!networkTokenVal) networkTokenVal = d.networkTokenValue || d.network_token_value || d.token_value || d.tokenValue || '';
+                            if (itObj && typeof itObj === 'object') {
+                                issuerTokenVal = itObj.token_value || '';
+                                itExpYr = itObj.token_exp_yr || '';
+                                itExpMon = itObj.token_exp_mon || '';
+                            }
+                            var cardNo = d.card_no || '';
+                            var last4 = cardNo ? cardNo.slice(-4) : (d.lastFourDigit || d.last4Digits || d.last_four_digits || d.lastFourDigits || '');
+                            var trid = d.trid || '';
+                            var tokenRefNo = d.token_refernce_id || d.token_reference_id || d.tokenRefNo || '';
+                            var wibmoMid = d.wibmoMerchantId || '';
+
+                            smAddM3NTCryptogramToken(d);
+
+                            var storeTokenVal = issuerTokenVal || networkTokenVal;
+                            if (storeTokenVal) { var el2 = document.getElementById('sc_m3nt_ccnum'); if (el2) el2.value = storeTokenVal; }
+
+                            if (tavv) { var el = document.getElementById('sc_m3nt_tavv'); if (el) el.value = tavv; }
+                            if (last4) { var el3 = document.getElementById('sc_m3nt_last4'); if (el3) el3.value = last4; }
+                            if (trid) { var el4 = document.getElementById('sc_m3nt_trid'); if (el4) el4.value = trid; }
+                            if (tokenRefNo) { var el5 = document.getElementById('sc_m3nt_tokenrefno'); if (el5) el5.value = tokenRefNo; }
+
+                            if (issuerTokenVal) {
+                                if (itExpYr) { var e1 = document.getElementById('sc_m3nt_iss_ccexpyr'); if (e1) e1.value = itExpYr; }
+                                if (itExpMon) { var e2 = document.getElementById('sc_m3nt_iss_ccexpmon'); if (e2) e2.value = itExpMon; }
+                                if (last4) { var e3 = document.getElementById('sc_m3nt_iss_last4'); if (e3) e3.value = last4; }
+                                if (wibmoMid) { var e4 = document.getElementById('sc_m3nt_iss_trmerchantid'); if (e4) e4.value = wibmoMid; }
+                                if (tokenRefNo) { var e5 = document.getElementById('sc_m3nt_iss_tokenrefid'); if (e5) e5.value = tokenRefNo; }
+                            }
+                            if (networkTokenVal) {
+                                if (ntExpYr) { var el6 = document.getElementById('sc_m3nt_ccexpyr'); if (el6) el6.value = ntExpYr; }
+                                if (ntExpMon) { var el7 = document.getElementById('sc_m3nt_ccexpmon'); if (el7) el7.value = ntExpMon; }
+                            }
+                        }
+                    }
+                })
+                .catch(function(err){document.getElementById('scM3CryStatusBadge').className='sm-status-badge error';document.getElementById('scM3CryStatusBadge').textContent='Failed';document.getElementById('scM3CryResponseView').textContent='Error: '+err.message;});
+        }
+
+        // --- Model 3: Submit OTP ---
+        function smM3SubmitOtp() {
+            var refid = document.getElementById('sc_m3_otp_refid').value.trim();
+            var otp = document.getElementById('sc_m3_otp_value').value.trim();
+            if (!refid || !otp) { alert('Fill Reference ID and OTP'); return; }
+            var params = { referenceId: refid, otp: otp, data: '{"payuPureS2S":"1"}' };
+            var panel = document.getElementById('scM3OtpReqRes'); panel.style.display = 'block';
+            var badge = document.getElementById('scM3OtpStatusBadge');
+            badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Submitting...';
+            document.getElementById('scM3OtpResponseView').textContent = 'Waiting...';
+            fetch('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'response_handler',params:params})})
+                .then(function(r){return r.json();}).then(function(result){
+                    smCardGenericDisplay('scM3Otp',result);
+                    if (result.response) {
+                        var txnid = null;
+                        if (result.response.result && result.response.result.txnid) {
+                            txnid = result.response.result.txnid;
+                        } else if (result.response.metaData && result.response.metaData.txnId) {
+                            txnid = result.response.metaData.txnId;
+                        } else if (result.response.txnid) {
+                            txnid = result.response.txnid;
+                        }
+                        if (txnid) {
+                            var verifyEl = document.getElementById('sc_m3_verify_txnid');
+                            if (verifyEl) verifyEl.value = txnid;
+                        }
+                    }
+                })
+                .catch(function(err){document.getElementById('scM3OtpStatusBadge').className='sm-status-badge error';document.getElementById('scM3OtpStatusBadge').textContent='Failed';document.getElementById('scM3OtpResponseView').textContent='Error: '+err.message;});
+        }
+        function smM3ResendOtp() {
+            var refid = document.getElementById('sc_m3_otp_refid').value.trim();
+            if (!refid) { alert('Enter Reference ID'); return; }
+            var params = { referenceId: refid, resendOtp: '1', data: '{"payuPureS2S":"1"}' };
+            var panel = document.getElementById('scM3OtpReqRes'); panel.style.display = 'block';
+            var badge = document.getElementById('scM3OtpStatusBadge');
+            badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Resending...';
+            document.getElementById('scM3OtpResponseView').textContent = 'Waiting...';
+            fetch('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'response_handler',params:params})})
+                .then(function(r){return r.json();}).then(function(result){smCardGenericDisplay('scM3Otp',result);})
+                .catch(function(err){document.getElementById('scM3OtpStatusBadge').className='sm-status-badge error';document.getElementById('scM3OtpStatusBadge').textContent='Failed';document.getElementById('scM3OtpResponseView').textContent='Error: '+err.message;});
+        }
+
+        // --- Model 3: Edit Payment Instrument ---
+        function smM3EditInstrument() {
+            var key = document.getElementById('sc_m3_edit_key').value.trim();
+            var salt = document.getElementById('sc_m3_edit_salt').value.trim();
+            var var1 = document.getElementById('sc_m3_edit_var1').value.trim();
+            var var2 = document.getElementById('sc_m3_edit_var2').value.trim();
+            var var3 = document.getElementById('sc_m3_edit_var3').value.trim();
+            var var4 = document.getElementById('sc_m3_edit_var4').value;
+            var var5 = document.getElementById('sc_m3_edit_var5').value;
+            var var6 = document.getElementById('sc_m3_edit_var6').value.trim();
+            var var7 = document.getElementById('sc_m3_edit_var7').value.trim();
+            var var8 = document.getElementById('sc_m3_edit_var8').value.trim();
+            var var9 = document.getElementById('sc_m3_edit_var9').value.trim();
+            if (!key || !salt || !var1 || !var2 || !var3 || !var6 || !var7 || !var8 || !var9) { alert('Fill all required fields'); return; }
+            var hashStr = key + '|edit_payment_instrument|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'edit_payment_instrument', var1: var1, var2: var2, var3: var3, var4: var4, var5: var5, var6: var6, var7: var7, var8: var8, var9: var9, hash: hash };
+            var panel = document.getElementById('scM3EditReqRes'); panel.style.display = 'block';
+            document.getElementById('scM3EditRequestView').textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
+            var badge = document.getElementById('scM3EditStatusBadge');
+            badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Updating...';
+            document.getElementById('scM3EditResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+                .then(function(r) { return r.json(); }).then(function(result) { smCardGenericDisplay('scM3Edit', result); })
+                .catch(function(err) { document.getElementById('scM3EditStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM3EditStatusBadge').textContent = 'Failed'; document.getElementById('scM3EditResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        window.smM2FTPreview = smM2FTPreview;
+        window.smM2FTSend = smM2FTSend;
+        window.smM3FTPreview = smM3FTPreview;
+        window.smM3FTSend = smM3FTSend;
+        window.smM3RPTPreview = smM3RPTPreview;
+        window.smM3RPTSend = smM3RPTSend;
+        window.smM3NTPreview = smM3NTPreview;
+        window.smM3NTSend = smM3NTSend;
+        window.smM3GetCryptogram = smM3GetCryptogram;
+        window.smM3SubmitOtp = smM3SubmitOtp;
+        window.smM3ResendOtp = smM3ResendOtp;
+        window.smM3EditInstrument = smM3EditInstrument;
+        window.smTokM2GetBinInfo = smTokM2GetBinInfo;
+        window.smTokM3GetBinInfo = smTokM3GetBinInfo;
+        window.smTokM3GetUserCards = smTokM3GetUserCards;
+        window.smTokM3SaveInstrument = smTokM3SaveInstrument;
+        window.smTokM3VerifyPayment = smTokM3VerifyPayment;
+        window.smCardGetUserCards = smCardGetUserCards;
+        window.smCardGetPaymentInstrument = smCardGetPaymentInstrument;
+        window.smCardDeleteInstrument = smCardDeleteInstrument;
+        /* Make prereq Merchant Key items clickable */
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var prereqs = document.querySelectorAll('.sm-prereq-item');
+                prereqs.forEach(function(item) {
+                    if (item.textContent.indexOf('Merchant Key') !== -1 || item.textContent.indexOf('Merchant key') !== -1) {
+                        item.classList.add('clickable-cred');
+                        item.addEventListener('click', function() { openCredentialGuide(); });
+                    }
+                });
+            }, 500);
+        });

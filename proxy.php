@@ -28,9 +28,10 @@ $method = strtoupper($input['method'] ?? 'POST');
 $headers = $input['headers'] ?? [];
 
 $allowedEndpoints = [
-    'postservice' => 'https://test.payu.in/merchant/postservice.php?form=2',
-    'payment'     => 'https://test.payu.in/_payment',
-    'otm_status'  => 'https://test.payu.in/v1/transaction/upi_otm_status_check',
+    'postservice'      => 'https://test.payu.in/merchant/postservice.php?form=2',
+    'payment'          => 'https://test.payu.in/_payment',
+    'otm_status'       => 'https://apitest.payu.in/v1/transaction/upi_otm_status_check',
+    'response_handler' => 'https://test.payu.in/ResponseHandler.php',
 ];
 
 if (!isset($allowedEndpoints[$endpoint])) {
@@ -41,17 +42,27 @@ if (!isset($allowedEndpoints[$endpoint])) {
 
 $url = $allowedEndpoints[$endpoint];
 
-if ($endpoint === 'otm_status' && !empty($params['requestId'])) {
-    $url .= '?requestId=' . urlencode($params['requestId']);
-    unset($params['requestId']);
+if ($endpoint === 'otm_status' && !empty($params['payuId'])) {
+    $url .= '?payuId=' . urlencode($params['payuId']);
+    unset($params['payuId']);
 }
 
 $ch = curl_init();
 
-$curlHeaders = ['Accept: application/json'];
+// For OTM status, only send the HMAC headers (no extra Accept/Content-Type)
+// For other endpoints, add Accept: application/json
+if ($endpoint === 'otm_status') {
+    $curlHeaders = [];
+} else {
+    $curlHeaders = ['Accept: application/json'];
+}
+
 foreach ($headers as $key => $value) {
     $curlHeaders[] = "$key: $value";
 }
+
+$multipartCommands = ['cancel_transaction', 'cancel_refund_transaction', 'capture_transaction'];
+$useMultipart = isset($params['command']) && in_array($params['command'], $multipartCommands, true);
 
 if ($method === 'GET') {
     if (!empty($params)) {
@@ -60,8 +71,12 @@ if ($method === 'GET') {
     curl_setopt($ch, CURLOPT_HTTPGET, true);
 } else {
     curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
-    $curlHeaders[] = 'Content-Type: application/x-www-form-urlencoded';
+    if ($useMultipart) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+    } else {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
+        $curlHeaders[] = 'Content-Type: application/x-www-form-urlencoded';
+    }
 }
 
 curl_setopt($ch, CURLOPT_URL, $url);
@@ -85,10 +100,10 @@ if ($error) {
     exit;
 }
 
-$decoded = json_decode($response, true);
+$decoded = json_decode($response, true, 512, JSON_BIGINT_AS_STRING);
 
 echo json_encode([
     'http_code' => $httpCode,
     'response' => $decoded !== null ? $decoded : $response,
-    'raw' => is_string($response) && $decoded === null ? $response : null
+    'raw_response' => $response
 ]);
