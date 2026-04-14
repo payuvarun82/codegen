@@ -3147,7 +3147,7 @@
         #sm-overview h2 {
             font-size: 1.75rem;
             font-weight: 800;
-            color: var(--ov-primary-dark);
+            color: #064e3b;
             margin-bottom: 0.5rem;
             position: relative;
             display: inline-block;
@@ -3158,7 +3158,7 @@
             width: 60%;
             height: 4px;
             border-radius: 4px;
-            background: linear-gradient(90deg, var(--ov-primary), var(--ov-accent), #14b8a6);
+            background: linear-gradient(90deg, #10846D, #34d399);
             margin: 0.6rem auto 0;
         }
         #sm-overview .sm-overview-subtitle {
@@ -3184,7 +3184,7 @@
         #sm-overview .sm-product-card {
             position: relative;
             padding: 1.75rem 1.5rem 1.5rem;
-            border: 1px solid #e0f2fe;
+            border: 1px solid #d1fae5;
             border-radius: 16px;
             background: #ffffff;
             cursor: pointer;
@@ -3201,24 +3201,18 @@
             right: 0;
             height: 4px;
             border-radius: 16px 16px 0 0;
-            background: linear-gradient(90deg, var(--ov-primary), var(--ov-accent));
+            background: linear-gradient(90deg, #10846D, #34d399);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
         #sm-overview .sm-product-card:hover {
-            border-color: var(--ov-border);
-            box-shadow: 0 8px 32px rgba(14, 116, 144, 0.12), 0 2px 8px rgba(14, 116, 144, 0.06);
+            border-color: #6ee7b7;
+            box-shadow: 0 8px 32px rgba(16, 132, 109, 0.12), 0 2px 8px rgba(16, 132, 109, 0.06);
             transform: translateY(-6px);
         }
         #sm-overview .sm-product-card:hover::before {
             opacity: 1;
         }
-
-        /* --- Per-card accent top bar --- */
-        #sm-overview .sm-card-onetime::before  { background: linear-gradient(90deg, #0e7490, #06b6d4); }
-        #sm-overview .sm-card-otm::before       { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
-        #sm-overview .sm-card-autopay::before   { background: linear-gradient(90deg, #059669, #34d399); }
-        #sm-overview .sm-card-troubleshoot::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
 
         /* --- "Most Popular" Badge --- */
         #sm-overview .sm-product-card-badge {
@@ -3230,7 +3224,7 @@
             text-transform: uppercase;
             letter-spacing: 0.06em;
             color: #fff;
-            background: linear-gradient(135deg, #0e7490, #06b6d4);
+            background: linear-gradient(135deg, #10846D, #059669);
             padding: 0.25rem 0.65rem;
             border-radius: 20px;
         }
@@ -3246,25 +3240,11 @@
             margin-bottom: 1rem;
             font-size: 1.5rem;
             transition: transform 0.3s ease;
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            color: #10846D;
         }
         #sm-overview .sm-product-card:hover .sm-product-card-icon-wrap {
             transform: scale(1.08);
-        }
-        #sm-overview .sm-card-onetime .sm-product-card-icon-wrap {
-            background: linear-gradient(135deg, #ecfeff, #cffafe);
-            color: #0e7490;
-        }
-        #sm-overview .sm-card-otm .sm-product-card-icon-wrap {
-            background: linear-gradient(135deg, #f5f3ff, #ede9fe);
-            color: #7c3aed;
-        }
-        #sm-overview .sm-card-autopay .sm-product-card-icon-wrap {
-            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-            color: #059669;
-        }
-        #sm-overview .sm-card-troubleshoot .sm-product-card-icon-wrap {
-            background: linear-gradient(135deg, #fffbeb, #fef3c7);
-            color: #d97706;
         }
         #sm-overview .sm-product-card-icon {
             font-size: 1.5rem;
@@ -3276,11 +3256,8 @@
             font-size: 1.08rem;
             font-weight: 700;
             margin: 0 0 0.4rem;
+            color: #10846D;
         }
-        #sm-overview .sm-card-onetime h3      { color: #0e7490; }
-        #sm-overview .sm-card-otm h3           { color: #7c3aed; }
-        #sm-overview .sm-card-autopay h3       { color: #059669; }
-        #sm-overview .sm-card-troubleshoot h3  { color: #d97706; }
 
         /* --- Card Description --- */
         #sm-overview .sm-product-card p {
@@ -3303,26 +3280,12 @@
             border-radius: 10px;
             margin-bottom: 1rem;
             letter-spacing: 0.01em;
+            background: #ecfdf5;
+            color: #10846D;
         }
         #sm-overview .sm-product-card-flow .sm-flow-sep {
-            color: #cbd5e1;
+            color: #a7f3d0;
             margin: 0 0.1rem;
-        }
-        #sm-overview .sm-card-onetime .sm-product-card-flow {
-            background: #ecfeff;
-            color: #0e7490;
-        }
-        #sm-overview .sm-card-otm .sm-product-card-flow {
-            background: #f5f3ff;
-            color: #7c3aed;
-        }
-        #sm-overview .sm-card-autopay .sm-product-card-flow {
-            background: #ecfdf5;
-            color: #059669;
-        }
-        #sm-overview .sm-card-troubleshoot .sm-product-card-flow {
-            background: #fffbeb;
-            color: #d97706;
         }
 
         /* --- CTA Button --- */
@@ -3332,6 +3295,7 @@
             gap: 0.4rem;
             font-size: 0.85rem;
             font-weight: 700;
+            color: #10846D;
             transition: gap 0.25s ease;
         }
         #sm-overview .sm-product-card-btn .sm-btn-arrow {
@@ -3341,16 +3305,6 @@
         #sm-overview .sm-product-card:hover .sm-product-card-btn .sm-btn-arrow {
             transform: translateX(4px);
         }
-        #sm-overview .sm-card-onetime .sm-product-card-btn      { color: #0e7490; }
-        #sm-overview .sm-card-otm .sm-product-card-btn           { color: #7c3aed; }
-        #sm-overview .sm-card-autopay .sm-product-card-btn       { color: #059669; }
-        #sm-overview .sm-card-troubleshoot .sm-product-card-btn  { color: #d97706; }
-
-        /* --- Per-card hover border accent --- */
-        #sm-overview .sm-card-onetime:hover      { border-color: #a5f3fc; }
-        #sm-overview .sm-card-otm:hover           { border-color: #c4b5fd; }
-        #sm-overview .sm-card-autopay:hover       { border-color: #a7f3d0; }
-        #sm-overview .sm-card-troubleshoot:hover  { border-color: #fde68a; }
 
         /* --- Simulator Box --- */
         #sm-overview .sm-ov-simulator-box {
@@ -3358,8 +3312,8 @@
             align-items: center;
             gap: 1.15rem;
             flex-wrap: wrap;
-            background: linear-gradient(135deg, #ecfeff 0%, #f0fdfa 50%, #f0f9ff 100%);
-            border: 1px solid var(--ov-border);
+            background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 50%, #d1fae5 100%);
+            border: 1px solid #a7f3d0;
             border-radius: 14px;
             padding: 1.25rem 1.5rem;
             margin-bottom: 1.25rem;
@@ -3374,7 +3328,7 @@
             min-width: 200px;
         }
         #sm-overview .sm-ov-sim-content strong {
-            color: var(--ov-primary-dark);
+            color: #064e3b;
             font-size: 0.95rem;
         }
         #sm-overview .sm-ov-sim-content p {
@@ -3391,12 +3345,12 @@
             font-size: 0.85rem;
             font-weight: 700;
             color: #fff;
-            background: linear-gradient(135deg, var(--ov-primary), var(--ov-accent));
+            background: linear-gradient(135deg, #10846D, #059669);
             border-radius: 10px;
             transition: box-shadow 0.25s ease, transform 0.2s ease;
         }
         #sm-overview .sm-ov-sim-btn:hover {
-            box-shadow: 0 4px 16px rgba(14, 116, 144, 0.3);
+            box-shadow: 0 4px 16px rgba(16, 132, 109, 0.3);
             transform: translateY(-2px);
         }
 
@@ -3408,16 +3362,216 @@
             font-size: 0.85rem;
             color: #94a3b8;
             padding-top: 1.1rem;
-            border-top: 1px solid #e0f2fe;
+            border-top: 1px solid #d1fae5;
         }
         #sm-overview .sm-overview-quick-links a {
-            color: var(--ov-primary);
+            color: #10846D;
             font-weight: 600;
             text-decoration: none;
             transition: color 0.2s ease;
         }
         #sm-overview .sm-overview-quick-links a:hover {
-            color: var(--ov-accent);
+            color: #059669;
+            text-decoration: underline;
+        }
+
+        /* ===== Net Banking Overview (single unified green theme) ===== */
+        #sm-nb-overview .sm-ov-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        #sm-nb-overview h2 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #064e3b;
+            margin-bottom: 0.5rem;
+            position: relative;
+            display: inline-block;
+        }
+        #sm-nb-overview h2::after {
+            content: '';
+            display: block;
+            width: 60%;
+            height: 4px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #10846D, #34d399);
+            margin: 0.6rem auto 0;
+        }
+        #sm-nb-overview .sm-overview-subtitle {
+            font-size: 1rem;
+            color: #64748b;
+            line-height: 1.65;
+            max-width: 650px;
+            margin: 0.75rem auto 0;
+        }
+        #sm-nb-overview .sm-product-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        @media (max-width: 768px) {
+            #sm-nb-overview .sm-product-grid { grid-template-columns: 1fr; }
+        }
+        #sm-nb-overview .sm-product-card {
+            position: relative;
+            padding: 1.75rem 1.5rem 1.5rem;
+            border: 1px solid #d1fae5;
+            border-radius: 16px;
+            background: #ffffff;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #sm-nb-overview .sm-product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            border-radius: 16px 16px 0 0;
+            background: linear-gradient(90deg, #10846D, #34d399);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #sm-nb-overview .sm-product-card:hover {
+            border-color: #6ee7b7;
+            box-shadow: 0 8px 32px rgba(16, 132, 109, 0.12), 0 2px 8px rgba(16, 132, 109, 0.06);
+            transform: translateY(-6px);
+        }
+        #sm-nb-overview .sm-product-card:hover::before {
+            opacity: 1;
+        }
+        #sm-nb-overview .sm-product-card-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #fff;
+            background: linear-gradient(135deg, #10846D, #059669);
+            padding: 0.25rem 0.65rem;
+            border-radius: 20px;
+        }
+        #sm-nb-overview .sm-product-card-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            color: #10846D;
+        }
+        #sm-nb-overview .sm-product-card:hover .sm-product-card-icon-wrap {
+            transform: scale(1.08);
+        }
+        #sm-nb-overview .sm-product-card-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+        #sm-nb-overview .sm-product-card h3 {
+            font-size: 1.08rem;
+            font-weight: 700;
+            margin: 0 0 0.4rem;
+            color: #10846D;
+        }
+        #sm-nb-overview .sm-product-card p {
+            font-size: 0.86rem;
+            color: #64748b;
+            line-height: 1.6;
+            margin: 0 0 0.85rem;
+            flex: 1;
+        }
+        #sm-nb-overview .sm-product-card-flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.15rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.55rem 0.85rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            letter-spacing: 0.01em;
+            background: #ecfdf5;
+            color: #10846D;
+        }
+        #sm-nb-overview .sm-product-card-flow .sm-flow-sep {
+            color: #a7f3d0;
+            margin: 0 0.1rem;
+        }
+        #sm-nb-overview .sm-product-card-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #10846D;
+            transition: gap 0.25s ease;
+        }
+        #sm-nb-overview .sm-product-card-btn .sm-btn-arrow {
+            transition: transform 0.25s ease;
+            display: inline-block;
+        }
+        #sm-nb-overview .sm-product-card:hover .sm-product-card-btn .sm-btn-arrow {
+            transform: translateX(4px);
+        }
+        #sm-nb-overview .sm-ov-simulator-box {
+            display: flex;
+            align-items: center;
+            gap: 1.15rem;
+            flex-wrap: wrap;
+            background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 50%, #d1fae5 100%);
+            border: 1px solid #a7f3d0;
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        #sm-nb-overview .sm-ov-sim-icon {
+            font-size: 2rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        #sm-nb-overview .sm-ov-sim-content {
+            flex: 1;
+            min-width: 200px;
+        }
+        #sm-nb-overview .sm-ov-sim-content strong {
+            color: #064e3b;
+            font-size: 0.95rem;
+        }
+        #sm-nb-overview .sm-ov-sim-content p {
+            margin: 0.3rem 0 0;
+            font-size: 0.85rem;
+            color: #64748b;
+            line-height: 1.55;
+        }
+        #sm-nb-overview .sm-overview-quick-links {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            padding-top: 1.1rem;
+            border-top: 1px solid #d1fae5;
+        }
+        #sm-nb-overview .sm-overview-quick-links a {
+            color: #10846D;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        #sm-nb-overview .sm-overview-quick-links a:hover {
+            color: #059669;
             text-decoration: underline;
         }
 

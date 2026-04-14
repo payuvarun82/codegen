@@ -11770,62 +11770,33 @@ httpResponse.getWriter().flush();</code></pre>
                     </div>
                     <ul class="seamless-nav" id="seamlessNbNav">
                         <li class="seamless-nav-group-label">Getting Started</li>
-                        <li class="seamless-nav-item active" data-section="sm-nb-overview" onclick="smNbNavTo(this,'sm-nb-overview')"><span class="nav-icon">&#9889;</span> Overview</li>
+                        <li class="seamless-nav-item active" data-section="sm-nb-overview" onclick="smNbNavTo(this,'sm-nb-overview')"><span class="nav-icon">&#9889;</span> Choose Your Flow</li>
 
-                        <li class="seamless-nav-group-label" style="margin-top:0.5rem; border-top:1px solid rgba(0,0,0,0.08); padding-top:0.75rem;">Payment Flows</li>
-
-                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">&#127974; NB One-Time Payment <span class="nav-group-arrow">&#9660;</span></li>
+                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">NB One-Time Payment <span class="nav-group-arrow">&#9660;</span></li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-status" onclick="smNbNavTo(this,'sm-nb-status')"><span class="nav-icon">1</span> Prerequisite for NB</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-payment" onclick="smNbNavTo(this,'sm-nb-payment')"><span class="nav-icon">2</span> Initiate Payment</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-redirect" onclick="smNbNavTo(this,'sm-nb-redirect')"><span class="nav-icon">3</span> Handle Response</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-verify" onclick="smNbNavTo(this,'sm-nb-verify')"><span class="nav-icon">4</span> Validate / Verify</li>
 
-                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">&#128260; NB Mandate (eNACH) <span class="nav-group-arrow">&#9660;</span></li>
+                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">NB Mandate (eNACH) <span class="nav-group-arrow">&#9660;</span></li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-subscription" onclick="smNbNavTo(this,'sm-nb-subscription')"><span class="nav-icon">1</span> Register Mandate</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-mandate-verify" onclick="smNbNavTo(this,'sm-nb-mandate-verify')"><span class="nav-icon">2</span> Handle Response</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-mandate-status" onclick="smNbNavTo(this,'sm-nb-mandate-status')"><span class="nav-icon">3</span> Validate Status</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-mandate-execute" onclick="smNbNavTo(this,'sm-nb-mandate-execute')"><span class="nav-icon">4</span> Execute Debit</li>
 
-                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">&#128737; NB TPV <span class="nav-group-arrow">&#9660;</span></li>
+                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">NB TPV <span class="nav-group-arrow">&#9660;</span></li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-tpv" onclick="smNbNavTo(this,'sm-nb-tpv')"><span class="nav-icon">1</span> Init TPV Payment</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-tpv-redirect" onclick="smNbNavTo(this,'sm-nb-tpv-redirect')"><span class="nav-icon">2</span> Handle Response</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-tpv-verify" onclick="smNbNavTo(this,'sm-nb-tpv-verify')"><span class="nav-icon">3</span> Validate / Verify</li>
 
-                        <!-- Phase 2: NB PACB (Pre-Auth) - Hidden for Phase 1 -->
-                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer; display:none;">&#128274; NB PACB (Pre-Auth) <span class="nav-group-arrow">&#9660;</span></li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-pacb" onclick="smNbNavTo(this,'sm-nb-pacb')" style="display:none;"><span class="nav-icon">1</span> Init Pre-Auth</li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-pacb-redirect" onclick="smNbNavTo(this,'sm-nb-pacb-redirect')" style="display:none;"><span class="nav-icon">2</span> Handle Response</li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-pacb-verify" onclick="smNbNavTo(this,'sm-nb-pacb-verify')" style="display:none;"><span class="nav-icon">3</span> Validate Auth</li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-capture" onclick="smNbNavTo(this,'sm-nb-capture')" style="display:none;"><span class="nav-icon">4</span> Capture Funds</li>
-
-                        <!-- Phase 2: NB Split Payment - Hidden for Phase 1 -->
-                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer; display:none;">&#128178; NB Split Payment <span class="nav-group-arrow">&#9660;</span></li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-split" onclick="smNbNavTo(this,'sm-nb-split')" style="display:none;"><span class="nav-icon">1</span> Init Split Payment</li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-split-verify" onclick="smNbNavTo(this,'sm-nb-split-verify')" style="display:none;"><span class="nav-icon">2</span> Verify Split</li>
-
-                        <!-- Phase 2: NB Offers - Hidden for Phase 1 -->
-                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer; display:none;">&#127873; NB Offers <span class="nav-group-arrow">&#9660;</span></li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-offers" onclick="smNbNavTo(this,'sm-nb-offers')" style="display:none;"><span class="nav-icon">1</span> Apply Offer</li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-sku-offers" onclick="smNbNavTo(this,'sm-nb-sku-offers')" style="display:none;"><span class="nav-icon">2</span> SKU Offers</li>
-
-                        <!-- Phase 2: Post-Payment section - Hidden for Phase 1 -->
-                        <li class="seamless-nav-group-label" style="margin-top:0.5rem; border-top:1px solid rgba(0,0,0,0.08); padding-top:0.75rem; display:none;">Post-Payment</li>
-                        
-                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer; display:none;">&#128181; NB Refund <span class="nav-group-arrow">&#9660;</span></li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-refund" onclick="smNbNavTo(this,'sm-nb-refund')" style="display:none;"><span class="nav-icon">1</span> Normal Refund</li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-split-refund" onclick="smNbNavTo(this,'sm-nb-split-refund')" style="display:none;"><span class="nav-icon">2</span> Split Refund</li>
-                        
-                        <li class="seamless-nav-item" data-section="sm-nb-settlement" onclick="smNbNavTo(this,'sm-nb-settlement')" style="display:none;"><span class="nav-icon">&#128176;</span> Settlement</li>
-                        
-                        <li class="seamless-nav-group-label" style="margin-top:0.5rem; border-top:1px solid rgba(0,0,0,0.08); padding-top:0.75rem;">Tools & Utilities</li>
-                        <li class="seamless-nav-item" data-section="sm-nb-hash-verify" onclick="smNbNavTo(this,'sm-nb-hash-verify')"><span class="nav-icon">#</span> Hash Generator</li>
-                        <li class="seamless-nav-item" data-section="sm-nb-codes" onclick="smNbNavTo(this,'sm-nb-codes')"><span class="nav-icon">&#128203;</span> Bank Codes Reference</li>
-                        <li class="seamless-nav-item" data-section="sm-nb-status" onclick="smNbNavTo(this,'sm-nb-status')"><span class="nav-icon">&#128270;</span> Check Bank Status</li>
+                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">Tools &amp; Utilities <span class="nav-group-arrow">&#9660;</span></li>
+                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-hash-verify" onclick="smNbNavTo(this,'sm-nb-hash-verify')"><span class="nav-icon">#</span> Hash Generator</li>
+                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-nb-codes" onclick="smNbNavTo(this,'sm-nb-codes')"><span class="nav-icon">&#128203;</span> Bank Codes Reference</li>
                     </ul>
-                </div>
+                    </div>
 
                 <!-- Main Content Area -->
-                <div class="seamless-detail-content" id="seamlessNbDetailContent">
+                <div class="seamless-content" id="seamlessNbDetailContent">
 
                     <!-- Global Config Bar for Net Banking -->
                     <div class="sm-global-config" id="smNbGlobalConfig">
@@ -11834,172 +11805,113 @@ httpResponse.getWriter().flush();</code></pre>
                             <div class="sm-global-field">
                                 <label>Key</label>
                                 <input type="text" id="sm_nb_global_key" value="a4vGC2" placeholder="Merchant Key">
-                            </div>
+                    </div>
                             <div class="sm-global-field">
                                 <label>Salt</label>
-                                <input type="text" id="sm_nb_global_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Merchant Salt" autocomplete="off" data-lpignore="true" style="-webkit-text-security: disc;">
-                            </div>
-                            <button class="sm-global-apply-btn" onclick="smNbApplyGlobalConfig()">Apply to All Forms</button>
-                        </div>
+                                <input type="password" id="sm_nb_global_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Merchant Salt (v1)">
                     </div>
+                            <button class="sm-global-apply-btn" onclick="smNbApplyGlobalConfig()">Apply to All Forms</button>
+                    </div>
+                </div>
 
                     <!-- Section: Overview -->
                     <div class="seamless-section active" id="sm-nb-overview">
-                        <h2>Net Banking S2S Integration</h2>
-                        <p class="sm-overview-subtitle">Build merchant-hosted Net Banking checkout with complete control over the customer experience.</p>
-
-                        <!-- Universal 6-Step Flow -->
-                        <div class="sm-info-box" style="background:#ebf8ff; border:1px solid #90cdf4; margin-bottom:2rem;">
-                            <strong style="color:#2b6cb0; font-size:1.1rem;">&#128736; Universal Integration Flow (6 Steps)</strong>
-                            <p style="margin:0.5rem 0 1rem; color:#2d3748;">Every Net Banking payment follows these steps:</p>
-                            <div class="sm-flow-diagram" style="justify-content:flex-start; flex-wrap:wrap; gap:0.5rem;">
-                                <div class="sm-flow-step" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-status]'),'sm-nb-status')" style="cursor:pointer;"><span class="sm-flow-num" style="background:#3182ce;">1</span><span class="sm-flow-label" style="color:#2d3748;">Prerequisite for NB</span></div>
-                                <div class="sm-flow-arrow" style="color:#718096;">&rarr;</div>
-                                <div class="sm-flow-step"><span class="sm-flow-num" style="background:#38a169;">2</span><span class="sm-flow-label" style="color:#2d3748;">Initiate Payment</span></div>
-                                <div class="sm-flow-arrow" style="color:#718096;">&rarr;</div>
-                                <div class="sm-flow-step"><span class="sm-flow-num" style="background:#38a169;">3</span><span class="sm-flow-label" style="color:#2d3748;">Handle Response</span></div>
-                                <div class="sm-flow-arrow" style="color:#718096;">&rarr;</div>
-                                <div class="sm-flow-step"><span class="sm-flow-num" style="background:#d69e2e;">4</span><span class="sm-flow-label" style="color:#2d3748;">Validate / Verify</span></div>
-                            </div>
-                            <p style="margin:1rem 0 0; font-size:0.85rem; color:#4a5568;"><strong>Step 1</strong> covers prerequisites (get active banks). <strong>Steps 2-4</strong> complete the payment flow.</p>
+                        <div class="sm-ov-header">
+                            <h2>Choose Your Integration Flow</h2>
+                            <p class="sm-overview-subtitle">Select the Net Banking product you want to integrate. Each card walks you through the complete flow &mdash; from initiation to verification.</p>
                         </div>
 
-                        <h3>Select Payment Flow</h3>
                         <div class="sm-product-grid">
-                            <div class="sm-product-card" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-payment]'),'sm-nb-payment')">
-                                <div class="sm-product-card-icon">&#127974;</div>
+                            <div class="sm-product-card sm-card-onetime" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-payment]'),'sm-nb-payment')">
+                                <div class="sm-product-card-badge">Most Popular</div>
+                                <div class="sm-product-card-icon-wrap"><span class="sm-product-card-icon">&#127974;</span></div>
                                 <h3>NB One-Time Payment</h3>
-                                <p>Accept single Net Banking payments. Customer selects bank, authenticates, and completes payment.</p>
-                                <div class="sm-product-card-flow">Prerequisite &rarr; Init &rarr; Bank Auth &rarr; Verify</div>
-                                <span class="sm-product-card-btn">Start Flow &rarr;</span>
-                            </div>
-                            <div class="sm-product-card" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-subscription]'),'sm-nb-subscription')">
-                                <div class="sm-product-card-icon">&#128260;</div>
-                                <h3>NB Mandate (eNACH)</h3>
-                                <p>Register recurring payment mandates via eNACH. Perfect for subscriptions, EMIs, SIPs, insurance.</p>
-                                <div class="sm-product-card-flow">Register &rarr; Authorize &rarr; Execute Debits</div>
-                                <span class="sm-product-card-btn">Start Flow &rarr;</span>
-                            </div>
-                            <div class="sm-product-card" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-tpv]'),'sm-nb-tpv')">
-                                <div class="sm-product-card-icon">&#128737;</div>
-                                <h3>NB TPV</h3>
-                                <p>Third Party Validation — validate payments originate from a specific bank account. Required for mutual funds, stock trading.</p>
-                                <div class="sm-product-card-flow">Beneficiary &rarr; Init &rarr; Bank Validates &rarr; Verify</div>
-                                <span class="sm-product-card-btn">Start Flow &rarr;</span>
-                            </div>
-                            <!-- Phase 2: NB PACB (Pre-Auth) - Hidden for Phase 1 -->
-                            <div class="sm-product-card" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-pacb]'),'sm-nb-pacb')" style="display:none;">
-                                <div class="sm-product-card-icon">&#128274;</div>
-                                <h3>NB PACB (Pre-Auth)</h3>
-                                <p>Pre-Authorize and Capture later. Block funds, then capture full or partial amount. Ideal for hotels, car rentals.</p>
-                                <div class="sm-product-card-flow">Pre-Auth &rarr; Funds Blocked &rarr; Capture</div>
-                                <span class="sm-product-card-btn">Start Flow &rarr;</span>
-                            </div>
-                            <!-- Phase 2: NB Split Payment - Hidden for Phase 1 -->
-                            <div class="sm-product-card" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-split]'),'sm-nb-split')" style="display:none;">
-                                <div class="sm-product-card-icon">&#128178;</div>
-                                <h3>NB Split Payment</h3>
-                                <p>Split payment among multiple merchants/aggregators. Automatic fund distribution with configurable splits.</p>
-                                <div class="sm-product-card-flow">Init Split &rarr; Bank Auth &rarr; Auto-Split Settlement</div>
-                                <span class="sm-product-card-btn">Start Flow &rarr;</span>
-                            </div>
-                            <!-- Phase 2: NB Offers - Hidden for Phase 1 -->
-                            <div class="sm-product-card" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-offers]'),'sm-nb-offers')" style="display:none;">
-                                <div class="sm-product-card-icon">&#127873;</div>
-                                <h3>NB Offers</h3>
-                                <p>Apply bank offers, cashback, and discounts. Includes SKU-level offers for specific product categories.</p>
-                                <div class="sm-product-card-flow">Check Offers &rarr; Apply &rarr; Initiate Payment &rarr; Discount Applied</div>
-                                <span class="sm-product-card-btn">Start Flow &rarr;</span>
-                            </div>
-                        </div>
-
-                        <h3 style="margin-top:2rem;">Tools & Utilities</h3>
-                        <div class="sm-product-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
-                            <!-- Phase 2: Settlement - Hidden for Phase 1 -->
-                            <div class="sm-product-card sm-product-card-tools" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-settlement]'),'sm-nb-settlement')" style="display:none;">
-                                <div class="sm-product-card-icon">&#128176;</div>
-                                <h3>Settlement</h3>
-                                <p>Check settlement status, reconciliation, and fund disbursement timelines.</p>
-                                <span class="sm-product-card-btn">View Settlement &rarr;</span>
-                            </div>
-                            <div class="sm-product-card sm-product-card-tools" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-status]'),'sm-nb-status')">
-                                <div class="sm-product-card-icon">&#128270;</div>
-                                <h3>Get Active NB List</h3>
-                                <p>Fetch real-time bank availability using <code>getNetbankingStatus</code> API.</p>
-                                <span class="sm-product-card-btn">Check Status &rarr;</span>
-                            </div>
-                            <div class="sm-product-card sm-product-card-tools" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-codes]'),'sm-nb-codes')">
-                                <div class="sm-product-card-icon">&#128203;</div>
-                                <h3>Bank Codes Reference</h3>
-                                <p>Complete list of bank codes for all supported banks.</p>
-                                <span class="sm-product-card-btn">View Codes &rarr;</span>
-                            </div>
-                        </div>
-
-                        <div class="sm-info-box" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:2rem; background:#f0fff4; border:1px solid #9ae6b4;">
-                            <div style="font-size:1.75rem;line-height:1;">&#127974;</div>
-                            <div style="flex:1;min-width:200px;">
-                                <strong style="color:#276749;">Quick Start: Test Net Banking Payment</strong>
-                                <p style="margin:0.25rem 0 0 0;font-size:0.9rem;color:#2d3748;">Use <code style="background:#c6f6d5;">bankcode=TESTPGNB</code> (Test Bank) for sandbox testing. Click "NB One-Time Payment" above to try it now.</p>
-                            </div>
-                        </div>
-
-                        <h3 style="margin-top:2rem;">How Net Banking S2S Works</h3>
-                        <div class="sm-step-guide">
-                            <div class="sm-guide-flow">
-                                <div class="sm-flow-diagram">
-                                    <div class="sm-flow-step"><span class="sm-flow-num">1</span><span class="sm-flow-label">Customer Selects Bank</span></div>
-                                    <div class="sm-flow-arrow">&rarr;</div>
-                                    <div class="sm-flow-step"><span class="sm-flow-num">2</span><span class="sm-flow-label">Call _payment API</span></div>
-                                    <div class="sm-flow-arrow">&rarr;</div>
-                                    <div class="sm-flow-step"><span class="sm-flow-num">3</span><span class="sm-flow-label">Get acsTemplate</span></div>
-                                    <div class="sm-flow-arrow">&rarr;</div>
-                                    <div class="sm-flow-step"><span class="sm-flow-num">4</span><span class="sm-flow-label">Redirect to Bank</span></div>
-                                    <div class="sm-flow-arrow">&rarr;</div>
-                                    <div class="sm-flow-step"><span class="sm-flow-num">5</span><span class="sm-flow-label">Verify Payment</span></div>
+                                <p>Accept single Net Banking payments. Customer selects bank, authenticates via OTP, and completes payment.</p>
+                                <div class="sm-product-card-flow">
+                                    <span>Prerequisite</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Initiate</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Bank Auth</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Verify</span>
                                 </div>
+                                <span class="sm-product-card-btn">Start Flow <span class="sm-btn-arrow">&rarr;</span></span>
+                            </div>
+                            <div class="sm-product-card sm-card-otm" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-subscription]'),'sm-nb-subscription')">
+                                <div class="sm-product-card-icon-wrap"><span class="sm-product-card-icon">&#128260;</span></div>
+                                <h3>NB Mandate (eNACH)</h3>
+                                <p>Register recurring payment mandates via eNACH. Perfect for subscriptions, EMIs, SIPs, and insurance premiums.</p>
+                                <div class="sm-product-card-flow">
+                                    <span>Register</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Authorize</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Status</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Execute</span>
+                                </div>
+                                <span class="sm-product-card-btn">Start Flow <span class="sm-btn-arrow">&rarr;</span></span>
+                            </div>
+                            <div class="sm-product-card sm-card-autopay" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-tpv]'),'sm-nb-tpv')">
+                                <div class="sm-product-card-icon-wrap"><span class="sm-product-card-icon">&#128737;</span></div>
+                                <h3>NB TPV (Third Party Validation)</h3>
+                                <p>Validate payments originate from a specific bank account. Required for mutual funds, stock trading, and KYC flows.</p>
+                                <div class="sm-product-card-flow">
+                                    <span>Beneficiary</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Initiate</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Bank Validates</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Verify</span>
+                                </div>
+                                <span class="sm-product-card-btn">Start Flow <span class="sm-btn-arrow">&rarr;</span></span>
+                            </div>
+                            <div class="sm-product-card sm-card-troubleshoot" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-hash-verify]'),'sm-nb-hash-verify')">
+                                <div class="sm-product-card-icon-wrap"><span class="sm-product-card-icon">&#128295;</span></div>
+                                <h3>Tools &amp; Utilities</h3>
+                                <p>Hash generator, bank codes reference, and active bank status checker for Net Banking integration.</p>
+                                <div class="sm-product-card-flow">
+                                    <span>Hash Gen</span><span class="sm-flow-sep">&bull;</span>
+                                    <span>Bank Codes</span><span class="sm-flow-sep">&bull;</span>
+                                    <span>Bank Status</span>
+                                </div>
+                                <span class="sm-product-card-btn">Open Tools <span class="sm-btn-arrow">&rarr;</span></span>
                             </div>
                         </div>
 
-                        <h3 style="margin-top:2rem;">Net Banking S2S Features</h3>
-                        <div class="sm-info-box" style="margin-top:1rem;border-left:4px solid #10846D;">
-                            <strong style="color:#10846D;">&#127974; Key Features</strong>
-                            <ul style="margin-top:0.5rem;padding-left:1.2rem;font-size:0.9rem;">
-                                <li>Uses <code>pg=NB</code> + <code>bankcode</code> parameters</li>
-                                <li>Returns <code>acsTemplate</code> (base64 encoded HTML form)</li>
-                                <li>Customer redirects to bank's secure login page</li>
-                                <li>Bank login + OTP based authentication</li>
-                                <li>Supports 50+ Indian banks (SBI, HDFC, ICICI, Axis, etc.)</li>
-                                <li>Ideal for desktop users and high-value transactions</li>
-                                <li>Supports PACB (Pre-Authorize) and eNACH (Subscriptions)</li>
-                            </ul>
+                        <div class="sm-ov-simulator-box">
+                            <div class="sm-ov-sim-icon">&#127974;</div>
+                            <div class="sm-ov-sim-content">
+                                <strong>Quick Start: Test Net Banking Payment</strong>
+                                <p>Use <code>bankcode=TESTPGNB</code> (Test Bank) for sandbox testing. Click "NB One-Time Payment" above to try it now.</p>
+                            </div>
+                        </div>
+
+                        <div class="sm-overview-quick-links">
+                            <span>Quick links:</span>
+                            <a href="javascript:void(0)" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-payment]'),'sm-nb-payment')">One-Time Payment</a>
+                            <a href="javascript:void(0)" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-status]'),'sm-nb-status')">Check Bank Status</a>
+                            <a href="javascript:void(0)" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-codes]'),'sm-nb-codes')">Bank Codes</a>
                         </div>
 
                         <h3 style="margin-top:2rem;">API Reference</h3>
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>salt</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
-                                <tr><td><code>txnid</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Unique transaction ID (max 25 chars)</td><td>NB_unique123</td></tr>
-                                <tr><td><code>amount</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Transaction amount in INR</td><td>100.00</td></tr>
-                                <tr><td><code>productinfo</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Product/service description</td><td>Test Product</td></tr>
-                                <tr><td><code>firstname</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's first name</td><td>John</td></tr>
-                                <tr><td><code>email</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's email address</td><td>john@email.com</td></tr>
-                                <tr><td><code>phone</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's phone number</td><td>9876543210</td></tr>
-                                <tr><td><code>surl</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Success callback URL</td><td>https://yoursite.com/success</td></tr>
-                                <tr><td><code>furl</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
-                                <tr><td><code>pg</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
-                                <tr><td><code>bankcode</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Bank code from getNetbankingStatus API</td><td>TESTPGNB</td></tr>
-                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
-                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-param-badge conditional">Conditional</span></td><td>Source IP of the customer. Required for S2S flow</td><td>10.200.12.12</td></tr>
-                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-param-badge conditional">Conditional</span></td><td>Customer agent's device information. Required for S2S flow</td><td>Mozilla/5.0</td></tr>
-                                <tr><td><code>udf1</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 1</td><td></td></tr>
-                                <tr><td><code>udf2</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 2</td><td></td></tr>
-                                <tr><td><code>udf3</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 3</td><td></td></tr>
-                                <tr><td><code>udf4</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 4</td><td></td></tr>
-                                <tr><td><code>udf5</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 5</td><td></td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
+                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID (max 25 chars)</td><td>NB_unique123</td></tr>
+                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction amount in INR</td><td>100.00</td></tr>
+                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Product/service description</td><td>Test Product</td></tr>
+                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's first name</td><td>John</td></tr>
+                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's email address</td><td>john@email.com</td></tr>
+                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's phone number</td><td>9876543210</td></tr>
+                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success callback URL</td><td>https://yoursite.com/success</td></tr>
+                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
+                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Bank code from getNetbankingStatus API</td><td>TESTPGNB</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
+                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Source IP of the customer. Required for S2S flow</td><td>10.200.12.12</td></tr>
+                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Customer agent's device information. Required for S2S flow</td><td>Mozilla/5.0</td></tr>
+                                <tr><td><code>udf1</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 1</td><td></td></tr>
+                                <tr><td><code>udf2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 2</td><td></td></tr>
+                                <tr><td><code>udf3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 3</td><td></td></tr>
+                                <tr><td><code>udf4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 4</td><td></td></tr>
+                                <tr><td><code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 5</td><td></td></tr>
                             </tbody>
                         </table>
                         
@@ -12298,27 +12210,27 @@ function onBankSelected(bankcode) {
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>salt</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
-                                <tr><td><code>txnid</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Unique transaction ID (max 25 chars)</td><td>NB_1234567890</td></tr>
-                                <tr><td><code>amount</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Transaction amount in INR</td><td>100.00</td></tr>
-                                <tr><td><code>productinfo</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Product/service description</td><td>Test Product</td></tr>
-                                <tr><td><code>firstname</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's first name</td><td>John</td></tr>
-                                <tr><td><code>email</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's email address</td><td>john@example.com</td></tr>
-                                <tr><td><code>phone</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's phone number</td><td>9876543210</td></tr>
-                                <tr><td><code>surl</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Success callback URL</td><td>https://yoursite.com/success</td></tr>
-                                <tr><td><code>furl</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
-                                <tr><td><code>pg</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
-                                <tr><td><code>bankcode</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Bank code from getNetbankingStatus API</td><td>TESTPGNB</td></tr>
-                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
-                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-param-badge conditional">Conditional</span></td><td>Source IP of the customer. Required for S2S flow</td><td>10.200.12.12</td></tr>
-                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-param-badge conditional">Conditional</span></td><td>Customer agent's device information</td><td>Mozilla/5.0</td></tr>
-                                <tr><td><code>udf1</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 1</td><td></td></tr>
-                                <tr><td><code>udf2</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 2</td><td></td></tr>
-                                <tr><td><code>udf3</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 3</td><td></td></tr>
-                                <tr><td><code>udf4</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 4</td><td></td></tr>
-                                <tr><td><code>udf5</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined field 5</td><td></td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
+                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID (max 25 chars)</td><td>NB_1234567890</td></tr>
+                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction amount in INR</td><td>100.00</td></tr>
+                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Product/service description</td><td>Test Product</td></tr>
+                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's first name</td><td>John</td></tr>
+                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's email address</td><td>john@example.com</td></tr>
+                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's phone number</td><td>9876543210</td></tr>
+                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success callback URL</td><td>https://yoursite.com/success</td></tr>
+                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
+                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Bank code from getNetbankingStatus API</td><td>TESTPGNB</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
+                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Source IP of the customer. Required for S2S flow</td><td>10.200.12.12</td></tr>
+                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Customer agent's device information</td><td>Mozilla/5.0</td></tr>
+                                <tr><td><code>udf1</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 1</td><td></td></tr>
+                                <tr><td><code>udf2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 2</td><td></td></tr>
+                                <tr><td><code>udf3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 3</td><td></td></tr>
+                                <tr><td><code>udf4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 4</td><td></td></tr>
+                                <tr><td><code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 5</td><td></td></tr>
                             </tbody>
                         </table>
                         
@@ -12640,10 +12552,10 @@ if (isset($response['result']['acsTemplate'])) {
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>command</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>verify_payment</code></td><td>verify_payment</td></tr>
-                                <tr><td><code>var1</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Transaction ID to verify</td><td>NB_123456</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>verify_payment</code></td><td>verify_payment</td></tr>
+                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction ID to verify</td><td>NB_123456</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
                             </tbody>
                         </table>
                         
@@ -12735,12 +12647,12 @@ sha512(a4vGC2|verify_payment|NB_123456|YourSaltHere)</code></pre>
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>command</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>cancel_refund_transaction</code></td><td>cancel_refund_transaction</td></tr>
-                                <tr><td><code>var1</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>PayU transaction ID (mihpayid)</td><td>403993715537135556</td></tr>
-                                <tr><td><code>var2</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Unique token/reference ID for refund</td><td>REFUND_123456</td></tr>
-                                <tr><td><code>var3</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Refund amount (can be partial)</td><td>500.00</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>cancel_refund_transaction</code></td><td>cancel_refund_transaction</td></tr>
+                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>PayU transaction ID (mihpayid)</td><td>403993715537135556</td></tr>
+                                <tr><td><code>var2</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique token/reference ID for refund</td><td>REFUND_123456</td></tr>
+                                <tr><td><code>var3</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Refund amount (can be partial)</td><td>500.00</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
                             </tbody>
                         </table>
                         
@@ -12865,13 +12777,13 @@ sha512(a4vGC2|cancel_refund_transaction|403993715537135556|YourSaltHere)</code><
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>command</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>cancel_refund_transaction</code></td><td>cancel_refund_transaction</td></tr>
-                                <tr><td><code>var1</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>PayU transaction ID (mihpayid)</td><td>403993715537135556</td></tr>
-                                <tr><td><code>var2</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Unique token/reference ID for refund</td><td>SPLIT_REFUND_123456</td></tr>
-                                <tr><td><code>var3</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Refund amount</td><td>500.00</td></tr>
-                                <tr><td><code>var5</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Split refund details JSON</td><td>{"splitInfo":[...]}</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>cancel_refund_transaction</code></td><td>cancel_refund_transaction</td></tr>
+                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>PayU transaction ID (mihpayid)</td><td>403993715537135556</td></tr>
+                                <tr><td><code>var2</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique token/reference ID for refund</td><td>SPLIT_REFUND_123456</td></tr>
+                                <tr><td><code>var3</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Refund amount</td><td>500.00</td></tr>
+                                <tr><td><code>var5</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Split refund details JSON</td><td>{"splitInfo":[...]}</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
                             </tbody>
                         </table>
                         
@@ -13014,25 +12926,25 @@ sha512(a4vGC2|cancel_refund_transaction|403993715537135556|YourSaltHere)</code><
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>salt</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
-                                <tr><td><code>txnid</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Unique transaction ID</td><td>TPV_123456</td></tr>
-                                <tr><td><code>amount</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Transaction amount in INR</td><td>100.00</td></tr>
-                                <tr><td><code>productinfo</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Product/service description</td><td>Mutual Fund SIP</td></tr>
-                                <tr><td><code>firstname</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's first name</td><td>John</td></tr>
-                                <tr><td><code>email</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's email address</td><td>john@example.com</td></tr>
-                                <tr><td><code>phone</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's phone number</td><td>9876543210</td></tr>
-                                <tr><td><code>surl</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Success callback URL</td><td>https://yoursite.com/success</td></tr>
-                                <tr><td><code>furl</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
-                                <tr><td><code>pg</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
-                                <tr><td><code>bankcode</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>TPV-enabled bank code</td><td>SBITPV</td></tr>
-                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
-                                <tr><td><code>api_version</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>API version for TPV &mdash; fixed <code>6</code></td><td>6</td></tr>
-                                <tr><td><code>beneficiarydetail</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>JSON with beneficiary account details</td><td>{"beneficiaryAccountNumber":"..."}</td></tr>
-                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-param-badge conditional">Conditional</span></td><td>Source IP of the customer. Required for S2S flow</td><td>10.200.12.12</td></tr>
-                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-param-badge conditional">Conditional</span></td><td>Customer agent's device information</td><td>Mozilla/5.0</td></tr>
-                                <tr><td><code>udf1-udf5</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined fields</td><td></td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
+                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID</td><td>TPV_123456</td></tr>
+                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction amount in INR</td><td>100.00</td></tr>
+                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Product/service description</td><td>Mutual Fund SIP</td></tr>
+                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's first name</td><td>John</td></tr>
+                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's email address</td><td>john@example.com</td></tr>
+                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's phone number</td><td>9876543210</td></tr>
+                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success callback URL</td><td>https://yoursite.com/success</td></tr>
+                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
+                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>TPV-enabled bank code</td><td>SBITPV</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
+                                <tr><td><code>api_version</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API version for TPV &mdash; fixed <code>6</code></td><td>6</td></tr>
+                                <tr><td><code>beneficiarydetail</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>JSON with beneficiary account details</td><td>{"beneficiaryAccountNumber":"..."}</td></tr>
+                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Source IP of the customer. Required for S2S flow</td><td>10.200.12.12</td></tr>
+                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Customer agent's device information</td><td>Mozilla/5.0</td></tr>
+                                <tr><td><code>udf1-udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined fields</td><td></td></tr>
                             </tbody>
                         </table>
 
@@ -13040,8 +12952,8 @@ sha512(a4vGC2|cancel_refund_transaction|403993715537135556|YourSaltHere)</code><
                         <table class="sm-table">
                             <thead><tr><th>Field</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>beneficiaryAccountNumber</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's bank account number</td><td>9876543210123456789</td></tr>
-                                <tr><td><code>ifscCode</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Bank IFSC code (11 characters)</td><td>SBIN0001234</td></tr>
+                                <tr><td><code>beneficiaryAccountNumber</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's bank account number</td><td>9876543210123456789</td></tr>
+                                <tr><td><code>ifscCode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Bank IFSC code (11 characters)</td><td>SBIN0001234</td></tr>
                             </tbody>
                         </table>
 
@@ -13525,25 +13437,25 @@ pre_authorize=1        // Enable pre-authorization mode</code></pre>
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>salt</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
-                                <tr><td><code>txnid</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Unique transaction ID</td><td>PACB_123456</td></tr>
-                                <tr><td><code>amount</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Amount to pre-authorize (block)</td><td>500.00</td></tr>
-                                <tr><td><code>productinfo</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Product/service description</td><td>Hotel Booking Deposit</td></tr>
-                                <tr><td><code>firstname</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's first name</td><td>John</td></tr>
-                                <tr><td><code>email</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's email address</td><td>john@example.com</td></tr>
-                                <tr><td><code>phone</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Customer's phone number</td><td>9876543210</td></tr>
-                                <tr><td><code>surl</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Success callback URL</td><td>https://yoursite.com/success</td></tr>
-                                <tr><td><code>furl</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
-                                <tr><td><code>pg</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
-                                <tr><td><code>bankcode</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Bank code from getNetbankingStatus API</td><td>TESTPGNB</td></tr>
-                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
-                                <tr><td><code>pre_authorize</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Enable pre-authorization &mdash; fixed <code>1</code></td><td>1</td></tr>
-                                <tr><td><code>api_version</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>API version for PACB &mdash; fixed <code>6</code></td><td>6</td></tr>
-                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-param-badge conditional">Conditional</span></td><td>Source IP of the customer. Required for S2S flow</td><td>10.200.12.12</td></tr>
-                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-param-badge conditional">Conditional</span></td><td>Customer's device/browser info</td><td>Mozilla/5.0...</td></tr>
-                                <tr><td><code>udf1-udf5</code></td><td><span class="sm-param-badge optional">Optional</span></td><td>User-defined fields</td><td></td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
+                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID</td><td>PACB_123456</td></tr>
+                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Amount to pre-authorize (block)</td><td>500.00</td></tr>
+                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Product/service description</td><td>Hotel Booking Deposit</td></tr>
+                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's first name</td><td>John</td></tr>
+                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's email address</td><td>john@example.com</td></tr>
+                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's phone number</td><td>9876543210</td></tr>
+                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success callback URL</td><td>https://yoursite.com/success</td></tr>
+                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
+                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Bank code from getNetbankingStatus API</td><td>TESTPGNB</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
+                                <tr><td><code>pre_authorize</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Enable pre-authorization &mdash; fixed <code>1</code></td><td>1</td></tr>
+                                <tr><td><code>api_version</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API version for PACB &mdash; fixed <code>6</code></td><td>6</td></tr>
+                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Source IP of the customer. Required for S2S flow</td><td>10.200.12.12</td></tr>
+                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Customer's device/browser info</td><td>Mozilla/5.0...</td></tr>
+                                <tr><td><code>udf1-udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined fields</td><td></td></tr>
                             </tbody>
                         </table>
 
@@ -13902,16 +13814,16 @@ pre_authorize=1        // Enable pre-authorization mode</code></pre>
                             <table class="sm-table">
                                 <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                 <tbody>
-                                    <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key</td><td>a4vGC2</td></tr>
-                                    <tr><td><code>txnid</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Unique transaction ID</td><td>PACB_SUB_123</td></tr>
-                                    <tr><td><code>amount</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Amount to pre-authorize</td><td>1000.00</td></tr>
-                                    <tr><td><code>pg</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Payment gateway &mdash; fixed <code>NB</code></td><td>NB</td></tr>
-                                    <tr><td><code>bankcode</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Bank code</td><td>TESTPGNB</td></tr>
-                                    <tr><td><code>pre_authorize</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Enable pre-auth &mdash; fixed <code>1</code></td><td>1</td></tr>
-                                    <tr><td><code>si</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Standing instruction &mdash; fixed <code>1</code></td><td>1</td></tr>
-                                    <tr><td><code>si_details</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>JSON with subscription parameters</td><td>{"billingAmount":"1000",...}</td></tr>
-                                    <tr><td><code>api_version</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>API version &mdash; fixed <code>7</code></td><td>7</td></tr>
-                                    <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 hash</td><td><em>(computed)</em></td></tr>
+                                    <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key</td><td>a4vGC2</td></tr>
+                                    <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID</td><td>PACB_SUB_123</td></tr>
+                                    <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Amount to pre-authorize</td><td>1000.00</td></tr>
+                                    <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment gateway &mdash; fixed <code>NB</code></td><td>NB</td></tr>
+                                    <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Bank code</td><td>TESTPGNB</td></tr>
+                                    <tr><td><code>pre_authorize</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Enable pre-auth &mdash; fixed <code>1</code></td><td>1</td></tr>
+                                    <tr><td><code>si</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Standing instruction &mdash; fixed <code>1</code></td><td>1</td></tr>
+                                    <tr><td><code>si_details</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>JSON with subscription parameters</td><td>{"billingAmount":"1000",...}</td></tr>
+                                    <tr><td><code>api_version</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API version &mdash; fixed <code>7</code></td><td>7</td></tr>
+                                    <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash</td><td><em>(computed)</em></td></tr>
                                 </tbody>
                             </table>
 
@@ -14059,12 +13971,12 @@ pre_authorize=1        // Enable pre-authorization mode</code></pre>
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>command</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>capture_transaction</code></td><td>capture_transaction</td></tr>
-                                <tr><td><code>var1</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>PayU transaction ID (mihpayid)</td><td>403993715537135556</td></tr>
-                                <tr><td><code>var2</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Unique capture request ID</td><td>CAP_123456</td></tr>
-                                <tr><td><code>var3</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Amount to capture (can be partial)</td><td>500.00</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>capture_transaction</code></td><td>capture_transaction</td></tr>
+                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>PayU transaction ID (mihpayid)</td><td>403993715537135556</td></tr>
+                                <tr><td><code>var2</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique capture request ID</td><td>CAP_123456</td></tr>
+                                <tr><td><code>var3</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Amount to capture (can be partial)</td><td>500.00</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
                             </tbody>
                         </table>
 
@@ -14532,11 +14444,11 @@ sha512(merchantKey|NB_mandate_status|{"authpayuid":"...","requestId":"..."}|merc
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>form</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Fixed value for API type</td><td>2</td></tr>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>command</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>si_transaction</code></td><td>si_transaction</td></tr>
-                                <tr><td><code>var1</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>JSON object with transaction details (see below)</td><td>{"authpayuid":...}</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>form</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Fixed value for API type</td><td>2</td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>si_transaction</code></td><td>si_transaction</td></tr>
+                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>JSON object with transaction details (see below)</td><td>{"authpayuid":...}</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
                             </tbody>
                         </table>
 
@@ -14666,10 +14578,10 @@ sha512(a4vGC2|si_transaction|{"authpayuid":"6611192557","invoiceDisplayNumber":"
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
-                                <tr><td><code>command</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>getNetbankingStatus</code></td><td>getNetbankingStatus</td></tr>
-                                <tr><td><code>var1</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>Bank code or <code>default</code> for all banks</td><td>default</td></tr>
-                                <tr><td><code>hash</code></td><td><span class="sm-param-badge mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>getNetbankingStatus</code></td><td>getNetbankingStatus</td></tr>
+                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Bank code or <code>default</code> for all banks</td><td>default</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed from key, command, var1, salt)</td><td><em>(computed)</em></td></tr>
                             </tbody>
                         </table>
                         
@@ -14995,43 +14907,324 @@ offer_auto_apply: "1"   // Optional: auto-apply best offer</code></pre>
                         </div>
                     </div>
 
-                    <!-- Section: NB Bank Codes -->
-                    <div class="seamless-section" id="sm-nb-codes">
-                        <h2>Net Banking Bank Codes Reference</h2>
+                    <!-- Section: NB Hash Generator -->
+                    <div class="seamless-section" id="sm-nb-hash-verify">
+                        <h2>Hash Generator</h2>
+
                         <div class="sm-step-guide">
                             <div class="sm-guide-overview">
-                                <h3>Common Bank Codes</h3>
-                                <p>Use these bank codes in the <code>bankcode</code> parameter when initiating Net Banking payments.</p>
+                                <h3>Overview</h3>
+                                <p>Every PayU API request requires a SHA-512 hash for authentication. The hash proves the request came from you and hasn't been tampered with. Different APIs use different hash formulas.</p>
+                            </div>
+
+                            <div class="sm-guide-prereqs">
+                                <h3>Prerequisites</h3>
+                                <div class="sm-prereq-list">
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Merchant Key</strong><br>Your PayU merchant key from the dashboard</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>Merchant Salt (v1)</strong><br>Salt v1 from your PayU dashboard &mdash; never expose this client-side</div>
+                                    </div>
+                                    <div class="sm-prereq-item">
+                                        <span class="sm-prereq-icon">&#10003;</span>
+                                        <div><strong>SHA-512 Library</strong><br>A server-side SHA-512 hashing library (e.g., <code>crypto</code> in Node.js, <code>hashlib</code> in Python)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sm-guide-flow">
+                                <h3>How It Works</h3>
+                                <div class="sm-flow-diagram">
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">1</div>
+                                        <div class="sm-flow-label">Parameters<br><small>Gather values</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">2</div>
+                                        <div class="sm-flow-label">Hash Formula<br><small>Pipe-separated</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">3</div>
+                                        <div class="sm-flow-label">SHA-512<br><small>Hash algorithm</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">4</div>
+                                        <div class="sm-flow-label">Hex String<br><small>Lowercase output</small></div>
+                                    </div>
+                                    <div class="sm-flow-arrow">&rarr;</div>
+                                    <div class="sm-flow-step">
+                                        <div class="sm-flow-num">5</div>
+                                        <div class="sm-flow-label">API Request<br><small>Include hash</small></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sm-guide-steps">
+                                <h3>Step-by-Step Guide</h3>
+                                <div class="sm-numbered-steps">
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">1</div>
+                                        <div class="sm-step-content">
+                                            <strong>Identify the hash formula for your API</strong>
+                                            <p>Each PayU API uses a different hash formula. Payment APIs, PostService APIs, and response verification all have distinct formulas. See the comparison table below.</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">2</div>
+                                        <div class="sm-step-content">
+                                            <strong>Assemble the hash string with pipes</strong>
+                                            <p>Concatenate the required parameters in exact order, separated by pipe (<code>|</code>) characters. Empty fields must remain as empty strings &mdash; do not skip them.</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">3</div>
+                                        <div class="sm-step-content">
+                                            <strong>Apply SHA-512, output lowercase hex</strong>
+                                            <p>Pass the assembled string through SHA-512 and convert the result to a lowercase hexadecimal string (128 characters).</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm-step">
+                                        <div class="sm-step-num">4</div>
+                                        <div class="sm-step-content">
+                                            <strong>Include hash in your API request</strong>
+                                            <p>Add the computed hash as the <code>hash</code> parameter in your API request. PayU will independently compute the same hash and reject the request if they don't match.</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="sm-table-wrapper">
-                            <table class="sm-reference-table">
-                                <thead>
-                                    <tr><th>Bank Code</th><th>Bank Name</th><th>Status</th></tr>
-                                </thead>
-                                <tbody>
-                                    <tr><td><code>TESTPGNB</code></td><td>Test Bank (Sandbox)</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>AXIB</code></td><td>Axis Bank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>HDFB</code></td><td>HDFC Bank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>ICIB</code></td><td>ICICI Bank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>SBIB</code></td><td>State Bank of India</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>YESB</code></td><td>Yes Bank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>KTKB</code></td><td>Karnataka Bank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>CABB</code></td><td>Canara Bank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>CABB</code></td><td>Canara Bank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>INDB</code></td><td>IndusInd Bank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>CITI</code></td><td>Citibank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>PNBB</code></td><td>Punjab National Bank</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>BKID</code></td><td>Bank of India</td><td>&#9989; Active</td></tr>
-                                    <tr><td><code>UNIB</code></td><td>Union Bank of India</td><td>&#9989; Active</td></tr>
-                                </tbody>
-                            </table>
+                        <h3>Hash Formulas by API</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>API</th><th>Hash Formula</th></tr></thead>
+                            <tbody>
+                                <tr><td><strong>Payment</strong></td><td><code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt)</code></td></tr>
+                                <tr><td><strong>Payment (api_version=7)</strong></td><td><code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||si_details|salt)</code></td></tr>
+                                <tr><td><strong>PostService APIs</strong></td><td><code>sha512(key|command|var1|salt)</code></td></tr>
+                                <tr><td><strong>Response Verification</strong></td><td><code>sha512(salt||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key|status)</code></td></tr>
+                            </tbody>
+                        </table>
+
+                        <div class="sm-info-box warning">
+                            <strong>Important Rules</strong>
+                            <ul>
+                                <li>All parameters must be in exact order shown above</li>
+                                <li>Empty UDF fields should be empty strings, not removed</li>
+                                <li>There must be exactly 6 pipe characters (||||||) before the SALT</li>
+                                <li>Hash must be computed server-side &ndash; never expose salt to client</li>
+                                <li>Use SHA-512 algorithm, output in lowercase hex</li>
+                            </ul>
                         </div>
 
-                        <div class="sm-info-box">
+                        <h3>Try It &ndash; Generate Hash</h3>
+                        <div class="sm-interactive-form">
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Merchant Key <span class="required">*</span></label>
+                                    <input type="text" id="sm_nb_hash_key" value="a4vGC2" placeholder="Enter merchant key">
+                                    <small class="sm-field-hint">Your PayU merchant key</small>
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Merchant Salt <span class="required">*</span></label>
+                                    <input type="password" id="sm_nb_hash_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter salt">
+                                    <small class="sm-field-hint">Salt v1 from PayU dashboard</small>
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Transaction ID <span class="required">*</span></label>
+                                    <input type="text" id="sm_nb_hash_txnid" placeholder="e.g. NB_TXN_123456">
+                                    <small class="sm-field-hint">Unique transaction reference</small>
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>Amount <span class="required">*</span></label>
+                                    <input type="text" id="sm_nb_hash_amount" value="100.00" placeholder="e.g. 100.00">
+                                    <small class="sm-field-hint">Transaction amount</small>
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Product Info <span class="required">*</span></label>
+                                    <input type="text" id="sm_nb_hash_productinfo" value="Test Product" placeholder="Product description">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>First Name <span class="required">*</span></label>
+                                    <input type="text" id="sm_nb_hash_firstname" value="Test" placeholder="Customer first name">
+                                </div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group">
+                                    <label>Email <span class="required">*</span></label>
+                                    <input type="text" id="sm_nb_hash_email" value="test@example.com" placeholder="Customer email">
+                                </div>
+                                <div class="sm-form-group">
+                                    <label>UDF1-5 <span class="optional">(optional)</span></label>
+                                    <input type="text" id="sm_nb_hash_udf" placeholder="Leave empty if not used">
+                                </div>
+                            </div>
+                            <div class="sm-form-actions">
+                                <button class="button sm-btn-fill-sample" onclick="smNbFillHashSample()">&#9889; Fill Sample Data</button>
+                                <button class="button sm-btn-primary" onclick="smNbGenerateHash()">Generate Hash</button>
+                            </div>
+                        </div>
+
+                        <div id="smNbHashResult" style="display:none; margin-top: 1.5rem;">
+                            <h4>Hash String</h4>
+                            <div class="sm-code-block">
+                                <div class="sm-code-header"><span>Input String</span><button onclick="smCopyCode(this)">Copy</button></div>
+                                <pre><code id="smNbHashString"></code></pre>
+                            </div>
+                            <h4>Generated Hash (SHA-512)</h4>
+                            <div class="hash-output" id="smNbHashOutput"></div>
+                        </div>
+
+                        <h3 style="margin-top: 2rem;">Code Examples</h3>
+                        <div class="sm-code-tabs">
+                            <button class="sm-code-tab active" onclick="smSwitchCodeTab(this, 'nb-hash-node')">Node.js</button>
+                            <button class="sm-code-tab" onclick="smSwitchCodeTab(this, 'nb-hash-php')">PHP</button>
+                            <button class="sm-code-tab" onclick="smSwitchCodeTab(this, 'nb-hash-python')">Python</button>
+                            <button class="sm-code-tab" onclick="smSwitchCodeTab(this, 'nb-hash-java')">Java</button>
+                        </div>
+                        <div class="sm-code-block" id="nb-hash-node">
+                            <div class="sm-code-header"><span>Node.js</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>const crypto = require('crypto');
+
+function generatePayUHash(key, txnid, amount, productinfo, firstname, email, salt) {
+    const udf1='', udf2='', udf3='', udf4='', udf5='';
+    const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|${udf3}|${udf4}|${udf5}||||||${salt}`;
+    return crypto.createHash('sha512').update(hashString).digest('hex');
+}
+
+// Example — Net Banking Payment
+const hash = generatePayUHash('a4vGC2', 'NB_TXN_123', '100.00', 'Test Product', 'John', 'john@example.com', 'YOUR_SALT');
+console.log('Hash:', hash);</code></pre>
+                        </div>
+                        <div class="sm-code-block" id="nb-hash-php" style="display:none;">
+                            <div class="sm-code-header"><span>PHP</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>&lt;?php
+function generatePayUHash($key, $txnid, $amount, $productinfo, $firstname, $email, $salt) {
+    $udf1=$udf2=$udf3=$udf4=$udf5='';
+    $hashString = "$key|$txnid|$amount|$productinfo|$firstname|$email|$udf1|$udf2|$udf3|$udf4|$udf5||||||$salt";
+    return strtolower(hash('sha512', $hashString));
+}
+
+// Example — Net Banking Payment
+$hash = generatePayUHash('a4vGC2', 'NB_TXN_123', '100.00', 'Test Product', 'John', 'john@example.com', 'YOUR_SALT');
+echo "Hash: " . $hash;
+?&gt;</code></pre>
+                        </div>
+                        <div class="sm-code-block" id="nb-hash-python" style="display:none;">
+                            <div class="sm-code-header"><span>Python</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>import hashlib
+
+def generate_payu_hash(key, txnid, amount, productinfo, firstname, email, salt):
+    udf1=udf2=udf3=udf4=udf5=''
+    hash_string = f"{key}|{txnid}|{amount}|{productinfo}|{firstname}|{email}|{udf1}|{udf2}|{udf3}|{udf4}|{udf5}||||||{salt}"
+    return hashlib.sha512(hash_string.encode('utf-8')).hexdigest().lower()
+
+# Example — Net Banking Payment
+hash_val = generate_payu_hash('a4vGC2', 'NB_TXN_123', '100.00', 'Test Product', 'John', 'john@example.com', 'YOUR_SALT')
+print(f"Hash: {hash_val}")</code></pre>
+                        </div>
+                        <div class="sm-code-block" id="nb-hash-java" style="display:none;">
+                            <div class="sm-code-header"><span>Java</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+
+public class PayUHash {
+    public static String generateHash(String key, String txnid, String amount,
+            String productinfo, String firstname, String email, String salt) {
+        String hashString = key+"|"+txnid+"|"+amount+"|"+productinfo+"|"+firstname+"|"+email+"|||||||||||"+salt;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
+            byte[] hash = md.digest(hashString.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) { throw new RuntimeException(e); }
+    }
+}</code></pre>
+                        </div>
+
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-codes]'), 'sm-nb-codes')">Next: Bank Codes Reference &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Section: NB Bank Codes -->
+                    <div class="seamless-section" id="sm-nb-codes">
+                        <h2>Bank Codes Reference</h2>
+
+                        <div class="sm-step-guide">
+                            <div class="sm-guide-overview">
+                                <h3>Overview</h3>
+                                <p>Use these bank codes in the <code>bankcode</code> parameter when initiating Net Banking payments via the <code>_payment</code> API. The list below shows commonly used banks. For a live list, use the <code>getNetbankingStatus</code> API.</p>
+                            </div>
+                        </div>
+
+                        <h3>Popular Banks</h3>
+                        <table class="sm-table">
+                            <thead>
+                                <tr><th>Bank Code</th><th>Bank Name</th><th>Type</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>TESTPGNB</code></td><td>Test Bank (Sandbox)</td><td>Test</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>SBIB</code></td><td>State Bank of India</td><td>Public</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>HDFB</code></td><td>HDFC Bank</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>ICIB</code></td><td>ICICI Bank</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>AXIB</code></td><td>Axis Bank</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>KTKB</code></td><td>Kotak Mahindra Bank</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>YESB</code></td><td>Yes Bank</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>INDB</code></td><td>IndusInd Bank</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                            </tbody>
+                        </table>
+
+                        <h3 style="margin-top:2rem;">Other Banks</h3>
+                        <table class="sm-table">
+                            <thead>
+                                <tr><th>Bank Code</th><th>Bank Name</th><th>Type</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>PNBB</code></td><td>Punjab National Bank</td><td>Public</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>BKID</code></td><td>Bank of India</td><td>Public</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>UNIB</code></td><td>Union Bank of India</td><td>Public</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>CABB</code></td><td>Canara Bank</td><td>Public</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>BOBB</code></td><td>Bank of Baroda</td><td>Public</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>CITI</code></td><td>Citibank</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>KTKB</code></td><td>Karnataka Bank</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>IDBB</code></td><td>IDBI Bank</td><td>Public</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>FEDB</code></td><td>Federal Bank</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                                <tr><td><code>SCBB</code></td><td>Standard Chartered</td><td>Private</td><td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:#10846D;">Active</span></td></tr>
+                            </tbody>
+                        </table>
+
+                        <div class="sm-info-box" style="margin-top:1.5rem;">
                             <strong>&#128161; Tip</strong>
-                            <p>Use the <code>getNetbankingStatus</code> API to get real-time bank availability and the complete list of supported banks for your merchant account.</p>
+                            <p>Use the <code>getNetbankingStatus</code> API to get real-time bank availability and the complete list of supported banks for your merchant account. Go to <strong>Prerequisite for NB</strong> section to try it live.</p>
+                        </div>
+
+                        <div class="sm-code-block" style="margin-top:1.5rem;">
+                            <div class="sm-code-header"><span>Example Usage</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>// Use bankcode in your _payment API request
+{
+  "key": "a4vGC2",
+  "pg": "NB",
+  "bankcode": "AXIB",       // Axis Bank
+  "txn_s2s_flow": "4",
+  "amount": "100.00",
+  "txnid": "NB_TXN_123",
+  // ... other required params
+}</code></pre>
+                        </div>
+
+                        <div class="sm-next-btn-wrapper">
+                            <button class="button" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-status]'), 'sm-nb-status')">Next: Check Bank Status &rarr;</button>
                         </div>
                     </div>
 
