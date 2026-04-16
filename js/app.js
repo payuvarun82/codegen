@@ -65,8 +65,10 @@
 
         const seamlessSectionIds = [
             'sm-overview','sm-validate-vpa','sm-payment','sm-upiflow','sm-verify','sm-cancel',
-            'sm-otm','sm-capture','sm-otm-status',
-            'sm-mandate','sm-recurring',
+            'sm-upi-cancel','sm-upi-check-status',
+            'sm-otm','sm-capture','sm-otm-status','sm-otm-verify-auth','sm-otm-verify-cap',
+            'sm-mandate','sm-mandate-verify','sm-mandate-status','sm-mandate-modify','sm-predebit','sm-si','sm-si-verify',
+            'sm-recurring',
             'sm-crossborder-s2s','sm-split-s2s',
             'sm-hash','sm-udf-update','sm-check-status','sm-simulate','sm-troubleshoot',
             'sm-prerequisites','sm-architecture',
@@ -107,14 +109,24 @@
         }
         
         // Default Callback URLs - Dynamically generated based on current domain
-        // Works on localhost, Render.com, or any other hosting platform
+        // On production (e.g. payu.in), derives from window.location automatically.
+        // On localhost/127.0.0.1, falls back to production callback since PayU
+        // redirects the browser after OTP and localhost is not publicly reachable.
         const getBaseUrl = () => {
             const protocol = window.location.protocol;
             const host = window.location.host;
             return `${protocol}//${host}`;
         };
-        const DEFAULT_SURL = getBaseUrl() + '/callback.php';
-        const DEFAULT_FURL = getBaseUrl() + '/callback.php';
+        const getCallbackUrl = () => {
+            var hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'https://payu.in/integrationlab/callback.php';
+            }
+            var path = window.location.pathname.replace(/\/[^/]*$/, '');
+            return window.location.origin + path + '/callback.php';
+        };
+        const DEFAULT_SURL = getCallbackUrl();
+        const DEFAULT_FURL = getCallbackUrl();
         
         // Back Button Detection - Auto-refresh for new transaction ID
         window.addEventListener('pageshow', function(event) {
@@ -195,6 +207,23 @@
             generateTransactionId('split');
             generateTransactionId('bankoffer');
             
+            // Initialize OTM capture type change event listener
+            var smOtmCaptureTypeEl = document.getElementById('sm_otm_captureType');
+            if (smOtmCaptureTypeEl) {
+                var initCt = smOtmCaptureTypeEl.value.toLowerCase().indexOf('multi') !== -1 ? 'Multi' : 'Normal';
+                smOtmSetCtx({ captureType: initCt, step: 'verify_auth' });
+
+                smOtmCaptureTypeEl.addEventListener('change', function() {
+                    var ct = (smOtmCaptureTypeEl.value || '').toLowerCase().indexOf('multi') !== -1 ? 'Multi' : 'Normal';
+                    smOtmSetCtx({ captureType: ct, step: 'verify_auth' });
+                    smOtmRefreshStepLabels();
+                    smSyncOtmNavSteps(ct);
+                    if (typeof smOtmForceCancelType === 'function') smOtmForceCancelType();
+                });
+                smOtmRefreshStepLabels();
+                smSyncOtmNavSteps(initCt);
+            }
+
             // Initialize Fill with Sample Data button visibility based on custom keys state
             const flows = ['crossborder', 'nonseamless', 'subscription', 'tpv', 'upiotm', 'preauth', 'checkoutplus', 'split', 'bankoffer'];
             flows.forEach(function(flow) {
@@ -553,6 +582,34 @@
                 if (furlField) {
                     furlField.value = DEFAULT_FURL;
                 }
+            });
+
+            var cardsSurlFurlIds = [
+                'sc_pay_surl', 'sc_pay_furl',
+                'sc_pa_pay_surl', 'sc_pa_pay_furl',
+                'sc_m2ft_surl', 'sc_m2ft_furl',
+                'sc_tok_pay_surl', 'sc_tok_pay_furl',
+                'sc_m3ft_surl', 'sc_m3ft_furl',
+                'sc_m3rpt_surl', 'sc_m3rpt_furl',
+                'sc_m3nt_surl', 'sc_m3nt_furl'
+            ];
+            cardsSurlFurlIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.value = getCallbackUrl();
+            });
+
+            var deviceInfoIds = [
+                'sc_pay_s2s_device_info',
+                'sc_pa_pay_s2s_device_info',
+                'sc_m2ft_s2s_device_info',
+                'sc_tok_pay_s2s_device_info',
+                'sc_m3ft_s2s_device_info',
+                'sc_m3rpt_s2s_device_info',
+                'sc_m3nt_s2s_device_info'
+            ];
+            deviceInfoIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && !el.value) el.value = navigator.userAgent;
             });
             
             console.log('✓ All callback URLs initialized with defaults:', DEFAULT_SURL);
@@ -7235,10 +7292,621 @@ nodeCartDetailsUsage +
 
         function openSeamlessFlow(sectionId) {
             _smShowUpiMode();
-            var navItem = document.querySelector('#seamlessNav .seamless-nav-item[data-section="' + sectionId + '"]');
+            var allNavItems = document.querySelectorAll('#seamlessNav .seamless-nav-item[data-section="' + sectionId + '"]');
+            var navItem = null;
+            allNavItems.forEach(function(el) {
+                if (el.style.display !== 'none') navItem = el;
+            });
+            if (!navItem && allNavItems.length > 0) navItem = allNavItems[0];
             smNavTo(navItem, sectionId);
+            smOtmRefreshStepLabels();
         }
 
+        // ========================
+        // OTM (Pre-Authorize) Navigation Context
+        // ========================
+        var SM_OTM_CTX_KEY = 'smOtmCtx';
+
+        function smOtmGetCtx() {
+            try {
+                return JSON.parse(localStorage.getItem(SM_OTM_CTX_KEY) || '{}') || {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function smOtmSetCtx(patch) {
+            var ctx = smOtmGetCtx();
+            ctx = Object.assign(ctx, patch || {});
+            localStorage.setItem(SM_OTM_CTX_KEY, JSON.stringify(ctx));
+        }
+
+        function smOtmGetCaptureType() {
+            var el = document.getElementById('sm_otm_captureType');
+            if (el && el.value) {
+                return el.value.toLowerCase().indexOf('multi') !== -1 ? 'Multi' : 'Normal';
+            }
+            var ctx = smOtmGetCtx();
+            if (ctx && ctx.captureType) return ctx.captureType;
+            return 'Normal';
+        }
+
+        function smOtmSetVerifyTxnid(value) {
+            var ver = document.getElementById('sm_ver_txnid');
+            if (ver) ver.value = (value || '').trim();
+        }
+
+        function smOtmSetHmacPayuId(value) {
+            var hmac = document.getElementById('sm_hmac_payuId');
+            if (hmac) hmac.value = (value || '').trim();
+        }
+
+        function smOtmRefreshStepLabels() {
+            var captureType = smOtmGetCaptureType();
+            var step = smOtmGuessVerifyStep();
+
+            if (typeof smSyncOtmNavSteps === 'function') smSyncOtmNavSteps(captureType);
+
+            var verAuthNextBtn = document.getElementById('smOtmVerAuthNextBtn');
+            if (verAuthNextBtn) {
+                verAuthNextBtn.textContent = (captureType === 'Multi')
+                    ? 'Next: OTM Status Check \u2192'
+                    : 'Next: Capture Transaction \u2192';
+            }
+
+            var cancelBtn = document.querySelector('#sm-cancel .sm-next-btn-wrapper .button');
+            if (cancelBtn) {
+                if (captureType === 'Normal') {
+                    cancelBtn.textContent = 'Next: OtmStatusCheckAPI \u2192';
+                    cancelBtn.style.display = 'inline-flex';
+                } else {
+                    cancelBtn.textContent = 'Flow Complete (MultiCapture)';
+                    cancelBtn.style.display = 'inline-flex';
+                }
+            }
+
+            smOtmForceCancelType();
+
+            var otmStatusBtn = document.querySelector('#sm-otm-status .sm-next-btn-wrapper .button');
+            if (otmStatusBtn) {
+                var ctx = smOtmGetCtx();
+                var ctxStep = ctx && ctx.step ? ctx.step : '';
+                if (ctxStep === 'otm_status_before_capture' || captureType === 'Multi') {
+                    otmStatusBtn.textContent = 'Next: Capture transaction API \u2192';
+                } else {
+                    otmStatusBtn.textContent = 'Flow Complete (NormalCapture)';
+                }
+            }
+        }
+
+        function smOtmGuessVerifyStep() {
+            var ctx = smOtmGetCtx();
+            if (ctx && ctx.step) return ctx.step;
+            var verTxnid = (document.getElementById('sm_ver_txnid') || {}).value || '';
+            var captureOrderId = (document.getElementById('sm_cap_captureOrderId') || {}).value || '';
+            var initTxnid = (document.getElementById('sm_otm_txnid') || {}).value || '';
+            if (captureOrderId && verTxnid && verTxnid === captureOrderId) return 'verify_capture';
+            if (initTxnid && verTxnid && verTxnid === initTxnid) return 'verify_auth';
+            return 'verify_auth';
+        }
+
+        function smOtmNextFromOtmInit() {
+            var captureType = smOtmGetCaptureType();
+            var initTxnid = (document.getElementById('sm_otm_txnid') || {}).value || '';
+            smOtmSetCtx({ captureType: captureType, step: 'verify_auth' });
+            smOtmPrefillVerifyAuth(initTxnid);
+            smOtmRefreshStepLabels();
+            openSeamlessFlow('sm-otm-verify-auth');
+        }
+        window.smOtmNextFromOtmInit = smOtmNextFromOtmInit;
+
+        function smOtmNextFromCapture() {
+            var captureType = smOtmGetCaptureType();
+            var captureOrderId = (document.getElementById('sm_cap_captureOrderId') || {}).value || '';
+            smOtmSetCtx({ captureType: captureType, step: 'verify_capture' });
+            smOtmPrefillVerifyCap(captureOrderId);
+            var vcNextWrap = document.getElementById('smOtmVerCapNextWrap');
+            if (vcNextWrap) vcNextWrap.style.display = (captureType === 'Multi') ? '' : 'none';
+            var vcFlowDone = document.getElementById('smOtmVerCapFlowDoneWrap');
+            if (vcFlowDone) vcFlowDone.style.display = (captureType === 'Normal') ? '' : 'none';
+            smOtmRefreshStepLabels();
+            openSeamlessFlow('sm-otm-verify-cap');
+        }
+        window.smOtmNextFromCapture = smOtmNextFromCapture;
+
+        function smOtmForceCancelType() {
+            var cancelTypeEl = document.getElementById('sm_cnl_cancelType');
+            var amountRow = document.getElementById('smCnlAmountRow');
+            if (cancelTypeEl) cancelTypeEl.value = 'cancel_transaction';
+            if (amountRow) amountRow.style.display = 'none';
+        }
+        window.smOtmForceCancelType = smOtmForceCancelType;
+
+        function smCnlCommandChanged() {
+            var amountRow = document.getElementById('smCnlAmountRow');
+            if (amountRow) amountRow.style.display = 'none';
+        }
+        window.smCnlCommandChanged = smCnlCommandChanged;
+
+        function smNavToCancelUpi() {
+            var verKey = (document.getElementById('sm_ver_key') || {}).value || '';
+            var verSalt = (document.getElementById('sm_ver_salt') || {}).value || '';
+            var cnlMihpayid = (document.getElementById('sm_cnl_mihpayid') || {}).value || '';
+            var ucnlKey = document.getElementById('sm_ucnl_key');
+            var ucnlSalt = document.getElementById('sm_ucnl_salt');
+            var ucnlMihpayid = document.getElementById('sm_ucnl_mihpayid');
+            if (ucnlKey && verKey) ucnlKey.value = verKey;
+            if (ucnlSalt && verSalt) ucnlSalt.value = verSalt;
+            if (ucnlMihpayid && cnlMihpayid) ucnlMihpayid.value = cnlMihpayid;
+            openSeamlessFlow('sm-upi-cancel');
+        }
+        window.smNavToCancelUpi = smNavToCancelUpi;
+
+        function smBuildUpiCancelPayload() {
+            var key = (document.getElementById('sm_ucnl_key') || {}).value.trim();
+            var salt = (document.getElementById('sm_ucnl_salt') || {}).value.trim();
+            var mihpayid = (document.getElementById('sm_ucnl_mihpayid') || {}).value.trim();
+            var amount = (document.getElementById('sm_ucnl_amount') || {}).value.trim();
+
+            var missing = [];
+            if (!key) missing.push('Merchant Key');
+            if (!salt) missing.push('Merchant Salt');
+            if (!mihpayid) missing.push('mihpayid (var1)');
+            if (!amount) missing.push('Cancel Amount (var3)');
+
+            if (missing.length > 0) {
+                alert('Please fill all mandatory parameters:\n\n\u2022 ' + missing.join('\n\u2022 '));
+                return null;
+            }
+
+            var parsed = parseFloat(amount);
+            if (isNaN(parsed) || parsed <= 0) {
+                alert('Cancel Amount must be a valid number greater than 0.');
+                return null;
+            }
+
+            var tokenField = document.getElementById('sm_ucnl_tokenId');
+            var cancelTokenId = tokenField ? tokenField.value.trim() : '';
+            if (!cancelTokenId) {
+                cancelTokenId = 'cnl_' + Math.floor(Math.random() * 100000);
+                if (tokenField) tokenField.value = cancelTokenId;
+            }
+            var command = 'cancel_refund_transaction';
+            var hashStr = key + '|' + command + '|' + mihpayid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: mihpayid, var2: cancelTokenId, var3: amount, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+
+        function smUpiCancelPreview() {
+            var data = smBuildUpiCancelPayload();
+            if (!data) return;
+            var panel = document.getElementById('smUpiCnlReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smUpiCnlRequestView').textContent = JSON.stringify({ endpoint: smGetEndpointUrl('postservice'), method: 'POST', params: data.params }, null, 2);
+            document.getElementById('smUpiCnlResponseView').textContent = '(Click "Send to PayU" to see live response)';
+            var badge = document.getElementById('smUpiCnlStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.textContent = 'Preview Only \u2014 Not Sent Yet';
+            document.getElementById('smUpiCnlCurlView').textContent = smBuildCurl(data.params, 'postservice');
+            document.getElementById('smUpiCnlResponseGuide').style.display = 'none';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        window.smUpiCancelPreview = smUpiCancelPreview;
+
+        function smUpiCancelSend() {
+            var data = smBuildUpiCancelPayload();
+            if (!data) return;
+            var panel = document.getElementById('smUpiCnlReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smUpiCnlRequestView').textContent = JSON.stringify({ endpoint: smGetEndpointUrl('postservice'), method: 'POST', params: data.params }, null, 2);
+            var badge = document.getElementById('smUpiCnlStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('smUpiCnlResponseView').textContent = 'Waiting...';
+            document.getElementById('smUpiCnlCurlView').textContent = smBuildCurl(data.params, 'postservice');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: data.params }) })
+                .then(function(result) { smGenericDisplay('UpiCnl', result); })
+                .catch(function(err) {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'Request Failed';
+                    document.getElementById('smUpiCnlResponseView').textContent = 'Error: ' + err.message;
+                });
+        }
+        window.smUpiCancelSend = smUpiCancelSend;
+
+        function smBuildUpiCasPayload() {
+            var key = (document.getElementById('sm_ucas_key') || {}).value.trim();
+            var salt = (document.getElementById('sm_ucas_salt') || {}).value.trim();
+            var payuid = (document.getElementById('sm_ucas_payuid') || {}).value.trim();
+
+            var missing = [];
+            if (!key) missing.push('Merchant Key');
+            if (!salt) missing.push('Merchant Salt');
+            if (!payuid) missing.push('PayU ID / mihpayid (var1)');
+
+            if (missing.length > 0) {
+                alert('Please fill all mandatory parameters:\n\n\u2022 ' + missing.join('\n\u2022 '));
+                return null;
+            }
+
+            var command = 'check_action_status';
+            var hashStr = key + '|' + command + '|' + payuid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: payuid, var2: 'payuid', hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+
+        function smUpiCasPreview() {
+            var data = smBuildUpiCasPayload();
+            if (!data) return;
+            var panel = document.getElementById('smUpiCasReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smUpiCasRequestView').textContent = JSON.stringify({ endpoint: smGetEndpointUrl('postservice'), method: 'POST', params: data.params }, null, 2);
+            document.getElementById('smUpiCasResponseView').textContent = '(Click "Send to PayU" to see live response)';
+            var badge = document.getElementById('smUpiCasStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.textContent = 'Preview Only \u2014 Not Sent Yet';
+            document.getElementById('smUpiCasCurlView').textContent = smBuildCurl(data.params, 'postservice');
+        }
+        window.smUpiCasPreview = smUpiCasPreview;
+
+        function smUpiCasSend() {
+            var data = smBuildUpiCasPayload();
+            if (!data) return;
+            var panel = document.getElementById('smUpiCasReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smUpiCasRequestView').textContent = JSON.stringify({ endpoint: smGetEndpointUrl('postservice'), method: 'POST', params: data.params }, null, 2);
+            var badge = document.getElementById('smUpiCasStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('smUpiCasResponseView').textContent = 'Waiting...';
+            document.getElementById('smUpiCasCurlView').textContent = smBuildCurl(data.params, 'postservice');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: data.params }) })
+                .then(function(result) { smGenericDisplay('UpiCas', result); })
+                .catch(function(err) {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'Request Failed';
+                    document.getElementById('smUpiCasResponseView').textContent = 'Error: ' + err.message;
+                });
+        }
+        window.smUpiCasSend = smUpiCasSend;
+
+        function smNavToCheckStatus() {
+            var cnlKey = (document.getElementById('sm_ucnl_key') || {}).value || '';
+            var cnlSalt = (document.getElementById('sm_ucnl_salt') || {}).value || '';
+            var cnlMihpayid = (document.getElementById('sm_ucnl_mihpayid') || {}).value || '';
+            if (cnlKey) { var f = document.getElementById('sm_ucas_key'); if (f) f.value = cnlKey; }
+            if (cnlSalt) { var f = document.getElementById('sm_ucas_salt'); if (f) f.value = cnlSalt; }
+            if (cnlMihpayid) { var f = document.getElementById('sm_ucas_payuid'); if (f) f.value = cnlMihpayid; }
+            smNavTo(document.querySelector('[data-section=sm-upi-check-status]'), 'sm-upi-check-status');
+        }
+        window.smNavToCheckStatus = smNavToCheckStatus;
+
+        function smVerifyNextStep() {
+            smNavToCancelUpi();
+        }
+        window.smVerifyNextStep = smVerifyNextStep;
+
+        function smOtmNextFromVerify() {
+            var captureType = smOtmGetCaptureType();
+            var step = smOtmGuessVerifyStep();
+
+            if (step === 'verify_auth') {
+                if (captureType === 'Multi') {
+                    smOtmSetCtx({ captureType: captureType, step: 'otm_status_before_capture' });
+                    smOtmRefreshStepLabels();
+                    openSeamlessFlow('sm-otm-status');
+                }
+                return;
+            }
+
+            if (step === 'verify_capture') {
+                if (captureType === 'Multi') {
+                    smOtmSetCtx({ captureType: captureType, step: 'cancel' });
+                    smOtmForceCancelType();
+                    smOtmRefreshStepLabels();
+                    openSeamlessFlow('sm-cancel');
+                }
+                return;
+            }
+        }
+        window.smOtmNextFromVerify = smOtmNextFromVerify;
+
+        function smOtmNextFromCancel() {
+            var captureType = smOtmGetCaptureType();
+            if (captureType === 'Normal') {
+                var authPayuId = _smLastOtmVaMihpayid
+                    || ((document.getElementById('sm_cap_mihpayid') || {}).value || '').trim();
+                smOtmSetHmacPayuId(authPayuId);
+                smOtmSetCtx({ captureType: captureType, step: 'otm_status_after_cancel' });
+                smOtmRefreshStepLabels();
+                openSeamlessFlow('sm-otm-status');
+                return;
+            }
+
+            smOtmSetCtx({ captureType: captureType, step: 'done' });
+            smOtmRefreshStepLabels();
+            openSeamlessFlow('sm-overview');
+        }
+        window.smOtmNextFromCancel = smOtmNextFromCancel;
+
+        function smOtmNextFromOtmStatus() {
+            var ctx = smOtmGetCtx();
+            var step = ctx && ctx.step ? ctx.step : 'otm_status_before_capture';
+
+            if (step === 'otm_status_before_capture') {
+                smOtmSetCtx({ captureType: smOtmGetCaptureType(), step: 'capture' });
+                smOtmRefreshStepLabels();
+                openSeamlessFlow('sm-capture');
+                return;
+            }
+
+            smOtmSetCtx({ captureType: smOtmGetCaptureType(), step: 'done' });
+            smOtmRefreshStepLabels();
+            openSeamlessFlow('sm-overview');
+        }
+        window.smOtmNextFromOtmStatus = smOtmNextFromOtmStatus;
+
+        function smSyncOtmNavSteps(captureType) {
+            var isMulti = captureType === 'Multi';
+            var multiItems = document.querySelectorAll('.otm-nav-multi:not(.otm-nav-normal)');
+            var sharedItems = document.querySelectorAll('.otm-nav-normal.otm-nav-multi');
+
+            multiItems.forEach(function(el) { el.style.display = isMulti ? '' : 'none'; });
+
+            var choiceEl = document.getElementById('smOtmVerAuthChoice');
+            var nextBtnWrap = document.getElementById('smOtmVerAuthNextBtnWrap');
+            if (isMulti) {
+                document.querySelectorAll('.otm-normal-capture-path').forEach(function(el) { el.style.display = 'none'; });
+                document.querySelectorAll('.otm-normal-cancel-path').forEach(function(el) { el.style.display = 'none'; });
+                if (choiceEl) choiceEl.style.display = 'none';
+                if (nextBtnWrap) nextBtnWrap.style.display = '';
+            } else {
+                if (nextBtnWrap) nextBtnWrap.style.display = 'none';
+                document.querySelectorAll('.otm-normal-capture-path').forEach(function(el) { el.style.display = ''; });
+                document.querySelectorAll('.otm-normal-cancel-path').forEach(function(el) { el.style.display = ''; });
+                var ctx = smOtmGetCtx();
+                if (ctx.normalPath === 'capture') {
+                    smOtmHighlightChoice('capture');
+                } else if (ctx.normalPath === 'cancel') {
+                    smOtmHighlightChoice('cancel');
+                } else {
+                    smOtmHighlightChoice('');
+                }
+            }
+
+            sharedItems.forEach(function(el) {
+                var numEl = el.querySelector('.otm-step-num');
+                var labelEl = el.querySelector('.otm-nav-label');
+                if (numEl) {
+                    var num = isMulti ? numEl.getAttribute('data-multi') : numEl.getAttribute('data-normal');
+                    if (num) numEl.textContent = num;
+                }
+                if (labelEl) {
+                    var label = isMulti ? labelEl.getAttribute('data-multi') : labelEl.getAttribute('data-normal');
+                    if (label) labelEl.textContent = label;
+                }
+            });
+        }
+        window.smSyncOtmNavSteps = smSyncOtmNavSteps;
+
+        // ========================
+        // OTM Dedicated Verify Sections
+        // ========================
+
+        function smOtmSyncVerField(field, value) {
+            var map = { key: 'sm_ver_key', salt: 'sm_ver_salt', txnid: 'sm_ver_txnid' };
+            var el = document.getElementById(map[field]);
+            if (el) el.value = value;
+        }
+        window.smOtmSyncVerField = smOtmSyncVerField;
+
+        function smOtmPrefillVerifyAuth(txnid) {
+            var key = (document.getElementById('sm_otm_key') || {}).value || 'PRiQvJ';
+            var salt = (document.getElementById('sm_otm_salt') || {}).value || '';
+            var vaKey = document.getElementById('sm_otm_va_key');
+            var vaSalt = document.getElementById('sm_otm_va_salt');
+            var vaTxnid = document.getElementById('sm_otm_va_txnid');
+            if (vaKey) vaKey.value = key;
+            if (vaSalt) vaSalt.value = salt;
+            if (vaTxnid && txnid) vaTxnid.value = txnid;
+            smOtmSyncVerField('key', key);
+            smOtmSyncVerField('salt', salt);
+            if (txnid) smOtmSyncVerField('txnid', txnid);
+        }
+
+        function smOtmPrefillVerifyCap(captureOrderId) {
+            var key = (document.getElementById('sm_cap_key') || {}).value || 'PRiQvJ';
+            var salt = (document.getElementById('sm_cap_salt') || {}).value || '';
+            var vcKey = document.getElementById('sm_otm_vc_key');
+            var vcSalt = document.getElementById('sm_otm_vc_salt');
+            var vcTxnid = document.getElementById('sm_otm_vc_txnid');
+            if (vcKey) vcKey.value = key;
+            if (vcSalt) vcSalt.value = salt;
+            if (vcTxnid && captureOrderId) vcTxnid.value = captureOrderId;
+            smOtmSyncVerField('key', key);
+            smOtmSyncVerField('salt', salt);
+            if (captureOrderId) smOtmSyncVerField('txnid', captureOrderId);
+        }
+
+        function smBuildOtmVerifyPayload(keyId, saltId, txnidId) {
+            var key = (document.getElementById(keyId) || {}).value.trim();
+            var salt = (document.getElementById(saltId) || {}).value.trim();
+            var txnid = (document.getElementById(txnidId) || {}).value.trim();
+            if (!key || !salt || !txnid) { alert('Fill Key, Salt and Transaction ID.'); return null; }
+            var command = 'verify_payment';
+            var hashStr = key + '|' + command + '|' + txnid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            return { params: { key: key, command: command, var1: txnid, hash: hash }, hashStr: hashStr, hash: hash };
+        }
+
+        function smOtmVerAuthPreview() {
+            var data = smBuildOtmVerifyPayload('sm_otm_va_key', 'sm_otm_va_salt', 'sm_otm_va_txnid');
+            if (!data) return;
+            var panel = document.getElementById('smOtmVaReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smOtmVaRequestView').textContent = JSON.stringify({ endpoint: smGetEndpointUrl('postservice'), method: 'POST', params: data.params }, null, 2);
+            document.getElementById('smOtmVaResponseView').textContent = '(Click "Send to PayU" to see live response)';
+            var badge = document.getElementById('smOtmVaStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.textContent = 'Preview Only \u2014 Not Sent Yet';
+            document.getElementById('smOtmVaCurlView').textContent = smBuildCurl(data.params, 'postservice');
+            document.getElementById('smOtmVaResponseGuide').style.display = 'none';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        window.smOtmVerAuthPreview = smOtmVerAuthPreview;
+
+        function smOtmVerAuthSend() {
+            var data = smBuildOtmVerifyPayload('sm_otm_va_key', 'sm_otm_va_salt', 'sm_otm_va_txnid');
+            if (!data) return;
+            var panel = document.getElementById('smOtmVaReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smOtmVaRequestView').textContent = JSON.stringify({ endpoint: smGetEndpointUrl('postservice'), method: 'POST', params: data.params }, null, 2);
+            var badge = document.getElementById('smOtmVaStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('smOtmVaResponseView').textContent = 'Waiting...';
+            document.getElementById('smOtmVaCurlView').textContent = smBuildCurl(data.params, 'postservice');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: data.params }) })
+                .then(function(result) {
+                    smGenericDisplay('OtmVa', result);
+                    var resp = result.response;
+                    if (resp && resp.transaction_details) {
+                        var td = Object.values(resp.transaction_details)[0];
+                        if (td && td.mihpayid) {
+                            _smLastOtmVaMihpayid = td.mihpayid;
+                            var capField = document.getElementById('sm_cap_mihpayid');
+                            var cnlField = document.getElementById('sm_cnl_mihpayid');
+                            var hmacField = document.getElementById('sm_hmac_payuId');
+                            if (capField) capField.value = td.mihpayid;
+                            if (cnlField) cnlField.value = td.mihpayid;
+                            if (hmacField) hmacField.value = td.mihpayid;
+                        }
+                    }
+                    var choiceEl = document.getElementById('smOtmVerAuthChoice');
+                    var captureType = smOtmGetCaptureType();
+                    if (choiceEl && captureType !== 'Multi') {
+                        choiceEl.style.display = '';
+                    }
+                })
+                .catch(function(err) {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'Request Failed';
+                    document.getElementById('smOtmVaResponseView').textContent = 'Error: ' + err.message;
+                });
+        }
+        window.smOtmVerAuthSend = smOtmVerAuthSend;
+
+        function smOtmVerCapPreview() {
+            var data = smBuildOtmVerifyPayload('sm_otm_vc_key', 'sm_otm_vc_salt', 'sm_otm_vc_txnid');
+            if (!data) return;
+            var panel = document.getElementById('smOtmVcReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smOtmVcRequestView').textContent = JSON.stringify({ endpoint: smGetEndpointUrl('postservice'), method: 'POST', params: data.params }, null, 2);
+            document.getElementById('smOtmVcResponseView').textContent = '(Click "Send to PayU" to see live response)';
+            var badge = document.getElementById('smOtmVcStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.textContent = 'Preview Only \u2014 Not Sent Yet';
+            document.getElementById('smOtmVcCurlView').textContent = smBuildCurl(data.params, 'postservice');
+            document.getElementById('smOtmVcResponseGuide').style.display = 'none';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        window.smOtmVerCapPreview = smOtmVerCapPreview;
+
+        function smOtmVerCapSend() {
+            var data = smBuildOtmVerifyPayload('sm_otm_vc_key', 'sm_otm_vc_salt', 'sm_otm_vc_txnid');
+            if (!data) return;
+            var panel = document.getElementById('smOtmVcReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smOtmVcRequestView').textContent = JSON.stringify({ endpoint: smGetEndpointUrl('postservice'), method: 'POST', params: data.params }, null, 2);
+            var badge = document.getElementById('smOtmVcStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
+            document.getElementById('smOtmVcResponseView').textContent = 'Waiting...';
+            document.getElementById('smOtmVcCurlView').textContent = smBuildCurl(data.params, 'postservice');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: data.params }) })
+                .then(function(result) { smGenericDisplay('OtmVc', result); })
+                .catch(function(err) {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'Request Failed';
+                    document.getElementById('smOtmVcResponseView').textContent = 'Error: ' + err.message;
+                });
+        }
+        window.smOtmVerCapSend = smOtmVerCapSend;
+
+        function smOtmShowNormalPathNav(path) {
+            document.querySelectorAll('.otm-normal-capture-path').forEach(function(el) {
+                el.style.display = '';
+            });
+            document.querySelectorAll('.otm-normal-cancel-path').forEach(function(el) {
+                el.style.display = '';
+            });
+            smOtmHighlightChoice(path);
+        }
+
+        function smOtmHighlightChoice(path) {
+            var cards = document.querySelectorAll('.sm-otm-choice-card');
+            cards.forEach(function(c) { c.classList.remove('sm-otm-choice-selected'); });
+            if (path === 'capture') {
+                var cap = document.querySelector('.sm-otm-choice-capture');
+                if (cap) cap.classList.add('sm-otm-choice-selected');
+            } else if (path === 'cancel') {
+                var cnl = document.querySelector('.sm-otm-choice-cancel');
+                if (cnl) cnl.classList.add('sm-otm-choice-selected');
+            }
+        }
+
+        function smOtmNormalChooseCapture() {
+            var captureType = 'Normal';
+            smOtmSetCtx({ captureType: captureType, step: 'capture', normalPath: 'capture' });
+            smOtmShowNormalPathNav('capture');
+            smOtmHighlightChoice('capture');
+            smOtmRefreshStepLabels();
+            openSeamlessFlow('sm-capture');
+        }
+        window.smOtmNormalChooseCapture = smOtmNormalChooseCapture;
+
+        function smOtmNormalChooseCancel() {
+            var captureType = 'Normal';
+            smOtmSetCtx({ captureType: captureType, step: 'cancel_auth', normalPath: 'cancel' });
+            smOtmShowNormalPathNav('cancel');
+            smOtmHighlightChoice('cancel');
+            var cancelTypeEl = document.getElementById('sm_cnl_cancelType');
+            var amountRow = document.getElementById('smCnlAmountRow');
+            if (cancelTypeEl) cancelTypeEl.value = 'cancel_transaction';
+            if (amountRow) amountRow.style.display = 'none';
+            var cnlField = document.getElementById('sm_cnl_mihpayid');
+            if (cnlField) cnlField.value = _smLastOtmVaMihpayid || '';
+            smOtmRefreshStepLabels();
+            openSeamlessFlow('sm-cancel');
+        }
+        window.smOtmNormalChooseCancel = smOtmNormalChooseCancel;
+
+        function smOtmNextFromVerifyAuth() {
+            var captureType = smOtmGetCaptureType();
+            if (captureType === 'Multi') {
+                smOtmSetCtx({ captureType: captureType, step: 'otm_status_before_capture' });
+                smOtmRefreshStepLabels();
+                openSeamlessFlow('sm-otm-status');
+            }
+        }
+        window.smOtmNextFromVerifyAuth = smOtmNextFromVerifyAuth;
+
+        function smOtmNextFromVerifyCap() {
+            var captureType = smOtmGetCaptureType();
+            if (captureType === 'Multi') {
+            smOtmSetCtx({ captureType: captureType, step: 'cancel' });
+            smOtmForceCancelType();
+            smOtmRefreshStepLabels();
+            openSeamlessFlow('sm-cancel');
+            }
+        }
+        window.smOtmNextFromVerifyCap = smOtmNextFromVerifyCap;
 
         // Net Banking navigation function
         function smNbNavTo(navItem, sectionId) {
@@ -7453,6 +8121,12 @@ nodeCartDetailsUsage +
             document.getElementById('smNbPayRequestView').textContent = JSON.stringify(data, null, 2);
             document.getElementById('smNbPayStatusBadge').className = 'sm-status-badge pending';
             document.getElementById('smNbPayStatusBadge').textContent = 'Sending...';
+
+            var curlCmd = "curl -X POST 'https://test.payu.in/_payment' \\\n  -H 'Content-Type: application/x-www-form-urlencoded' \\\n";
+            for (var k in data) {
+                curlCmd += "  -d '" + k + "=" + encodeURIComponent(data[k]) + "' \\\n";
+            }
+            document.getElementById('smNbPayCurlView').textContent = curlCmd.replace(/ \\\n$/, '');
 
             var payload = { endpoint: 'payment', method: 'POST', params: data };
 
@@ -10717,7 +11391,7 @@ nodeCartDetailsUsage +
         function selectSeamlessMethod(method) { showSeamlessMethod(method); }
         function backToMethodSelector() { goHome(); }
 
-        var seamlessSections = ['sm-overview','sm-payment','sm-upiflow','sm-otm','sm-mandate','sm-crossborder-s2s','sm-split-s2s','sm-validate-vpa','sm-hash','sm-capture','sm-verify','sm-cancel','sm-otm-status','sm-recurring','sm-udf-update','sm-check-status','sm-troubleshoot','sm-simulate'];
+        var seamlessSections = ['sm-overview','sm-payment','sm-upiflow','sm-otm','sm-mandate','sm-mandate-verify','sm-mandate-status','sm-mandate-modify','sm-capture','sm-verify','sm-cancel','sm-otm-status','sm-predebit','sm-si','sm-si-verify','sm-crossborder-s2s','sm-split-s2s','sm-validate-vpa','sm-hash','sm-recurring','sm-udf-update','sm-check-status','sm-troubleshoot','sm-simulate'];
 
         function showSeamlessSection(navItem, sectionId) {
             smNavTo(navItem, sectionId);
@@ -11253,23 +11927,42 @@ nodeCartDetailsUsage +
 
         // --- UPI One-Time Payment (sm-payment) ---
 
-        function smBuildPaymentPayload() {
-            var key = document.getElementById('sm_pay_key').value.trim();
-            var salt = document.getElementById('sm_pay_salt').value.trim();
-            var txnid = document.getElementById('sm_pay_txnid').value.trim();
-            var amount = document.getElementById('sm_pay_amount').value.trim();
-            var productinfo = document.getElementById('sm_pay_productinfo').value.trim();
-            var firstname = document.getElementById('sm_pay_firstname').value.trim();
-            var email = document.getElementById('sm_pay_email').value.trim();
-            var phone = document.getElementById('sm_pay_phone').value.trim();
-            var surl = document.getElementById('sm_pay_surl').value.trim();
-            var furl = document.getElementById('sm_pay_furl').value.trim();
-            var bankcode = document.getElementById('sm_pay_bankcode').value;
-            var clientIp = document.getElementById('sm_pay_client_ip').value.trim();
-            var deviceInfo = document.getElementById('sm_pay_device_info').value.trim();
+        function smPayGetVal(id) {
+            var el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
 
-            if (!key || !salt || !amount || !productinfo || !firstname || !email || !phone || !surl || !furl) {
-                alert('Please fill in all required fields (Key, Salt, Amount, Product Info, First Name, Email, Phone, Success URL, Failure URL).');
+        function smBuildPaymentPayload() {
+            var key = smPayGetVal('sm_pay_key');
+            var salt = smPayGetVal('sm_pay_salt');
+            var txnid = smPayGetVal('sm_pay_txnid');
+            var amount = smPayGetVal('sm_pay_amount');
+            var productinfo = smPayGetVal('sm_pay_productinfo');
+            var firstname = smPayGetVal('sm_pay_firstname');
+            var lastname = smPayGetVal('sm_pay_lastname');
+            var email = smPayGetVal('sm_pay_email');
+            var phone = smPayGetVal('sm_pay_phone');
+            var zipcode = smPayGetVal('sm_pay_zipcode');
+            var surl = smPayGetVal('sm_pay_surl');
+            var furl = smPayGetVal('sm_pay_furl');
+            var bankcode = smPayGetVal('sm_pay_bankcode');
+
+            var missing = [];
+            if (!key) missing.push('Merchant Key');
+            if (!salt) missing.push('Merchant Salt');
+            if (!amount) missing.push('Amount');
+            if (!productinfo) missing.push('Product Info');
+            if (!firstname) missing.push('First Name');
+            if (!lastname) missing.push('Last Name');
+            if (!email) missing.push('Email');
+            if (!phone) missing.push('Phone');
+            if (!zipcode) missing.push('Zipcode');
+            if (!surl) missing.push('Success URL');
+            if (!furl) missing.push('Failure URL');
+            if (!bankcode) missing.push('Bank Code');
+
+            if (missing.length > 0) {
+                alert('Please fill all mandatory parameters:\n\n\u2022 ' + missing.join('\n\u2022 '));
                 return null;
             }
 
@@ -11278,7 +11971,11 @@ nodeCartDetailsUsage +
                 document.getElementById('sm_pay_txnid').value = txnid;
             }
 
-            var udf1 = '', udf2 = '', udf3 = '', udf4 = '', udf5 = '';
+            var udf1 = smPayGetVal('sm_pay_udf1');
+            var udf2 = smPayGetVal('sm_pay_udf2');
+            var udf3 = smPayGetVal('sm_pay_udf3');
+            var udf4 = smPayGetVal('sm_pay_udf4');
+            var udf5 = smPayGetVal('sm_pay_udf5');
             var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + salt;
             var hash = smSHA512(hashStr);
 
@@ -11288,17 +11985,49 @@ nodeCartDetailsUsage +
                 amount: amount,
                 productinfo: productinfo,
                 firstname: firstname,
+                lastname: lastname,
                 email: email,
                 phone: phone,
+                zipcode: zipcode,
                 surl: surl,
                 furl: furl,
                 hash: hash,
                 pg: 'UPI',
                 bankcode: bankcode,
-                txn_s2s_flow: document.getElementById('sm_pay_txn_s2s_flow') ? document.getElementById('sm_pay_txn_s2s_flow').value.trim() || '4' : '4'
+                txn_s2s_flow: smPayGetVal('sm_pay_txn_s2s_flow') || '4'
             };
+
+            var clientIp = smPayGetVal('sm_pay_client_ip');
+            var deviceInfo = smPayGetVal('sm_pay_device_info');
             if (clientIp) params.s2s_client_ip = clientIp;
             if (deviceInfo) params.s2s_device_info = deviceInfo;
+
+            if (udf1) params.udf1 = udf1;
+            if (udf2) params.udf2 = udf2;
+            if (udf3) params.udf3 = udf3;
+            if (udf4) params.udf4 = udf4;
+            if (udf5) params.udf5 = udf5;
+
+            var vpa = smPayGetVal('sm_pay_vpa');
+            if (vpa) params.vpa = vpa;
+
+            var address1 = smPayGetVal('sm_pay_address1');
+            var address2 = smPayGetVal('sm_pay_address2');
+            var city = smPayGetVal('sm_pay_city');
+            var state = smPayGetVal('sm_pay_state');
+            var country = smPayGetVal('sm_pay_country');
+            if (address1) params.address1 = address1;
+            if (address2) params.address2 = address2;
+            if (city) params.city = city;
+            if (state) params.state = state;
+            if (country) params.country = country;
+
+            var upiAppName = smPayGetVal('sm_pay_upiAppName');
+            var udfParams = smPayGetVal('sm_pay_udf_params');
+            var buyerTypeBusiness = smPayGetVal('sm_pay_buyer_type_business');
+            if (upiAppName) params.upiAppName = upiAppName;
+            if (udfParams) params.udf_params = udfParams;
+            if (buyerTypeBusiness) params.buyer_type_business = buyerTypeBusiness;
 
             return { params: params, hashStr: hashStr, hash: hash, key: key, txnid: txnid };
         }
@@ -11339,6 +12068,10 @@ nodeCartDetailsUsage +
         }
 
         function smSendPaymentRequest() {
+            var newTxnid = 'TXN_' + Date.now();
+            var txnidField = document.getElementById('sm_pay_txnid');
+            if (txnidField) txnidField.value = newTxnid;
+
             var data = smBuildPaymentPayload();
             if (!data) return;
 
@@ -11397,7 +12130,13 @@ nodeCartDetailsUsage +
             var explain = document.getElementById('smPayResponseExplain');
 
             var resp = result.response;
-            responseView.textContent = JSON.stringify(resp, null, 2);
+            var rawResp = result.raw_response;
+            responseView.textContent = rawResp ? smPrettyJsonRaw(rawResp) : JSON.stringify(resp, null, 2);
+
+            var qrSection = document.getElementById('smPayQrSection');
+            if (qrSection) qrSection.style.display = 'none';
+            var dlGuide = document.getElementById('smPayDeeplinkGuide');
+            if (dlGuide) dlGuide.style.display = 'none';
 
             var meta = resp && resp.metaData ? resp.metaData : {};
             var unmapped = meta.unmappedStatus || (resp && resp.unmappedStatus) || '';
@@ -11407,14 +12146,104 @@ nodeCartDetailsUsage +
                 badge.textContent = 'HTTP ' + result.http_code + ' — Payment Pending (Awaiting UPI Authorization)';
 
                 var intentData = (resp.result && resp.result.intentURIData) ? resp.result.intentURIData : '';
-                var acsTemplate = (resp.result && resp.result.acsTemplate) ? 'Present (base64)' : 'Not returned';
+                var rawAcsTemplate = (resp.result && resp.result.acsTemplate) ? resp.result.acsTemplate : '';
+                var acsTemplate = rawAcsTemplate ? 'Present (base64)' : 'Not returned';
+
+                var selectedBankcode = smPayGetVal('sm_pay_bankcode');
+                if (intentData && selectedBankcode === 'INTENT') {
+                    var deeplink = 'upi://pay?' + intentData;
+                    var qrDeeplinkEl = document.getElementById('smPayQrDeeplink');
+                    var qrCanvasEl = document.getElementById('smPayQrCanvas');
+                    if (qrSection && qrDeeplinkEl && qrCanvasEl) {
+                        qrSection.style.display = 'block';
+                        qrDeeplinkEl.textContent = deeplink;
+                        qrCanvasEl.innerHTML = '';
+                        try {
+                            new QRCode(qrCanvasEl, {
+                                text: deeplink,
+                                width: 220,
+                                height: 220,
+                                colorDark: '#1a7a5b',
+                                colorLight: '#ffffff',
+                                correctLevel: QRCode.CorrectLevel.M
+                            });
+                        } catch (qrErr) {
+                            qrCanvasEl.innerHTML = '<p style="color:#dc3545;font-size:0.85rem;">QR generation failed: ' + qrErr.message + '</p>';
+                        }
+                    }
+                }
+
+                if (rawAcsTemplate) _smLastAcsTemplate = rawAcsTemplate;
 
                 guide.style.display = 'block';
+                var deeplinkGuideEl = document.getElementById('smPayDeeplinkGuide');
+                if (intentData && deeplinkGuideEl) {
+                    deeplinkGuideEl.style.display = 'block';
+                    deeplinkGuideEl.innerHTML =
+                        '<div style="padding:1rem;background:#f0faf7;border:1px solid #d1e7dd;border-radius:10px;margin-bottom:1rem;">' +
+                            '<h4 style="margin:0 0 0.5rem;color:#1a7a5b;font-size:0.9rem;">How to construct the Deeplink</h4>' +
+                            '<p style="font-size:0.85rem;margin:0 0 0.5rem;color:#333;">The <code>intentURIData</code> from the response is <strong>not</strong> a complete deeplink. You must prepend a platform-specific prefix to make it work.</p>' +
+                            '<div style="font-size:0.82rem;margin-bottom:0.5rem;">' +
+                                '<strong>Generic UPI (QR Code / Web):</strong><br>' +
+                                '<code style="word-break:break-all;background:#e8f5e9;padding:0.2rem 0.4rem;border-radius:4px;">upi://pay?' + intentData.substring(0, 60) + '...</code>' +
+                            '</div>' +
+                            '<div style="font-size:0.82rem;margin-bottom:0.5rem;">' +
+                                '<strong>Android Specific Intent:</strong><br>' +
+                                '<code style="word-break:break-all;background:#e8f5e9;padding:0.2rem 0.4rem;border-radius:4px;">intent://pay?{intentURIData}#Intent;scheme=upi;package=&lt;packageName&gt;;end</code>' +
+                            '</div>' +
+                            '<div style="font-size:0.82rem;margin-bottom:0.5rem;">' +
+                                '<strong>iOS App-Specific Prefixes:</strong><br>' +
+                                '<code style="background:#e8f5e9;padding:0.2rem 0.4rem;border-radius:4px;">phonepe://upi/pay?</code> &nbsp; ' +
+                                '<code style="background:#e8f5e9;padding:0.2rem 0.4rem;border-radius:4px;">paytm://upi/pay?</code> &nbsp; ' +
+                                '<code style="background:#e8f5e9;padding:0.2rem 0.4rem;border-radius:4px;">gpay://upi/pay?</code> &nbsp; ' +
+                                '<code style="background:#e8f5e9;padding:0.2rem 0.4rem;border-radius:4px;">bhim://upi/pay?</code> &nbsp; ' +
+                                '<code style="background:#e8f5e9;padding:0.2rem 0.4rem;border-radius:4px;">credpay://upi/pay?</code>' +
+                            '</div>' +
+                            '<p style="font-size:0.8rem;margin:0.5rem 0 0;color:#666;">Ref: <a href="https://docs.payu.in/docs/upi-intent-server-to-server" target="_blank" style="color:#1a7a5b;">PayU UPI Intent S2S Docs</a></p>' +
+                        '</div>';
+                } else if (deeplinkGuideEl) {
+                    deeplinkGuideEl.style.display = 'none';
+                }
                 explain.innerHTML =
                     '<div class="sm-response-field"><code>unmappedStatus</code> <span>= "pending" — Transaction created, awaiting UPI authorization</span></div>' +
                     '<div class="sm-response-field"><code>txnId</code> <span>= "' + (meta.txnId || data.txnid) + '"</span></div>' +
-                    (intentData ? '<div class="sm-response-field"><code>intentURIData</code> <span>= Deeplink URL — Generate a QR code from this</span></div>' : '') +
+                    (intentData ? '<div class="sm-response-field"><code>intentURIData</code> <span>= The raw URI query string for UPI payment</span></div>' : '') +
                     '<div class="sm-response-field"><code>acsTemplate</code> <span>= ' + acsTemplate + '</span></div>' +
+                    (rawAcsTemplate ?
+                    '<div style="margin:0.75rem 0;padding:1rem;background:#fff8f0;border:1px solid #ffe0b2;border-radius:10px;">' +
+                        '<h4 style="margin:0 0 0.5rem;color:#e65100;font-size:0.9rem;">How to use the acsTemplate</h4>' +
+                        '<p style="font-size:0.85rem;margin:0 0 0.5rem;color:#333;">The <code>acsTemplate</code> is a <strong>base64-encoded HTML page</strong>. When decoded, it contains an auto-submitting form that redirects the customer to the UPI payment handler. This is used as a <strong>fallback</strong> when the deeplink/intent doesn\'t work.</p>' +
+                        '<div style="font-size:0.82rem;margin-bottom:0.75rem;">' +
+                            '<strong>Usage:</strong>' +
+                            '<ul style="margin:0.25rem 0 0 1.2rem;padding:0;">' +
+                                '<li>Decode the base64 string to get the HTML</li>' +
+                                '<li>Render this HTML in a <strong>WebView</strong> (mobile) or <strong>iframe</strong> (web) to redirect the customer</li>' +
+                                '<li>On Android, use it as the <code>browser_fallback_url</code> in the intent deeplink</li>' +
+                            '</ul>' +
+                        '</div>' +
+                        '<div style="margin-bottom:0.75rem;">' +
+                            '<strong style="font-size:0.82rem;">Code Examples:</strong>' +
+                            '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">JavaScript</div>' +
+                                '<code>const html = atob(acsTemplate);<br>document.getElementById("iframe").srcdoc = html;</code>' +
+                            '</div>' +
+                            '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">Android (Kotlin)</div>' +
+                                '<code>val html = String(Base64.decode(acsTemplate, Base64.DEFAULT))<br>webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)</code>' +
+                            '</div>' +
+                            '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">iOS (Swift)</div>' +
+                                '<code>let data = Data(base64Encoded: acsTemplate)!<br>let html = String(data: data, encoding: .utf8)!<br>webView.loadHTMLString(html, baseURL: nil)</code>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div>' +
+                            '<button type="button" onclick="smDecodeAcsPreview()" style="background:#e65100;color:#fff;border:none;padding:0.5rem 1rem;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;">Decode &amp; Preview</button>' +
+                            '<div id="smAcsDecodedPreview" style="display:none;margin-top:0.75rem;border:1px solid #ddd;border-radius:8px;overflow:hidden;">' +
+                                '<div style="padding:0.4rem 0.75rem;background:#f5f5f5;font-size:0.78rem;font-weight:600;color:#666;">Decoded HTML Preview</div>' +
+                                '<pre style="margin:0;padding:0.75rem;background:#fafafa;font-size:0.75rem;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;"><code id="smAcsDecodedCode"></code></pre>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' : '') +
                     '<div class="sm-next-step-actions" style="margin-top:1rem">' +
                     '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-verify]\'),\'sm-verify\')">Verify Payment &#8594;</button>' +
                     '</div>';
@@ -11439,7 +12268,7 @@ nodeCartDetailsUsage +
                     '<div class="sm-response-field"><code>mihpayid</code> <span>= "' + (meta.referenceId || 'N/A') + '" — PayU reference ID</span></div>' +
                     '<div class="sm-next-step-actions" style="margin-top:1rem">' +
                     '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-verify]\'),\'sm-verify\')">Verify Payment &#8594;</button>' +
-                    '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-cancel]\'),\'sm-cancel\')">Refund &#8594;</button>' +
+                    '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavToCancelUpi()">Refund &#8594;</button>' +
                     '</div>';
             } else if (unmapped === 'failure') {
                 badge.className = 'sm-status-badge error';
@@ -11481,40 +12310,55 @@ nodeCartDetailsUsage +
             document.getElementById('sm_mand_txnid').value = txnid;
             var surl = document.getElementById('sm_mand_surl').value.trim();
             var furl = document.getElementById('sm_mand_furl').value.trim();
-            var freeTrial = document.getElementById('sm_mand_free_trial').value;
             var udf1 = document.getElementById('sm_mand_udf1').value.trim();
             var udf3 = document.getElementById('sm_mand_udf3').value.trim();
             var lastname = document.getElementById('sm_mand_lastname') ? document.getElementById('sm_mand_lastname').value.trim() : '';
             var address1 = document.getElementById('sm_mand_address1') ? document.getElementById('sm_mand_address1').value.trim() : '';
+            var address2 = document.getElementById('sm_mand_address2') ? document.getElementById('sm_mand_address2').value.trim() : '';
             var city = document.getElementById('sm_mand_city') ? document.getElementById('sm_mand_city').value.trim() : '';
             var state = document.getElementById('sm_mand_state') ? document.getElementById('sm_mand_state').value.trim() : '';
             var country = document.getElementById('sm_mand_country') ? document.getElementById('sm_mand_country').value.trim() : '';
             var zipcode = document.getElementById('sm_mand_zipcode') ? document.getElementById('sm_mand_zipcode').value.trim() : '';
             var startDate = document.getElementById('sm_mand_paymentStartDate') ? document.getElementById('sm_mand_paymentStartDate').value : '';
             var endDate = document.getElementById('sm_mand_paymentEndDate') ? document.getElementById('sm_mand_paymentEndDate').value : '';
-            var siDetails = JSON.stringify({
+            var siObj = {
                 billingAmount: document.getElementById('sm_mand_billingAmount').value.trim(),
                 billingCurrency: 'INR',
                 billingCycle: document.getElementById('sm_mand_billingCycle').value,
                 billingInterval: parseInt(document.getElementById('sm_mand_billingInterval').value) || 1,
                 paymentStartDate: startDate,
                 paymentEndDate: endDate
-            });
+            };
+            var remarksEl = document.getElementById('sm_mand_remarks');
+            var billingLimitEl = document.getElementById('sm_mand_billingLimit');
+            var billingRuleEl = document.getElementById('sm_mand_billingRule');
+            var billingDateEl = document.getElementById('sm_mand_billingDate');
+            if (remarksEl && remarksEl.value.trim()) siObj.remarks = remarksEl.value.trim();
+            if (billingLimitEl && billingLimitEl.value) siObj.billingLimit = billingLimitEl.value;
+            if (billingRuleEl && billingRuleEl.value) siObj.billingRule = billingRuleEl.value;
+            if (billingDateEl && billingDateEl.value.trim()) siObj.billingDate = billingDateEl.value.trim();
+            var siDetails = JSON.stringify(siObj);
             var udf2 = '', udf4 = '', udf5 = '';
             var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetails + '|' + salt;
             var hash = smSHA512(hashStr);
             var txnS2sFlow = document.getElementById('sm_mand_txn_s2s_flow') ? document.getElementById('sm_mand_txn_s2s_flow').value.trim() || '4' : '4';
+            var apiVersion = document.getElementById('sm_mand_api_version') ? document.getElementById('sm_mand_api_version').value.trim() || '7' : '7';
+            var vpa = document.getElementById('sm_mand_vpa') ? document.getElementById('sm_mand_vpa').value.trim() : '';
+            var freeTrial = document.getElementById('sm_mand_free_trial') ? document.getElementById('sm_mand_free_trial').value : '';
             var params = {
                 key: key, txnid: txnid, amount: amount, productinfo: productinfo,
                 firstname: firstname, email: email, phone: phone,
                 surl: surl, furl: furl,
                 pg: 'UPI', bankcode: 'INTENT', txn_s2s_flow: txnS2sFlow,
-                api_version: '7', si: '1', free_trial: freeTrial,
+                api_version: apiVersion, si: '1',
                 si_details: siDetails, udf1: udf1, udf2: udf2, udf3: udf3,
                 hash: hash
             };
+            if (freeTrial) params.free_trial = freeTrial;
+            if (vpa) params.vpa = vpa;
             if (lastname) params.lastname = lastname;
             if (address1) params.address1 = address1;
+            if (address2) params.address2 = address2;
             if (city) params.city = city;
             if (state) params.state = state;
             if (country) params.country = country;
@@ -11522,49 +12366,87 @@ nodeCartDetailsUsage +
             return { params: params, hashStr: hashStr, hash: hash, key: key, txnid: txnid };
         }
         function smPreviewMandateRequest() { smGenericPreview('Mand', smBuildMandatePayload, 'payment'); }
-        function smSendMandateRequest() { smGenericSend('Mand', smBuildMandatePayload, 'payment'); }
+        function smSendMandateRequest() {
+            var data = smBuildMandatePayload();
+            if (!data) return;
+            _smLastMandateTxnid = data.params.txnid || '';
+            var verifyField = document.getElementById('sm_mandverify_txnid');
+            if (verifyField && _smLastMandateTxnid) verifyField.value = _smLastMandateTxnid;
+            smGenericSend('Mand', smBuildMandatePayload, 'payment');
+        }
         window.smPreviewMandateRequest = smPreviewMandateRequest;
         window.smSendMandateRequest = smSendMandateRequest;
+
+        var _smLastOtmVaMihpayid = '';
+        var _smLastOtmVcMihpayid = '';
+        var _smLastMandateTxnid = '';
+        var _smLastMihpayid = '';
+        var _smLastSiTxnid = '';
+        var _smLastAcsTemplate = '';
 
         // ========================
         // OTM Pre-Authorize
         // ========================
         function smBuildOtmPayload() {
-            var key = document.getElementById('sm_otm_key').value.trim();
-            var salt = document.getElementById('sm_otm_salt').value.trim();
-            var amount = document.getElementById('sm_otm_amount').value.trim();
-            var productinfo = document.getElementById('sm_otm_productinfo').value.trim();
-            var firstname = document.getElementById('sm_otm_firstname').value.trim();
-            var email = document.getElementById('sm_otm_email').value.trim();
-            var phone = document.getElementById('sm_otm_phone').value.trim();
-            if (!key || !salt || !amount || !firstname || !email) { alert('Fill required fields.'); return null; }
-            var txnid = document.getElementById('sm_otm_txnid').value.trim() || ('OTM_' + Date.now());
+            var gv = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+            var key = gv('sm_otm_key');
+            var salt = gv('sm_otm_salt');
+            var amount = gv('sm_otm_amount');
+            var productinfo = gv('sm_otm_productinfo');
+            var firstname = gv('sm_otm_firstname');
+            var email = gv('sm_otm_email');
+            var phone = gv('sm_otm_phone');
+            var surl = gv('sm_otm_surl');
+            var furl = gv('sm_otm_furl');
+            var startDate = gv('sm_otm_paymentStartDate');
+            var endDate = gv('sm_otm_paymentEndDate');
+
+            var missing = [];
+            if (!key) missing.push('Merchant Key');
+            if (!salt) missing.push('Merchant Salt');
+            if (!amount) missing.push('Amount');
+            if (!productinfo) missing.push('Product Info');
+            if (!firstname) missing.push('First Name');
+            if (!email) missing.push('Email');
+            if (!phone) missing.push('Phone');
+            if (!surl) missing.push('Success URL');
+            if (!furl) missing.push('Failure URL');
+            if (!startDate) missing.push('Payment Start Date');
+            if (!endDate) missing.push('Payment End Date');
+
+            if (missing.length > 0) {
+                alert('Please fill all mandatory parameters:\n\n\u2022 ' + missing.join('\n\u2022 '));
+                return null;
+            }
+
+            var txnid = gv('sm_otm_txnid') || ('OTM_' + Date.now());
             document.getElementById('sm_otm_txnid').value = txnid;
-            var surl = document.getElementById('sm_otm_surl').value.trim();
-            var furl = document.getElementById('sm_otm_furl').value.trim();
-            var captureType = document.getElementById('sm_otm_captureType').value;
-            var startDate = document.getElementById('sm_otm_paymentStartDate').value;
-            var endDate = document.getElementById('sm_otm_paymentEndDate').value;
-            if (!startDate || !endDate) { alert('Payment Start Date and End Date are required.'); return null; }
+
+            var captureType = gv('sm_otm_captureType') || 'Normal';
             var siObj = { paymentStartDate: startDate, paymentEndDate: endDate };
             if (captureType.toLowerCase() === 'multi') siObj.multiCapture = 'Y';
             var siDetails = JSON.stringify(siObj);
-            var udf1 = document.getElementById('sm_otm_udf1') ? document.getElementById('sm_otm_udf1').value.trim() : '';
-            var udf2 = document.getElementById('sm_otm_udf2') ? document.getElementById('sm_otm_udf2').value.trim() : '';
-            var udf3 = document.getElementById('sm_otm_udf3') ? document.getElementById('sm_otm_udf3').value.trim() : '';
-            var udf4 = document.getElementById('sm_otm_udf4') ? document.getElementById('sm_otm_udf4').value.trim() : '';
-            var udf5 = document.getElementById('sm_otm_udf5') ? document.getElementById('sm_otm_udf5').value.trim() : '';
+
+            var udf1 = gv('sm_otm_udf1');
+            var udf2 = gv('sm_otm_udf2');
+            var udf3 = gv('sm_otm_udf3');
+            var udf4 = gv('sm_otm_udf4');
+            var udf5 = gv('sm_otm_udf5');
+
             var hashStr = key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + siDetails + '|' + salt;
             var hash = smSHA512(hashStr);
-            var clientIp = document.getElementById('sm_otm_client_ip') ? document.getElementById('sm_otm_client_ip').value.trim() : '';
-            var deviceInfo = document.getElementById('sm_otm_device_info') ? document.getElementById('sm_otm_device_info').value.trim() : '';
-            var txnS2sFlow = document.getElementById('sm_otm_txn_s2s_flow') ? document.getElementById('sm_otm_txn_s2s_flow').value.trim() || '4' : '4';
+
+            var clientIp = gv('sm_otm_client_ip');
+            var deviceInfo = gv('sm_otm_device_info');
+            var lastname = gv('sm_otm_lastname');
+
             var params = {
                 key: key, txnid: txnid, amount: amount, productinfo: productinfo,
                 firstname: firstname, email: email, phone: phone, surl: surl, furl: furl,
-                pg: 'UPI', bankcode: 'INTENT', txn_s2s_flow: txnS2sFlow,
+                pg: 'UPI', bankcode: 'INTENT', txn_s2s_flow: '4',
                 api_version: '7', pre_authorize: '1', si_details: siDetails, hash: hash
             };
+            if (lastname) params.lastname = lastname;
             if (udf1) params.udf1 = udf1;
             if (udf2) params.udf2 = udf2;
             if (udf3) params.udf3 = udf3;
@@ -11575,9 +12457,140 @@ nodeCartDetailsUsage +
             return { params: params, hashStr: hashStr, hash: hash };
         }
         function smPreviewOtmRequest() { smGenericPreview('Otm', smBuildOtmPayload, 'payment'); }
-        function smSendOtmRequest() { smGenericSend('Otm', smBuildOtmPayload, 'payment'); }
+
+        function smSendOtmRequest() {
+            var data = smBuildOtmPayload();
+            if (!data) return;
+            var panel = document.getElementById('smOtmReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smOtmRequestView').textContent = JSON.stringify({ endpoint: smGetEndpointUrl('payment'), method: 'POST', params: data.params }, null, 2);
+            var badge = document.getElementById('smOtmStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending request to PayU...';
+            document.getElementById('smOtmResponseView').textContent = 'Waiting for response...';
+            document.getElementById('smOtmCurlView').textContent = smBuildCurl(data.params, 'payment');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'payment', params: data.params }) })
+                .then(function(r) { return r.json(); })
+                .then(function(result) { smDisplayOtmResponse(result, data); })
+                .catch(function(err) {
+                    badge.className = 'sm-status-badge error';
+                    badge.textContent = 'Request Failed';
+                    document.getElementById('smOtmResponseView').textContent = 'Error: ' + err.message;
+                });
+        }
+
         window.smPreviewOtmRequest = smPreviewOtmRequest;
         window.smSendOtmRequest = smSendOtmRequest;
+
+        function smDisplayOtmResponse(result, data) {
+            var badge = document.getElementById('smOtmStatusBadge');
+            var responseView = document.getElementById('smOtmResponseView');
+            var guide = document.getElementById('smOtmResponseGuide');
+            var explain = document.getElementById('smOtmResponseExplain');
+            var resp = result.response;
+            var rawResp = result.raw_response;
+            responseView.textContent = rawResp ? smPrettyJsonRaw(rawResp) : JSON.stringify(resp, null, 2);
+
+            var meta = resp && resp.metaData ? resp.metaData : {};
+            var unmapped = meta.unmappedStatus || (resp && resp.unmappedStatus) || '';
+
+            if (unmapped === 'pending') {
+                badge.className = 'sm-status-badge pending';
+                badge.textContent = 'HTTP ' + result.http_code + ' \u2014 OTM Pending (Awaiting UPI Authorization)';
+
+                var intentData = (resp.result && resp.result.intentURIData) ? resp.result.intentURIData : '';
+                var rawAcsOtm = (resp.result && resp.result.acsTemplate) ? resp.result.acsTemplate : '';
+                var acsLabel = rawAcsOtm ? 'Present (base64)' : 'Not returned';
+                if (rawAcsOtm) _smLastAcsTemplate = rawAcsOtm;
+
+                var acsGuideHtml = '';
+                if (rawAcsOtm) {
+                    acsGuideHtml =
+                        '<div style="margin:0.75rem 0;padding:1rem;background:#fff8f0;border:1px solid #ffe0b2;border-radius:10px;">' +
+                            '<h4 style="margin:0 0 0.5rem;color:#e65100;font-size:0.9rem;">How to use the acsTemplate</h4>' +
+                            '<p style="font-size:0.85rem;margin:0 0 0.5rem;color:#333;">The <code>acsTemplate</code> is a <strong>base64-encoded HTML page</strong>. When decoded, it contains an auto-submitting form that redirects the customer to the UPI payment handler. This is used as a <strong>fallback</strong> when the deeplink/intent doesn\'t work.</p>' +
+                            '<div style="font-size:0.82rem;margin-bottom:0.75rem;">' +
+                                '<strong>Usage:</strong>' +
+                                '<ul style="margin:0.25rem 0 0 1.2rem;padding:0;">' +
+                                    '<li>Decode the base64 string to get the HTML</li>' +
+                                    '<li>Render this HTML in a <strong>WebView</strong> (mobile) or <strong>iframe</strong> (web) to redirect the customer</li>' +
+                                    '<li>On Android, use it as the <code>browser_fallback_url</code> in the intent deeplink</li>' +
+                                '</ul>' +
+                            '</div>' +
+                            '<div style="margin-bottom:0.75rem;">' +
+                                '<strong style="font-size:0.82rem;">Code Examples:</strong>' +
+                                '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                    '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">JavaScript</div>' +
+                                    '<code>const html = atob(acsTemplate);<br>document.getElementById("iframe").srcdoc = html;</code>' +
+                                '</div>' +
+                                '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                    '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">Android (Kotlin)</div>' +
+                                    '<code>val html = String(Base64.decode(acsTemplate, Base64.DEFAULT))<br>webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)</code>' +
+                                '</div>' +
+                                '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                    '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">iOS (Swift)</div>' +
+                                    '<code>let data = Data(base64Encoded: acsTemplate)!<br>let html = String(data: data, encoding: .utf8)!<br>webView.loadHTMLString(html, baseURL: nil)</code>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div>' +
+                                '<button type="button" onclick="smDecodeAcsPreviewFor(\'smAcsDecoded_Otm\')" style="background:#e65100;color:#fff;border:none;padding:0.5rem 1rem;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;">Decode &amp; Preview</button>' +
+                                '<div id="smAcsDecoded_Otm" style="display:none;margin-top:0.75rem;border:1px solid #ddd;border-radius:8px;overflow:hidden;">' +
+                                    '<div style="padding:0.4rem 0.75rem;background:#f5f5f5;font-size:0.78rem;font-weight:600;color:#666;">Decoded HTML Preview</div>' +
+                                    '<pre style="margin:0;padding:0.75rem;background:#fafafa;font-size:0.75rem;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;"><code id="smAcsDecoded_Otm_code"></code></pre>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                }
+
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>unmappedStatus</code> <span>= "pending" \u2014 Pre-authorization created, awaiting UPI authorization</span></div>' +
+                    '<div class="sm-response-field"><code>txnId</code> <span>= "' + (meta.txnId || data.params.txnid) + '"</span></div>' +
+                    (intentData ? '<div class="sm-response-field"><code>intentURIData</code> <span>= Deeplink / UPI mandate URL for customer authorization</span></div>' : '') +
+                    '<div class="sm-response-field"><code>acsTemplate</code> <span>= ' + acsLabel + '</span></div>' +
+                    acsGuideHtml +
+                    '<div class="sm-next-step-actions" style="margin-top:1rem">' +
+                    '<button class="button sm-btn-primary sm-next-step-btn" onclick="smOtmNextFromOtmInit()">Next: Verify Payment Auth \u2192</button>' +
+                    '</div>';
+
+                if (meta.txnId) {
+                    var vf = document.getElementById('sm_ver_txnid'); if (vf) vf.value = meta.txnId;
+                    var hmacTxn = document.getElementById('sm_hmac_payuId'); if (hmacTxn) hmacTxn.value = meta.txnId;
+                }
+                var downKeys = ['sm_cap_key','sm_hmac_key','sm_ver_key','sm_cnl_key','sm_ucnl_key','sm_ucas_key'];
+                var downSalts = ['sm_cap_salt','sm_hmac_salt','sm_ver_salt','sm_cnl_salt','sm_ucnl_salt','sm_ucas_salt'];
+                downKeys.forEach(function(id) { var el = document.getElementById(id); if (el && data.params.key) el.value = data.params.key; });
+                var srcSalt = document.getElementById('sm_otm_salt');
+                if (srcSalt) downSalts.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = srcSalt.value; });
+
+            } else if (unmapped === 'success') {
+                badge.className = 'sm-status-badge success';
+                badge.textContent = 'HTTP ' + result.http_code + ' \u2014 OTM Authorized';
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>unmappedStatus</code> <span>= "success" \u2014 Pre-authorization approved</span></div>' +
+                    '<div class="sm-next-step-actions" style="margin-top:1rem">' +
+                    '<button class="button sm-btn-primary sm-next-step-btn" onclick="smOtmNextFromOtmInit()">Next: Verify Payment Auth \u2192</button>' +
+                    '</div>';
+            } else if (unmapped === 'failure') {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + result.http_code + ' \u2014 OTM Failed';
+                guide.style.display = 'block';
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>unmappedStatus</code> <span>= "failure" \u2014 Pre-authorization request failed</span></div>' +
+                    '<div class="sm-response-field"><code>error</code> <span>= "' + ((meta.message) || 'N/A') + '"</span></div>' +
+                    '<p style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-tertiary);">Check the response for error details. Common issues: invalid hash, missing required params, inactive payment mode on merchant key.</p>';
+            } else {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + result.http_code + ' \u2014 Error';
+                guide.style.display = 'block';
+                var errorMsg = (resp && resp.message) ? resp.message : (resp && resp.msg) ? resp.msg : 'Unknown error';
+                explain.innerHTML =
+                    '<div class="sm-response-field"><code>error</code> <span>' + errorMsg + '</span></div>' +
+                    '<p style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-tertiary);">Check your parameters, hash formula, and ensure all required fields are provided.</p>';
+            }
+        }
 
         // ========================
         // Capture Transaction
@@ -11588,7 +12601,7 @@ nodeCartDetailsUsage +
             var mihpayid = document.getElementById('sm_cap_mihpayid').value.trim();
             var captureAmount = document.getElementById('sm_cap_captureAmount').value.trim();
             if (!key || !salt || !mihpayid) { alert('Fill Key, Salt and mihpayid.'); return null; }
-            var captureOrderId = document.getElementById('sm_cap_captureOrderId').value.trim() || (mihpayid + '_cap_' + Date.now());
+            var captureOrderId = 'capture_order_' + Math.floor(Math.random() * 100000);
             document.getElementById('sm_cap_captureOrderId').value = captureOrderId;
             var command = 'capture_transaction';
             var hashStr = key + '|' + command + '|' + mihpayid + '|' + salt;
@@ -11597,7 +12610,52 @@ nodeCartDetailsUsage +
             return { params: params, hashStr: hashStr, hash: hash };
         }
         function smPreviewCaptureRequest() { smGenericPreview('Cap', smBuildCapturePayload, 'postservice'); }
-        function smSendCaptureRequest() { smGenericSend('Cap', smBuildCapturePayload, 'postservice'); }
+        function smSendCaptureRequest() {
+            var data = smBuildCapturePayload();
+            if (!data) return;
+            var panel = document.getElementById('smCapReqRes');
+            panel.style.display = 'block';
+            document.getElementById('smCapRequestView').textContent = JSON.stringify({
+                endpoint: smGetEndpointUrl('postservice'), method: 'POST', params: data.params
+            }, null, 2);
+            var badge = document.getElementById('smCapStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending request to PayU...';
+            document.getElementById('smCapResponseView').textContent = 'Waiting for response...';
+            document.getElementById('smCapCurlView').textContent = smBuildCurl(data.params, 'postservice');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            fetchWithRetry(getProxyUrl(), {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ endpoint: 'postservice', params: data.params })
+            }).then(function(result) {
+                smGenericDisplay('Cap', result);
+                var resp = result.response;
+                var raw = result.raw_response;
+                var authpayuid = null;
+                if (raw) {
+                    var m = raw.match(/"authpayuid"\s*:\s*"([^"]+)"/);
+                    if (m) authpayuid = m[1];
+                }
+                if (!authpayuid && resp && resp.result && resp.result.authpayuid) {
+                    authpayuid = String(resp.result.authpayuid);
+                }
+                if (!authpayuid && resp && resp.authpayuid) {
+                    authpayuid = String(resp.authpayuid);
+                }
+                if (authpayuid) {
+                    _smLastOtmVaMihpayid = authpayuid;
+                    _smLastOtmVcMihpayid = authpayuid;
+                    var hmacField = document.getElementById('sm_hmac_payuId');
+                    if (hmacField) hmacField.value = authpayuid;
+                    var cnlField = document.getElementById('sm_cnl_mihpayid');
+                    if (cnlField) cnlField.value = authpayuid;
+                }
+            }).catch(function(err) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'Request Failed';
+                document.getElementById('smCapResponseView').textContent = 'Error: ' + err.message;
+            });
+        }
         window.smPreviewCaptureRequest = smPreviewCaptureRequest;
         window.smSendCaptureRequest = smSendCaptureRequest;
 
@@ -11605,10 +12663,19 @@ nodeCartDetailsUsage +
         // Verify Payment
         // ========================
         function smBuildVerifyPayload() {
-            var key = document.getElementById('sm_ver_key').value.trim();
-            var salt = document.getElementById('sm_ver_salt').value.trim();
-            var txnid = document.getElementById('sm_ver_txnid').value.trim();
-            if (!key || !salt || !txnid) { alert('Fill Key, Salt and Transaction ID.'); return null; }
+            var key = (document.getElementById('sm_ver_key') || {}).value ? document.getElementById('sm_ver_key').value.trim() : '';
+            var salt = (document.getElementById('sm_ver_salt') || {}).value ? document.getElementById('sm_ver_salt').value.trim() : '';
+            var txnid = (document.getElementById('sm_ver_txnid') || {}).value ? document.getElementById('sm_ver_txnid').value.trim() : '';
+
+            var missing = [];
+            if (!key) missing.push('Merchant Key');
+            if (!salt) missing.push('Merchant Salt');
+            if (!txnid) missing.push('Transaction ID (var1)');
+
+            if (missing.length > 0) {
+                alert('Please fill all mandatory parameters:\n\n\u2022 ' + missing.join('\n\u2022 '));
+                return null;
+            }
             var command = 'verify_payment';
             var hashStr = key + '|' + command + '|' + txnid + '|' + salt;
             var hash = smSHA512(hashStr);
@@ -11663,7 +12730,7 @@ nodeCartDetailsUsage +
             var auth = 'hmac username="' + key + '", algorithm="hmac-sha256", headers="date digest", signature="' + signature + '"';
             return {
                 params: { payuId: payuid },
-                headers: { 'Date': date, 'Digest': digest, 'Authorization': auth },
+                headers: { 'date': date, 'digest': digest, 'Authorization': auth },
                 hmacInfo: { date: date, digest: digest, auth: auth, payuid: payuid }
             };
         }
@@ -11718,6 +12785,93 @@ nodeCartDetailsUsage +
         window.smSendOtmStatusRequest = smSendOtmStatusRequest;
 
         // ========================
+        // Verify Payment (Autopay)
+        // ========================
+        function smBuildMandVerifyPayload() {
+            var key = document.getElementById('sm_mandverify_key').value.trim();
+            var salt = document.getElementById('sm_mandverify_salt').value.trim();
+            var txnid = document.getElementById('sm_mandverify_txnid').value.trim();
+            if (!key || !salt || !txnid) { alert('Fill Key, Salt and Transaction ID.'); return null; }
+            var command = 'verify_payment';
+            var hashStr = key + '|' + command + '|' + txnid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: txnid, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+        function smPreviewMandVerifyRequest() { smGenericPreview('MandVerify', smBuildMandVerifyPayload, 'postservice'); }
+        function smSendMandVerifyRequest() { smGenericSend('MandVerify', smBuildMandVerifyPayload, 'postservice'); }
+        window.smPreviewMandVerifyRequest = smPreviewMandVerifyRequest;
+        window.smSendMandVerifyRequest = smSendMandVerifyRequest;
+
+        // ========================
+        // Get UPI Mandate Status
+        // ========================
+        function smBuildMandateStatusPayload() {
+            var key = document.getElementById('sm_mandstatus_key').value.trim();
+            var salt = document.getElementById('sm_mandstatus_salt').value.trim();
+            var authPayuId = document.getElementById('sm_mandstatus_authPayuId').value.trim();
+            if (!key || !salt || !authPayuId) { alert('Fill Key, Salt and AuthPayuId.'); return null; }
+            var requestId = document.getElementById('sm_mandstatus_requestId').value.trim();
+            if (!requestId) {
+                var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                var rid = '';
+                for (var ri = 0; ri < 16; ri++) rid += chars.charAt(Math.floor(Math.random() * chars.length));
+                requestId = rid;
+            }
+            document.getElementById('sm_mandstatus_requestId').value = requestId;
+            var var1 = JSON.stringify({
+                authPayuId: authPayuId,
+                requestId: requestId
+            });
+            var command = 'upi_mandate_status';
+            var hashStr = key + '|' + command + '|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: var1, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+        function smPreviewMandateStatusRequest() { smGenericPreview('MandStatus', smBuildMandateStatusPayload, 'postservice'); }
+        function smSendMandateStatusRequest() { smGenericSend('MandStatus', smBuildMandateStatusPayload, 'postservice'); }
+        window.smPreviewMandateStatusRequest = smPreviewMandateStatusRequest;
+        window.smSendMandateStatusRequest = smSendMandateStatusRequest;
+
+        // ========================
+        // Modify UPI Mandate
+        // ========================
+        function smBuildMandateModifyPayload() {
+            var key = document.getElementById('sm_mandmodify_key').value.trim();
+            var salt = document.getElementById('sm_mandmodify_salt').value.trim();
+            var authPayuId = document.getElementById('sm_mandmodify_authPayuId').value.trim();
+            if (!key || !salt || !authPayuId) { alert('Fill Key, Salt and AuthPayuId.'); return null; }
+            var requestId = document.getElementById('sm_mandmodify_requestId').value.trim();
+            if (!requestId) {
+                var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                var rid = '';
+                for (var ri = 0; ri < 16; ri++) rid += chars.charAt(Math.floor(Math.random() * chars.length));
+                requestId = rid;
+            }
+            document.getElementById('sm_mandmodify_requestId').value = requestId;
+            var var1Obj = {
+                authPayuId: authPayuId,
+                requestId: requestId
+            };
+            var amount = document.getElementById('sm_mandmodify_amount').value.trim();
+            var endDate = document.getElementById('sm_mandmodify_endDate').value.trim();
+            if (amount) var1Obj.amount = amount;
+            if (endDate) var1Obj.endDate = endDate;
+            if (!amount && !endDate) { alert('Provide at least a new Amount or End Date to modify.'); return null; }
+            var var1 = JSON.stringify(var1Obj);
+            var command = 'upi_mandate_modify';
+            var hashStr = key + '|' + command + '|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: var1, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+        function smPreviewMandateModifyRequest() { smGenericPreview('MandModify', smBuildMandateModifyPayload, 'postservice'); }
+        function smSendMandateModifyRequest() { smGenericSend('MandModify', smBuildMandateModifyPayload, 'postservice'); }
+        window.smPreviewMandateModifyRequest = smPreviewMandateModifyRequest;
+        window.smSendMandateModifyRequest = smSendMandateModifyRequest;
+
+        // ========================
         // Pre-Debit Notification
         // ========================
         function smBuildPreDebitPayload() {
@@ -11725,15 +12879,20 @@ nodeCartDetailsUsage +
             var salt = document.getElementById('sm_predebit_salt').value.trim();
             var authPayuId = document.getElementById('sm_predebit_authPayuId').value.trim();
             if (!key || !salt || !authPayuId) { alert('Fill Key, Salt and AuthPayuId.'); return null; }
-            var requestId = document.getElementById('sm_predebit_requestId').value.trim() || (authPayuId + '_' + Date.now());
+            var requestId = document.getElementById('sm_predebit_requestId').value.trim();
+            if (!requestId) {
+                requestId = authPayuId + '_1';
+            }
             document.getElementById('sm_predebit_requestId').value = requestId;
-            var var1 = JSON.stringify({
+            var var1Obj = {
                 authPayuId: authPayuId,
                 requestId: requestId,
                 debitDate: document.getElementById('sm_predebit_debitDate').value,
-                amount: document.getElementById('sm_predebit_amount').value.trim(),
-                invoiceDisplayNumber: document.getElementById('sm_predebit_invoiceDisplayNumber').value.trim() || (authPayuId + '_inv1')
-            });
+                amount: document.getElementById('sm_predebit_amount').value.trim()
+            };
+            var invoiceNum = document.getElementById('sm_predebit_invoiceDisplayNumber') ? document.getElementById('sm_predebit_invoiceDisplayNumber').value.trim() : '';
+            if (invoiceNum) var1Obj.invoiceDisplayNumber = invoiceNum;
+            var var1 = JSON.stringify(var1Obj);
             var command = 'pre_debit_SI';
             var hashStr = key + '|' + command + '|' + var1 + '|' + salt;
             var hash = smSHA512(hashStr);
@@ -11755,15 +12914,27 @@ nodeCartDetailsUsage +
             if (!key || !salt || !authpayuid) { alert('Fill Key, Salt and authpayuid.'); return null; }
             var txnid = document.getElementById('sm_si_txnid').value.trim() || ('SI_' + Date.now());
             document.getElementById('sm_si_txnid').value = txnid;
-            var var1 = JSON.stringify({
+            var var1Obj = {
                 authpayuid: authpayuid,
                 amount: document.getElementById('sm_si_amount').value.trim(),
                 txnid: txnid,
                 firstname: document.getElementById('sm_si_firstname').value.trim(),
                 email: document.getElementById('sm_si_email').value.trim(),
+                phone: document.getElementById('sm_si_phone').value.trim(),
                 udf1: document.getElementById('sm_si_udf1').value.trim(),
                 udf3: document.getElementById('sm_si_udf3').value.trim()
+            };
+            var optFields = [
+                ['sm_si_lastname','lastname'], ['sm_si_address1','address1'], ['sm_si_address2','address2'],
+                ['sm_si_city','city'], ['sm_si_state','state'], ['sm_si_country','country'], ['sm_si_zipcode','zipcode'],
+                ['sm_si_udf2','udf2'], ['sm_si_udf4','udf4'], ['sm_si_udf5','udf5'],
+                ['sm_si_invoiceDisplayNumber','invoiceDisplayNumber']
+            ];
+            optFields.forEach(function(f) {
+                var el = document.getElementById(f[0]);
+                if (el && el.value.trim()) var1Obj[f[1]] = el.value.trim();
             });
+            var var1 = JSON.stringify(var1Obj);
             var command = 'si_transaction';
             var hashStr = key + '|' + command + '|' + var1 + '|' + salt;
             var hash = smSHA512(hashStr);
@@ -11771,9 +12942,41 @@ nodeCartDetailsUsage +
             return { params: params, hashStr: hashStr, hash: hash };
         }
         function smPreviewSiTxnRequest() { smGenericPreview('SiTxn', smBuildSiTxnPayload, 'postservice'); }
-        function smSendSiTxnRequest() { smGenericSend('SiTxn', smBuildSiTxnPayload, 'postservice'); }
+        function smSendSiTxnRequest() {
+            var data = smBuildSiTxnPayload();
+            if (!data) return;
+            var siTxnid = document.getElementById('sm_si_txnid').value.trim();
+            if (siTxnid) {
+                _smLastSiTxnid = siTxnid;
+                var vf = document.getElementById('sm_siverify_txnid'); if (vf) vf.value = siTxnid;
+            }
+            var srcKey = document.getElementById('sm_si_key');
+            var srcSalt = document.getElementById('sm_si_salt');
+            if (srcKey && srcKey.value) { var k = document.getElementById('sm_siverify_key'); if (k) k.value = srcKey.value; }
+            if (srcSalt && srcSalt.value) { var s = document.getElementById('sm_siverify_salt'); if (s) s.value = srcSalt.value; }
+            smGenericSend('SiTxn', smBuildSiTxnPayload, 'postservice');
+        }
         window.smPreviewSiTxnRequest = smPreviewSiTxnRequest;
         window.smSendSiTxnRequest = smSendSiTxnRequest;
+
+        // ========================
+        // Verify SI Payment
+        // ========================
+        function smBuildSiVerifyPayload() {
+            var key = document.getElementById('sm_siverify_key').value.trim();
+            var salt = document.getElementById('sm_siverify_salt').value.trim();
+            var txnid = document.getElementById('sm_siverify_txnid').value.trim();
+            if (!key || !salt || !txnid) { alert('Fill Key, Salt and SI Transaction ID.'); return null; }
+            var command = 'verify_payment';
+            var hashStr = key + '|' + command + '|' + txnid + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: command, var1: txnid, hash: hash };
+            return { params: params, hashStr: hashStr, hash: hash };
+        }
+        function smPreviewSiVerifyRequest() { smGenericPreview('SiVerify', smBuildSiVerifyPayload, 'postservice'); }
+        function smSendSiVerifyRequest() { smGenericSend('SiVerify', smBuildSiVerifyPayload, 'postservice'); }
+        window.smPreviewSiVerifyRequest = smPreviewSiVerifyRequest;
+        window.smSendSiVerifyRequest = smSendSiVerifyRequest;
 
         // ========================
         // Cross Border One-Time (S2S)
@@ -11988,7 +13191,7 @@ nodeCartDetailsUsage +
             var command = 'check_action_status';
             var hashStr = key + '|' + command + '|' + requestId + '|' + salt;
             var hash = smSHA512(hashStr);
-            var params = { key:key, command:command, var1:requestId, hash:hash };
+            var params = { key:key, command:command, var1:requestId, var2:'payuid', hash:hash };
             return { params:params, hashStr:hashStr, hash:hash };
         }
         function smPreviewCheckStatusRequest() { smGenericPreview('Cas', smBuildCheckStatusPayload, 'postservice'); }
@@ -12004,36 +13207,56 @@ nodeCartDetailsUsage +
             var sets = {
                 pay: {
                     sm_pay_key: 'PRiQvJ', sm_pay_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_pay_txnid: 'TXN_' + ts, sm_pay_amount: '2.00', sm_pay_productinfo: 'TestProduct',
-                    sm_pay_firstname: 'Payu-Admin', sm_pay_email: 'test@example.com', sm_pay_phone: '9876543210',
+                    sm_pay_txnid: 'TXN_' + ts, sm_pay_amount: '200.00', sm_pay_productinfo: 'TestProduct',
+                    sm_pay_firstname: 'Ashish', sm_pay_lastname: 'Kumar',
+                    sm_pay_email: 'test@example.com', sm_pay_phone: '9876543210',
+                    sm_pay_zipcode: '122018',
                     sm_pay_surl: 'https://test.payu.in/admin/test_response', sm_pay_furl: 'https://test.payu.in/admin/test_response',
                     sm_pay_bankcode: 'INTENT', sm_pay_txn_s2s_flow: '4',
-                    sm_pay_client_ip: '10.200.12.12', sm_pay_device_info: 'Mozilla/5.0'
+                    sm_pay_client_ip: '10.200.12.12', sm_pay_device_info: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PayU-API-Test/1.0',
+                    sm_pay_vpa: '',
+                    sm_pay_udf1: 'ABCDE1234F||1990-01-01', sm_pay_udf2: '', sm_pay_udf3: 'INV123456||MerchantName',
+                    sm_pay_udf4: '', sm_pay_udf5: '',
+                    sm_pay_address1: '308, Third Floor', sm_pay_address2: 'testing',
+                    sm_pay_city: 'Gurugram', sm_pay_state: 'Haryana', sm_pay_country: 'India',
+                    sm_pay_upiAppName: '', sm_pay_udf_params: '', sm_pay_buyer_type_business: ''
                 },
-                vpa: {
-                    sm_vpa_key: 'PRiQvJ', sm_vpa_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_vpa_address: '9999999999@upi'
-                },
-                mandate: {
+                mandate: (function() {
+                    var today = new Date();
+                    var endDt = new Date(today);
+                    endDt.setFullYear(endDt.getFullYear() + 1);
+                    var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+                    return {
                     sm_mand_key: 'PRiQvJ', sm_mand_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_mand_txnid: 'my_order_' + ts, sm_mand_amount: '2.00', sm_mand_productinfo: 'my_order_' + ts,
+                        sm_mand_txnid: 'my_order_' + ts, sm_mand_amount: '1000.00', sm_mand_productinfo: 'my_order_' + ts,
                     sm_mand_firstname: 'sudhanshu', sm_mand_lastname: 'kumar',
                     sm_mand_email: 'test@test.com', sm_mand_phone: '9999999999',
-                    sm_mand_address1: '308 third floor', sm_mand_city: 'Gurugram',
-                    sm_mand_state: 'UP', sm_mand_country: 'India', sm_mand_zipcode: '122018',
+                    sm_mand_address1: '308 third floor', sm_mand_address2: '34 Saikripa-Estate, Tilak Nagar',
+                    sm_mand_city: 'Gurugram', sm_mand_state: 'UP', sm_mand_country: 'India', sm_mand_zipcode: '122018',
                     sm_mand_surl: 'https://test.payu.in/admin/test_response', sm_mand_furl: 'https://test.payu.in/admin/test_response',
-                    sm_mand_billingAmount: '200.00', sm_mand_billingCycle: 'MONTHLY', sm_mand_billingInterval: '1',
-                    sm_mand_paymentStartDate: '2026-04-01', sm_mand_paymentEndDate: '2026-12-01',
+                        sm_mand_billingAmount: '1000.00', sm_mand_billingCycle: 'MONTHLY', sm_mand_billingInterval: '1',
+                        sm_mand_paymentStartDate: fmt(today), sm_mand_paymentEndDate: fmt(endDt),
+                        sm_mand_remarks: 'Subscription for a year',
+                        sm_mand_billingLimit: '', sm_mand_billingRule: '', sm_mand_billingDate: '',
                     sm_mand_udf1: 'ABCDE1234F||1990-01-01', sm_mand_udf3: 'INV123456||MerchantName',
-                    sm_mand_txn_s2s_flow: '4', sm_mand_free_trial: '1'
-                },
-                otm: {
-                    sm_otm_key: 'PRiQvJ', sm_otm_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_otm_txnid: 'OTM_' + ts, sm_otm_amount: '18000', sm_otm_productinfo: 'OTMProduct',
-                    sm_otm_firstname: 'Payu-Admin', sm_otm_email: 'test@example.com', sm_otm_phone: '9876543210',
-                    sm_otm_surl: 'https://test.payu.in/admin/test_response', sm_otm_furl: 'https://test.payu.in/admin/test_response',
-                    sm_otm_txn_s2s_flow: '4', sm_otm_client_ip: '10.200.12.12', sm_otm_device_info: 'Mozilla/5.0'
-                },
+                        sm_mand_txn_s2s_flow: '4', sm_mand_api_version: '7', sm_mand_vpa: '', sm_mand_free_trial: ''
+                    };
+                })(),
+                otm: (function() {
+                    var today = new Date();
+                    var end = new Date(today); end.setDate(end.getDate() + 60);
+                    var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+                    return {
+                        sm_otm_key: 'PRiQvJ', sm_otm_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                        sm_otm_txnid: 'OTM_' + ts, sm_otm_amount: '18000', sm_otm_productinfo: 'iPhone',
+                        sm_otm_firstname: 'Payu-Admin', sm_otm_lastname: 'Kumar',
+                        sm_otm_email: 'test@example.com', sm_otm_phone: '9876543210',
+                        sm_otm_surl: 'https://test.payu.in/admin/test_response', sm_otm_furl: 'https://test.payu.in/admin/test_response',
+                        sm_otm_client_ip: '10.200.12.12', sm_otm_device_info: 'Mozilla/5.0',
+                        sm_otm_paymentStartDate: fmt(today), sm_otm_paymentEndDate: fmt(end),
+                        sm_otm_udf1: 'udf1', sm_otm_udf2: 'udf2', sm_otm_udf3: 'udf3', sm_otm_udf4: 'udf4', sm_otm_udf5: 'udf5'
+                    };
+                })(),
                 cap: {
                     sm_cap_key: 'PRiQvJ', sm_cap_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
                     sm_cap_captureAmount: '15000', sm_cap_captureOrderId: 'cap_' + ts
@@ -12041,26 +13264,86 @@ nodeCartDetailsUsage +
                 ver: {
                     sm_ver_key: 'PRiQvJ', sm_ver_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ'
                 },
+                ucnl: {
+                    sm_ucnl_key: 'PRiQvJ', sm_ucnl_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_ucnl_amount: '2.00', sm_ucnl_tokenId: 'cnl_' + ts
+                },
+                ucas: {
+                    sm_ucas_key: 'PRiQvJ', sm_ucas_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_ucas_payuid: '139210626'
+                },
                 cnl: {
                     sm_cnl_key: 'PRiQvJ', sm_cnl_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_cnl_cancelType: 'cancel_refund_transaction', sm_cnl_cancelTokenId: 'cnl_' + ts,
-                    sm_cnl_cancelAmount: '18000'
+                    sm_cnl_mihpayid: _smLastOtmVaMihpayid || _smLastOtmVcMihpayid || '',
+                    sm_cnl_cancelTokenId: 'cnl_' + ts, sm_cnl_cancelAmount: '1000'
                 },
                 hmac: {
-                    sm_hmac_key: 'PRiQvJ', sm_hmac_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ'
+                    sm_hmac_key: 'PRiQvJ', sm_hmac_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_hmac_payuId: _smLastOtmVaMihpayid || ''
+                },
+                mandverify: {
+                    sm_mandverify_key: 'PRiQvJ', sm_mandverify_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_mandverify_txnid: _smLastMandateTxnid || document.getElementById('sm_mand_txnid').value.trim() || ''
+                },
+                mandstatus: {
+                    sm_mandstatus_key: 'PRiQvJ', sm_mandstatus_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_mandstatus_authPayuId: _smLastMihpayid || '',
+                    sm_mandstatus_requestId: 'MSTATUS' + Math.random().toString(36).substring(2, 10)
+                },
+                mandmodify: {
+                    sm_mandmodify_key: 'PRiQvJ', sm_mandmodify_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_mandmodify_authPayuId: _smLastMihpayid || '',
+                    sm_mandmodify_requestId: 'MMOD' + Math.random().toString(36).substring(2, 10),
+                    sm_mandmodify_amount: '10000',
+                    sm_mandmodify_endDate: '2028-11-15'
                 },
                 predebit: {
                     sm_predebit_key: 'PRiQvJ', sm_predebit_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_predebit_requestId: 'PREDEBIT_' + ts,
-                    sm_predebit_debitDate: new Date(Date.now() + 86400000*3).toISOString().split('T')[0],
-                    sm_predebit_amount: '200.00',
-                    sm_predebit_invoiceDisplayNumber: 'INV_' + ts
+                    sm_predebit_authPayuId: _smLastMihpayid || '',
+                    sm_predebit_requestId: (_smLastMihpayid || ts) + '_1',
+                    sm_predebit_debitDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+                    sm_predebit_amount: '1000',
+                    sm_predebit_invoiceDisplayNumber: ''
                 },
                 si: {
                     sm_si_key: 'PRiQvJ', sm_si_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_si_txnid: 'SI_' + ts, sm_si_amount: '200.00',
-                    sm_si_firstname: 'Payu-Admin', sm_si_email: 'test@example.com',
-                    sm_si_udf1: 'ABCDE1234F||01-01-1990', sm_si_udf3: 'INV' + ts + '||MerchantName'
+                    sm_si_authpayuid: _smLastMihpayid || '',
+                    sm_si_txnid: 'Rec_' + (_smLastMihpayid || ts) + '_1', sm_si_amount: '100',
+                    sm_si_firstname: 'Sudhanshu', sm_si_lastname: 'Kr',
+                    sm_si_email: 'test@example.com', sm_si_phone: '9999999999',
+                    sm_si_address1: 'address', sm_si_address2: 'my lane',
+                    sm_si_city: 'my city', sm_si_state: 'my state',
+                    sm_si_country: 'India', sm_si_zipcode: '110092',
+                    sm_si_udf1: 'ABCDE1234F||1990-01-01', sm_si_udf3: 'INV' + ts + '||MerchantName',
+                    sm_si_udf2: '', sm_si_udf4: '', sm_si_udf5: '',
+                    sm_si_invoiceDisplayNumber: 'SI' + Math.floor(Math.random() * 9999)
+                },
+                siverify: {
+                    sm_siverify_key: 'PRiQvJ', sm_siverify_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_siverify_txnid: _smLastSiTxnid || document.getElementById('sm_si_txnid').value.trim() || ''
+                },
+                udfu: {
+                    sm_udfu_key: 'PRiQvJ', sm_udfu_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_udfu_udf1: 'UpdatedUdf1', sm_udfu_udf4: 'INV123456'
+                },
+                cas: {
+                    sm_cas_key: 'PRiQvJ', sm_cas_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ'
+                },
+                hash: {
+                    sm_hash_key: 'PRiQvJ', sm_hash_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_hash_txnid: 'SM_' + ts, sm_hash_amount: '10.00', sm_hash_productinfo: 'TestProduct',
+                    sm_hash_firstname: 'Payu-Admin', sm_hash_email: 'test@example.com'
+                },
+                sim: {
+                    sm_sim_key: 'PRiQvJ', sm_sim_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_sim_txnid: 'SIM_' + ts, sm_sim_amount: '10.00', sm_sim_productinfo: 'TestProduct',
+                    sm_sim_firstname: 'Payu-Admin', sm_sim_email: 'test@example.com', sm_sim_phone: '9876543210',
+                    sm_sim_bankcode: 'INTENT', sm_sim_surl: 'https://test.payu.in/admin/test_response'
+                }
+            ,
+                vpa: {
+                    sm_vpa_key: 'PRiQvJ', sm_vpa_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_vpa_address: '9999999999@upi'
                 },
                 cbs: {
                     sm_cbs_key: 'PRiQvJ', sm_cbs_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
@@ -12088,26 +13371,8 @@ nodeCartDetailsUsage +
                     sm_spl_surl: 'https://test.payu.in/admin/test_response', sm_spl_furl: 'https://test.payu.in/admin/test_response',
                     sm_spl_txn_s2s_flow: '4', sm_spl_splitType: 'absolute',
                     sm_spl_client_ip: '10.200.12.12', sm_spl_device_info: 'Mozilla/5.0'
-                },
-                udfu: {
-                    sm_udfu_key: 'PRiQvJ', sm_udfu_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_udfu_udf1: 'UpdatedUdf1', sm_udfu_udf4: 'INV123456'
-                },
-                cas: {
-                    sm_cas_key: 'PRiQvJ', sm_cas_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ'
-                },
-                hash: {
-                    sm_hash_key: 'PRiQvJ', sm_hash_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_hash_txnid: 'SM_' + ts, sm_hash_amount: '10.00', sm_hash_productinfo: 'TestProduct',
-                    sm_hash_firstname: 'Payu-Admin', sm_hash_email: 'test@example.com'
-                },
-                sim: {
-                    sm_sim_key: 'PRiQvJ', sm_sim_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
-                    sm_sim_txnid: 'SIM_' + ts, sm_sim_amount: '10.00', sm_sim_productinfo: 'TestProduct',
-                    sm_sim_firstname: 'Payu-Admin', sm_sim_email: 'test@example.com', sm_sim_phone: '9876543210',
-                    sm_sim_bankcode: 'INTENT', sm_sim_surl: 'https://test.payu.in/admin/test_response'
                 }
-            };
+};
             var data = sets[formType];
             if (!data) return;
             var gKey = document.getElementById('sm_global_key') ? document.getElementById('sm_global_key').value.trim() : '';
@@ -12131,8 +13396,49 @@ nodeCartDetailsUsage +
                 }
             }
             if (typeof computeUpiOtmLiveHash === 'function' && formType === 'otm') computeUpiOtmLiveHash();
+            if (formType === 'cnl' && typeof smOtmForceCancelType === 'function') {
+                smOtmForceCancelType();
+            }
         }
         window.smFillSampleData = smFillSampleData;
+
+        function smGenerateNewTxnId(fieldId, prefix) {
+            var el = document.getElementById(fieldId);
+            if (!el) return;
+            var pfx = prefix || 'TXN';
+            el.value = pfx + '_' + Date.now();
+        }
+        window.smGenerateNewTxnId = smGenerateNewTxnId;
+
+        function smDecodeAcsPreview() {
+            var previewDiv = document.getElementById('smAcsDecodedPreview');
+            var codeEl = document.getElementById('smAcsDecodedCode');
+            if (!previewDiv || !codeEl || !_smLastAcsTemplate) return;
+            try {
+                var decoded = atob(_smLastAcsTemplate);
+                codeEl.textContent = decoded;
+                previewDiv.style.display = 'block';
+            } catch (e) {
+                codeEl.textContent = 'Error decoding base64: ' + e.message;
+                previewDiv.style.display = 'block';
+            }
+        }
+        window.smDecodeAcsPreview = smDecodeAcsPreview;
+
+        function smDecodeAcsPreviewFor(containerId) {
+            var previewDiv = document.getElementById(containerId);
+            var codeEl = document.getElementById(containerId + '_code');
+            if (!previewDiv || !codeEl || !_smLastAcsTemplate) return;
+            try {
+                var decoded = atob(_smLastAcsTemplate);
+                codeEl.textContent = decoded;
+                previewDiv.style.display = 'block';
+            } catch (e) {
+                codeEl.textContent = 'Error decoding base64: ' + e.message;
+                previewDiv.style.display = 'block';
+            }
+        }
+        window.smDecodeAcsPreviewFor = smDecodeAcsPreviewFor;
 
         // ========================
         // Generic Preview/Send/Display helpers
@@ -12148,10 +13454,22 @@ nodeCartDetailsUsage +
 
         function smBuildCurl(params, endpoint) {
             var url = smGetEndpointUrl(endpoint);
-            var curl = 'curl -X POST "' + url + '" \\\n  -H "Content-Type: application/x-www-form-urlencoded"';
-            for (var k in params) {
-                if (params.hasOwnProperty(k)) {
-                    curl += ' \\\n  --data-urlencode "' + k + '=' + params[k] + '"';
+            var multipartCommands = ['cancel_transaction', 'cancel_refund_transaction', 'capture_transaction'];
+            var useMultipart = params.command && multipartCommands.indexOf(params.command) !== -1;
+            var curl;
+            if (useMultipart) {
+                curl = 'curl --location "' + url + '"';
+                for (var k in params) {
+                    if (params.hasOwnProperty(k)) {
+                        curl += ' \\\n  --form \'' + k + '="' + params[k] + '"\'';
+                    }
+                }
+            } else {
+                curl = 'curl -X POST "' + url + '" \\\n  -H "Content-Type: application/x-www-form-urlencoded"';
+                for (var k in params) {
+                    if (params.hasOwnProperty(k)) {
+                        curl += ' \\\n  --data-urlencode "' + k + '=' + params[k] + '"';
+                    }
                 }
             }
             return curl;
@@ -12201,19 +13519,59 @@ nodeCartDetailsUsage +
             });
         }
 
+        function smPrettyJsonRaw(rawStr) {
+            if (!rawStr || typeof rawStr !== 'string') return rawStr || '';
+            try {
+                var indent = 0;
+                var out = '';
+                var inStr = false;
+                var esc = false;
+                for (var i = 0; i < rawStr.length; i++) {
+                    var ch = rawStr[i];
+                    if (esc) { out += ch; esc = false; continue; }
+                    if (ch === '\\' && inStr) { out += ch; esc = true; continue; }
+                    if (ch === '"') { inStr = !inStr; out += ch; continue; }
+                    if (inStr) { out += ch; continue; }
+                    if (ch === '{' || ch === '[') {
+                        indent++;
+                        out += ch + '\n' + '  '.repeat(indent);
+                    } else if (ch === '}' || ch === ']') {
+                        indent--;
+                        out += '\n' + '  '.repeat(indent) + ch;
+                    } else if (ch === ',') {
+                        out += ',\n' + '  '.repeat(indent);
+                    } else if (ch === ':') {
+                        out += ': ';
+                    } else if (ch !== ' ' && ch !== '\n' && ch !== '\r' && ch !== '\t') {
+                        out += ch;
+                    }
+                }
+                return out;
+            } catch (e) { return rawStr; }
+        }
+
+        function smExtractFromRaw(rawStr, key) {
+            if (!rawStr) return null;
+            var regex = new RegExp('"' + key + '"\\s*:\\s*"?([^",}\\]]+)"?');
+            var m = rawStr.match(regex);
+            return m ? m[1].trim() : null;
+        }
+
         function smGenericDisplay(prefix, result) {
             var badge = document.getElementById('sm' + prefix + 'StatusBadge');
             var responseView = document.getElementById('sm' + prefix + 'ResponseView');
             var guide = document.getElementById('sm' + prefix + 'ResponseGuide');
             var explain = document.getElementById('sm' + prefix + 'ResponseExplain');
             var resp = result.response;
-            responseView.textContent = JSON.stringify(resp, null, 2);
+            var rawResp = result.raw_response;
+            responseView.textContent = rawResp ? smPrettyJsonRaw(rawResp) : JSON.stringify(resp, null, 2);
             var httpCode = result.http_code || 0;
             var st = resp && resp.status;
-            var isSuccess = (st === 1 || st === '1' || (typeof st === 'string' && st.toLowerCase() === 'success'));
+            var stLower = (typeof st === 'string') ? st.toLowerCase() : '';
+            var isSuccess = (st === 1 || st === '1' || stLower === 'success' || stLower === 'active');
             if (httpCode >= 200 && httpCode < 300 && isSuccess) {
                 badge.className = 'sm-status-badge success';
-                badge.textContent = 'HTTP ' + httpCode + ' — Success';
+                badge.textContent = 'HTTP ' + httpCode + ' — ' + (stLower === 'active' ? 'Mandate Active' : 'Success');
             } else if (httpCode >= 200 && httpCode < 300) {
                 badge.className = 'sm-status-badge error';
                 badge.textContent = 'HTTP ' + httpCode + ' — ' + (resp && resp.msg ? resp.msg : 'See response');
@@ -12236,28 +13594,196 @@ nodeCartDetailsUsage +
                 explain.innerHTML = html;
             }
 
+            var _smMandPendingHandled = false;
+            // Special handling for Mandate Registration pending response
+            if (prefix === 'Mand') {
+                var mandMeta = resp && resp.metaData ? resp.metaData : {};
+                var mandUnmapped = mandMeta.unmappedStatus || (resp && resp.unmappedStatus) || '';
+                if (mandUnmapped === 'pending') {
+                    badge.className = 'sm-status-badge pending';
+                    badge.textContent = 'HTTP ' + httpCode + ' — Mandate Pending (Awaiting UPI Authorization)';
+
+                    var mandIntentData = (resp.result && resp.result.intentURIData) ? resp.result.intentURIData : '';
+                    var mandRawAcs = (resp.result && resp.result.acsTemplate) ? resp.result.acsTemplate : '';
+                    if (mandRawAcs) _smLastAcsTemplate = mandRawAcs;
+
+                    var mandAcsGuide = '';
+                    if (mandRawAcs) {
+                        mandAcsGuide =
+                            '<div style="margin:0.75rem 0;padding:1rem;background:#fff8f0;border:1px solid #ffe0b2;border-radius:10px;">' +
+                                '<h4 style="margin:0 0 0.5rem;color:#e65100;font-size:0.9rem;">How to use the acsTemplate</h4>' +
+                                '<p style="font-size:0.85rem;margin:0 0 0.5rem;color:#333;">The <code>acsTemplate</code> is a <strong>base64-encoded HTML page</strong>. When decoded, it contains an auto-submitting form that redirects the customer to the UPI payment handler. This is used as a <strong>fallback</strong> when the deeplink/intent doesn\'t work.</p>' +
+                                '<div style="font-size:0.82rem;margin-bottom:0.75rem;">' +
+                                    '<strong>Usage:</strong>' +
+                                    '<ul style="margin:0.25rem 0 0 1.2rem;padding:0;">' +
+                                        '<li>Decode the base64 string to get the HTML</li>' +
+                                        '<li>Render this HTML in a <strong>WebView</strong> (mobile) or <strong>iframe</strong> (web) to redirect the customer</li>' +
+                                        '<li>On Android, use it as the <code>browser_fallback_url</code> in the intent deeplink</li>' +
+                                    '</ul>' +
+                                '</div>' +
+                                '<div style="margin-bottom:0.75rem;">' +
+                                    '<strong style="font-size:0.82rem;">Code Examples:</strong>' +
+                                    '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                        '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">JavaScript</div>' +
+                                        '<code>const html = atob(acsTemplate);<br>document.getElementById("iframe").srcdoc = html;</code>' +
+                                    '</div>' +
+                                    '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                        '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">Android (Kotlin)</div>' +
+                                        '<code>val html = String(Base64.decode(acsTemplate, Base64.DEFAULT))<br>webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)</code>' +
+                                    '</div>' +
+                                    '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                        '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">iOS (Swift)</div>' +
+                                        '<code>let data = Data(base64Encoded: acsTemplate)!<br>let html = String(data: data, encoding: .utf8)!<br>webView.loadHTMLString(html, baseURL: nil)</code>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div>' +
+                                    '<button type="button" onclick="smDecodeAcsPreviewFor(\'smAcsDecoded_Mand\')" style="background:#e65100;color:#fff;border:none;padding:0.5rem 1rem;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;">Decode &amp; Preview</button>' +
+                                    '<div id="smAcsDecoded_Mand" style="display:none;margin-top:0.75rem;border:1px solid #ddd;border-radius:8px;overflow:hidden;">' +
+                                        '<div style="padding:0.4rem 0.75rem;background:#f5f5f5;font-size:0.78rem;font-weight:600;color:#666;">Decoded HTML Preview</div>' +
+                                        '<pre style="margin:0;padding:0.75rem;background:#fafafa;font-size:0.75rem;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;"><code id="smAcsDecoded_Mand_code"></code></pre>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>';
+                    }
+
+                    if (guide && explain) {
+                        guide.style.display = 'block';
+                        explain.innerHTML =
+                            '<div class="sm-response-field"><code>unmappedStatus</code> <span>= "pending" — Mandate created, awaiting UPI authorization</span></div>' +
+                            '<div class="sm-response-field"><code>txnId</code> <span>= "' + (mandMeta.txnId || '') + '"</span></div>' +
+                            (mandIntentData ? '<div class="sm-response-field"><code>intentURIData</code> <span>= Deeplink / UPI mandate URL for customer authorization</span></div>' : '') +
+                            '<div class="sm-response-field"><code>acsTemplate</code> <span>= ' + (mandRawAcs ? 'Present (base64)' : 'Not returned') + '</span></div>' +
+                            mandAcsGuide +
+                            '<div class="sm-next-step-actions" style="margin-top:1rem">' +
+                            '<button class="button sm-btn-primary sm-next-step-btn" onclick="if(_smLastMandateTxnid){var f=document.getElementById(\'sm_mandverify_txnid\');if(f)f.value=_smLastMandateTxnid;}smNavTo(document.querySelector(\'[data-section=sm-mandate-verify]\'),\'sm-mandate-verify\')">Next: Verify Payment &#8594;</button>' +
+                            '</div>';
+                    }
+
+                    if (mandMeta.txnId) {
+                        _smLastMandateTxnid = mandMeta.txnId;
+                        var vf = document.getElementById('sm_mandverify_txnid'); if (vf) vf.value = mandMeta.txnId;
+                    }
+                    var mandSrcKey = document.getElementById('sm_mand_key');
+                    var mandSrcSalt = document.getElementById('sm_mand_salt');
+                    ['sm_predebit_key','sm_si_key','sm_siverify_key','sm_mandverify_key','sm_mandstatus_key','sm_mandmodify_key'].forEach(function(id) {
+                        var el = document.getElementById(id); if (el && mandSrcKey && mandSrcKey.value) el.value = mandSrcKey.value;
+                    });
+                    ['sm_predebit_salt','sm_si_salt','sm_siverify_salt','sm_mandverify_salt','sm_mandstatus_salt','sm_mandmodify_salt'].forEach(function(id) {
+                        var el = document.getElementById(id); if (el && mandSrcSalt && mandSrcSalt.value) el.value = mandSrcSalt.value;
+                    });
+                    _smMandPendingHandled = true;
+                }
+            }
+
+            // Special handling for capture-in-progress (common in OTM flows)
+            var msgText = (resp && resp.msg) ? String(resp.msg).toLowerCase() : '';
+            if (prefix === 'Cap' && msgText.indexOf('already a capture is in processing') !== -1) {
+                badge.className = 'sm-status-badge pending';
+                badge.textContent = 'HTTP ' + httpCode + ' — Capture In Progress';
+                if (guide && explain) {
+                    guide.style.display = 'block';
+                    explain.innerHTML =
+                        '<div class="sm-response-field"><code>status</code> <span>= 0 (request accepted but previous capture is still processing)</span></div>' +
+                        '<div class="sm-response-field"><code>next_step</code> <span>Wait 20-60 seconds, then run <strong>Verify Payment API Capture</strong>.</span></div>' +
+                        '<div class="sm-response-field"><code>note</code> <span>Do not fire repeated capture calls with same <code>mihpayid</code> immediately.</span></div>';
+                }
+            }
+
+            var isCancelPrefix = (prefix === 'Cnl' || prefix === 'UpiCnl');
+            var errCode = resp && resp.error_code ? String(resp.error_code) : '';
+
+            if (isCancelPrefix && errCode === '230' && msgText.indexOf('purged transaction') !== -1) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + httpCode + ' — Refund Failed (Purged Transaction)';
+                if (guide && explain) {
+                    guide.style.display = 'block';
+                    explain.innerHTML =
+                        '<div class="sm-response-field"><code>error_code</code> <span>= 230 (Purged Transaction)</span></div>' +
+                        '<div class="sm-response-field"><code>impact</code> <span>Automated refund cannot be processed for this <code>mihpayid</code>.</span></div>' +
+                        '<div class="sm-response-field"><code>next_step</code> <span>Raise manual follow-up with PayU support/operations and share <code>mihpayid</code>, txn/cancel token, amount, and timestamp.</span></div>' +
+                        '<div class="sm-response-field"><code>recommended</code> <span>Run <strong>Check Action Status</strong> once for record, then stop retrying automated cancel/refund for this transaction.</span></div>';
+                }
+            }
+
+            if (isCancelPrefix && errCode === '111' && msgText.indexOf('invalid transaction status') !== -1) {
+                badge.className = 'sm-status-badge error';
+                badge.textContent = 'HTTP ' + httpCode + ' — Invalid Transaction Status';
+                if (guide && explain) {
+                    guide.style.display = 'block';
+                    explain.innerHTML =
+                        '<div class="sm-response-field"><code>error_code</code> <span>= 111 (Invalid Transaction Status)</span></div>' +
+                        '<div class="sm-response-field"><code>cause</code> <span>The transaction is not in a refundable/cancellable state. It may be pending, already refunded, or failed.</span></div>' +
+                        '<div class="sm-response-field"><code>next_step</code> <span>Run <strong>Verify Payment</strong> first to confirm the current <code>status</code> of this <code>mihpayid</code>. Only transactions with status <code>captured</code> / <code>success</code> can be cancelled or refunded.</span></div>' +
+                        '<div class="sm-response-field"><code>common_reasons</code> <span>Transaction is still <code>pending</code> (customer hasn\'t approved UPI request yet), already <code>cancelled</code>/<code>refunded</code>, or was <code>failed</code>/<code>dropped</code>.</span></div>';
+                }
+            }
+
             var mihpayid = null;
             var requestId = resp && resp.request_id;
             var txnIdFromMeta = resp && resp.metaData && resp.metaData.txnId;
 
-            if (resp && resp.mihpayid) mihpayid = resp.mihpayid;
-            if (resp && resp.payuMoneyId) mihpayid = resp.payuMoneyId;
+            var rawMihpayid = smExtractFromRaw(rawResp, 'mihpayid');
+            var rawPayuMoneyId = smExtractFromRaw(rawResp, 'payuMoneyId');
+            if (rawMihpayid) mihpayid = rawMihpayid;
+            else if (rawPayuMoneyId) mihpayid = rawPayuMoneyId;
+            else if (resp && resp.mihpayid) mihpayid = String(resp.mihpayid);
+            else if (resp && resp.payuMoneyId) mihpayid = String(resp.payuMoneyId);
 
             if (!mihpayid && resp && resp.transaction_details && typeof resp.transaction_details === 'object') {
                 for (var txKey in resp.transaction_details) {
                     if (resp.transaction_details.hasOwnProperty(txKey)) {
                         var td = resp.transaction_details[txKey];
-                        if (td && td.mihpayid) { mihpayid = td.mihpayid; break; }
+                        if (td && td.mihpayid) {
+                            mihpayid = smExtractFromRaw(rawResp, 'mihpayid') || String(td.mihpayid);
+                            break;
+                        }
                     }
                 }
             }
 
+            var authPayuIdFromCapture = null;
+            if (prefix === 'Cap') {
+                authPayuIdFromCapture = smExtractFromRaw(rawResp, 'authpayuid')
+                    || (resp && resp.authpayuid ? String(resp.authpayuid) : null)
+                    || (resp && resp.result && resp.result.authpayuid ? String(resp.result.authpayuid) : null);
+            }
+
+            if (prefix === 'Cap' && authPayuIdFromCapture) {
+                _smLastOtmVaMihpayid = authPayuIdFromCapture;
+                _smLastOtmVcMihpayid = authPayuIdFromCapture;
+                var cnlEl = document.getElementById('sm_cnl_mihpayid');
+                if (cnlEl) cnlEl.value = authPayuIdFromCapture;
+                var hmacField = document.getElementById('sm_hmac_payuId');
+                if (hmacField) hmacField.value = authPayuIdFromCapture;
+            }
+
             if (mihpayid) {
-                ['sm_cap_mihpayid','sm_cnl_mihpayid','sm_udfu_mihpayid','sm_predebit_authPayuId','sm_si_authpayuid'].forEach(function(id) {
+                var skipForCancel = (prefix === 'Cap' || prefix === 'OtmVc');
+                ['sm_ucnl_mihpayid','sm_ucas_payuid','sm_udfu_mihpayid','sm_predebit_authPayuId','sm_si_authpayuid'].forEach(function(id) {
                     var el = document.getElementById(id); if (el) el.value = mihpayid;
                 });
-                var hmacField = document.getElementById('sm_hmac_payuId');
-                if (hmacField) hmacField.value = mihpayid;
+
+                if (!skipForCancel) {
+                    var capEl = document.getElementById('sm_cap_mihpayid');
+                    if (capEl) capEl.value = mihpayid;
+                    var cnlEl = document.getElementById('sm_cnl_mihpayid');
+                    if (cnlEl) cnlEl.value = mihpayid;
+                    var hmacField = document.getElementById('sm_hmac_payuId');
+                    if (hmacField) hmacField.value = mihpayid;
+                }
+
+                if (prefix === 'OtmVc') {
+                    _smLastOtmVcMihpayid = mihpayid;
+                    var cnlEl = document.getElementById('sm_cnl_mihpayid');
+                    if (cnlEl) {
+                        var otmCtx = smOtmGetCtx();
+                        if (otmCtx.captureType === 'Multi') {
+                            cnlEl.value = _smLastOtmVaMihpayid || mihpayid;
+                        } else {
+                            cnlEl.value = mihpayid;
+                        }
+                    }
+                }
             }
 
             if (txnIdFromMeta) {
@@ -12275,8 +13801,8 @@ nodeCartDetailsUsage +
             if (srcFormPrefix) {
                 var srcKey = document.getElementById(srcFormPrefix + '_key');
                 var srcSalt = document.getElementById(srcFormPrefix + '_salt');
-                var downstreamKeyIds = ['sm_cap_key','sm_hmac_key','sm_ver_key','sm_cnl_key','sm_udfu_key','sm_cas_key','sm_predebit_key','sm_si_key'];
-                var downstreamSaltIds = ['sm_cap_salt','sm_hmac_salt','sm_ver_salt','sm_cnl_salt','sm_udfu_salt','sm_cas_salt','sm_predebit_salt','sm_si_salt'];
+                var downstreamKeyIds = ['sm_cap_key','sm_hmac_key','sm_ver_key','sm_cnl_key','sm_udfu_key','sm_cas_key','sm_predebit_key','sm_si_key','sm_ucnl_key','sm_ucas_key'];
+                var downstreamSaltIds = ['sm_cap_salt','sm_hmac_salt','sm_ver_salt','sm_cnl_salt','sm_udfu_salt','sm_cas_salt','sm_predebit_salt','sm_si_salt','sm_ucnl_salt','sm_ucas_salt'];
                 if (srcKey && srcKey.value) {
                     downstreamKeyIds.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = srcKey.value; });
                 }
@@ -12285,7 +13811,9 @@ nodeCartDetailsUsage +
                 }
             }
 
+            if (!_smMandPendingHandled) {
             smShowNextStep(prefix, resp, httpCode, isSuccess);
+            }
         }
 
         function smShowNextStep(prefix, resp, httpCode, isSuccess) {
@@ -12309,7 +13837,44 @@ nodeCartDetailsUsage +
             if (isPaymentInit && isSuccess && (hasAcsTemplate || hasIntentUrl || hasQr)) {
                 html += '<div class="sm-next-step-title">Payment Initiated Successfully</div>';
                 if (hasAcsTemplate) {
+                    _smLastAcsTemplate = resp.result.acsTemplate;
+                    var acsId = 'smAcsDecoded_' + prefix;
                     html += '<p>The response contains an <code>acsTemplate</code> (base64-encoded HTML). On mobile, decode and render this to show the UPI intent chooser or QR code to the customer.</p>';
+                    html +=
+                        '<div style="margin:0.75rem 0;padding:1rem;background:#fff8f0;border:1px solid #ffe0b2;border-radius:10px;">' +
+                            '<h4 style="margin:0 0 0.5rem;color:#e65100;font-size:0.9rem;">How to use the acsTemplate</h4>' +
+                            '<p style="font-size:0.85rem;margin:0 0 0.5rem;color:#333;">The <code>acsTemplate</code> is a <strong>base64-encoded HTML page</strong>. When decoded, it contains an auto-submitting form that redirects the customer to the UPI payment handler. This is used as a <strong>fallback</strong> when the deeplink/intent doesn\'t work.</p>' +
+                            '<div style="font-size:0.82rem;margin-bottom:0.75rem;">' +
+                                '<strong>Usage:</strong>' +
+                                '<ul style="margin:0.25rem 0 0 1.2rem;padding:0;">' +
+                                    '<li>Decode the base64 string to get the HTML</li>' +
+                                    '<li>Render this HTML in a <strong>WebView</strong> (mobile) or <strong>iframe</strong> (web) to redirect the customer</li>' +
+                                    '<li>On Android, use it as the <code>browser_fallback_url</code> in the intent deeplink</li>' +
+                                '</ul>' +
+                            '</div>' +
+                            '<div style="margin-bottom:0.75rem;">' +
+                                '<strong style="font-size:0.82rem;">Code Examples:</strong>' +
+                                '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                    '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">JavaScript</div>' +
+                                    '<code>const html = atob(acsTemplate);<br>document.getElementById("iframe").srcdoc = html;</code>' +
+                                '</div>' +
+                                '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                    '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">Android (Kotlin)</div>' +
+                                    '<code>val html = String(Base64.decode(acsTemplate, Base64.DEFAULT))<br>webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)</code>' +
+                                '</div>' +
+                                '<div style="margin-top:0.4rem;background:#fff3e0;border-radius:6px;padding:0.6rem;font-size:0.78rem;overflow-x:auto;">' +
+                                    '<div style="margin-bottom:0.4rem;color:#e65100;font-weight:600;">iOS (Swift)</div>' +
+                                    '<code>let data = Data(base64Encoded: acsTemplate)!<br>let html = String(data: data, encoding: .utf8)!<br>webView.loadHTMLString(html, baseURL: nil)</code>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div>' +
+                                '<button type="button" onclick="smDecodeAcsPreviewFor(\'' + acsId + '\')" style="background:#e65100;color:#fff;border:none;padding:0.5rem 1rem;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;">Decode &amp; Preview</button>' +
+                                '<div id="' + acsId + '" style="display:none;margin-top:0.75rem;border:1px solid #ddd;border-radius:8px;overflow:hidden;">' +
+                                    '<div style="padding:0.4rem 0.75rem;background:#f5f5f5;font-size:0.78rem;font-weight:600;color:#666;">Decoded HTML Preview</div>' +
+                                    '<pre style="margin:0;padding:0.75rem;background:#fafafa;font-size:0.75rem;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;"><code id="' + acsId + '_code"></code></pre>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
                 }
                 if (hasIntentUrl) {
                     var intentUrl = (resp.result.paymentId || resp.result.intentUrl || resp.result.upiIntentUrl || resp.result.deepLink || '');
@@ -12324,7 +13889,11 @@ nodeCartDetailsUsage +
                     html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-otm-status]\'),\'sm-otm-status\')">OTM Status Check &#8594;</button>';
                     html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-capture]\'),\'sm-capture\')">Capture Transaction &#8594;</button>';
                 }
-                if (prefix === 'Mand' || prefix === 'CbSub') {
+                if (prefix === 'Mand') {
+                    html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="if(_smLastMandateTxnid){var f=document.getElementById(\'sm_mandverify_txnid\');if(f)f.value=_smLastMandateTxnid;}smNavTo(document.querySelector(\'[data-section=sm-mandate-verify]\'),\'sm-mandate-verify\')">Verify Payment &#8594;</button>';
+                    html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-predebit]\'),\'sm-predebit\')">Pre-Debit Notification &#8594;</button>';
+                }
+                if (prefix === 'CbSub') {
                     html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-recurring]\'),\'sm-recurring\')">Pre-Debit Notification &#8594;</button>';
                 }
                 html += '</div>';
@@ -12345,8 +13914,9 @@ nodeCartDetailsUsage +
                 if (txStatus === 'auth' || txStatus === 'userCancelled' || txStatus === 'pending') {
                     html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-capture]\'),\'sm-capture\')">Step 3: Capture Transaction &#8594;</button>';
                 }
-                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-cancel]\'),\'sm-cancel\')">Cancel / Refund &#8594;</button>';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavToCancelUpi()">Cancel / Refund &#8594;</button>';
                 html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-udf-update]\'),\'sm-udf-update\')">UDF Update &#8594;</button>';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-troubleshoot]\'),\'sm-troubleshoot\')">Troubleshooting &#8594;</button>';
                 html += '</div>';
             } else if (prefix === 'Cap' && isSuccess) {
                 html += '<div class="sm-next-step-title">Capture Successful</div>';
@@ -12359,17 +13929,64 @@ nodeCartDetailsUsage +
                 html += '<div class="sm-next-step-actions">';
                 html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-check-status]\'),\'sm-check-status\')">Check Action Status &#8594;</button>';
                 html += '</div>';
+            } else if (prefix === 'UpiCnl' && isSuccess) {
+                html += '<div class="sm-next-step-title">Cancel/Refund Initiated</div>';
+                html += '<p>Use <strong>Check Action Status</strong> to track the refund progress for this transaction.</p>';
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavToCheckStatus()">Next: Check Action Status &#8594;</button>';
+                html += '</div>';
+            } else if (prefix === 'MandVerify') {
+                html += '<div class="sm-next-step-title">' + (isSuccess ? 'Payment Verified' : 'Verify Payment Response') + '</div>';
+                if (isSuccess && resp && resp.transaction_details) {
+                    var mihpayid = '';
+                    var txStatus = '';
+                    for (var vk in resp.transaction_details) {
+                        if (resp.transaction_details[vk]) {
+                            mihpayid = resp.transaction_details[vk].mihpayid || '';
+                            txStatus = resp.transaction_details[vk].status || '';
+                            break;
+                        }
+                    }
+                    if (mihpayid) {
+                        _smLastMihpayid = mihpayid;
+                        var downstreamFields = ['sm_mandstatus_authPayuId','sm_mandmodify_authPayuId','sm_predebit_authPayuId','sm_si_authpayuid'];
+                        downstreamFields.forEach(function(fid) { var el = document.getElementById(fid); if (el) el.value = mihpayid; });
+                        html += '<p><strong>mihpayid (authPayuId):</strong> <code>' + mihpayid + '</code></p>';
+                        html += '<p>This value has been auto-filled into all subsequent steps.</p>';
+                    }
+                    if (txStatus) html += '<p>Transaction status: <strong>' + txStatus + '</strong></p>';
+                }
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-mandate-status]\'),\'sm-mandate-status\')">Next: Mandate Status &#8594;</button>';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-mandate-modify]\'),\'sm-mandate-modify\')">Modify Mandate &#8594;</button>';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-predebit]\'),\'sm-predebit\')">Pre-Debit Notification &#8594;</button>';
+                html += '</div>';
+            } else if (prefix === 'MandStatus') {
+                html += '<div class="sm-next-step-title">' + (isSuccess ? 'Mandate Status Retrieved' : 'Mandate Status Response') + '</div>';
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-mandate-modify]\'),\'sm-mandate-modify\')">Modify Mandate &#8594;</button>';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-predebit]\'),\'sm-predebit\')">Pre-Debit Notification &#8594;</button>';
+                html += '</div>';
+            } else if (prefix === 'MandModify') {
+                html += '<div class="sm-next-step-title">' + (isSuccess ? 'Mandate Modification Initiated' : 'Mandate Modify Response') + '</div>';
+                if (isSuccess) html += '<p>The modification request has been sent. The customer will receive an approval request on their UPI app.</p>';
+                html += '<div class="sm-next-step-actions">';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-mandate-status]\'),\'sm-mandate-status\')">Check Mandate Status &#8594;</button>';
+                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-predebit]\'),\'sm-predebit\')">Pre-Debit Notification &#8594;</button>';
+                html += '</div>';
             } else if (prefix === 'PreDebit' && isSuccess) {
                 html += '<div class="sm-next-step-title">Pre-Debit Notification Sent</div>';
-                html += '<p>Wait for the pre-debit notification to be acknowledged (usually within 24-48 hours before debit date). Then execute the SI Transaction below.</p>';
+                html += '<p>Wait for the pre-debit notification to be acknowledged (usually within 24-48 hours before debit date). Then execute the SI Transaction.</p>';
                 html += '<div class="sm-next-step-actions">';
-                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="document.getElementById(\'smSiTxnForm\') && document.getElementById(\'smSiTxnForm\').scrollIntoView({behavior:\'smooth\'})">Scroll to SI Transaction Form &#8595;</button>';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-si]\'),\'sm-si\')">Next: SI Transaction &#8594;</button>';
                 html += '</div>';
             } else if (prefix === 'SiTxn') {
                 html += '<div class="sm-next-step-title">' + (isSuccess ? 'SI Transaction Executed' : 'SI Transaction Response') + '</div>';
                 html += '<div class="sm-next-step-actions">';
-                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-verify]\'),\'sm-verify\')">Verify SI Payment &#8594;</button>';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-si-verify]\'),\'sm-si-verify\')">Next: Verify SI Payment &#8594;</button>';
                 html += '</div>';
+            } else if (prefix === 'SiVerify') {
+                html += '<div class="sm-next-step-title">' + (isSuccess ? 'SI Payment Verified' : 'SI Verify Response') + '</div>';
             } else if (prefix === 'Vpa' && isSuccess) {
                 html += '<div class="sm-next-step-title">VPA Validated</div>';
                 var isAutoPaySupported = resp && resp.isAutoPayVPAValid;
@@ -12876,7 +14493,7 @@ nodeCartDetailsUsage +
 
         var customerTypeHidePatterns = {
             'm2': {
-                'first': ['Get User Cards', 'Repeat Customer'],
+                'first': ['Get User Cards', 'Repeat Customer', 'Delete Payment Instrument'],
                 'repeat': ['Get BIN Info', 'First-Time Customer']
             },
             'm3': {
@@ -13284,24 +14901,52 @@ nodeCartDetailsUsage +
                 var firstname = document.getElementById(prefix + 'firstname').value.trim();
                 var email = document.getElementById(prefix + 'email').value.trim();
                 var phone = document.getElementById(prefix + 'phone').value.trim();
-                var udf1='',udf2='',udf3='',udf4='',udf5='';
+                var udf1 = (document.getElementById(prefix + 'udf1') || {}).value || '';
+                var udf2 = (document.getElementById(prefix + 'udf2') || {}).value || '';
+                var udf3 = (document.getElementById(prefix + 'udf3') || {}).value || '';
+                var udf4 = (document.getElementById(prefix + 'udf4') || {}).value || '';
+                var udf5 = (document.getElementById(prefix + 'udf5') || {}).value || '';
                 var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|'+udf1+'|'+udf2+'|'+udf3+'|'+udf4+'|'+udf5+'||||||'+salt;
                 var hash = smSHA512(hashStr);
-                var pg = document.getElementById(prefix + 'pg').value;
+                var pg = document.getElementById(prefix + 'pg').value.trim();
+                var bankcode = (document.getElementById(prefix + 'bankcode') || {}).value || pg;
                 params = {
                     key: key, txnid: txnid, amount: amount, productinfo: productinfo,
                     firstname: firstname, email: email, phone: phone,
-                    pg: pg, bankcode: pg,
+                    pg: pg, bankcode: bankcode,
                     ccnum: document.getElementById(prefix + 'ccnum').value.trim(),
                     ccname: document.getElementById(prefix + 'ccname').value.trim(),
                     ccexpmon: document.getElementById(prefix + 'ccexpmon').value.trim(),
                     ccexpyr: document.getElementById(prefix + 'ccexpyr').value.trim(),
                     ccvv: document.getElementById(prefix + 'ccvv').value.trim(),
-                    surl: document.getElementById(prefix + 'surl').value.trim() || (window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php'),
-                    furl: document.getElementById(prefix + 'furl').value.trim() || (window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php'),
+                    surl: document.getElementById(prefix + 'surl').value.trim() || getCallbackUrl(),
+                    furl: document.getElementById(prefix + 'furl').value.trim() || getCallbackUrl(),
                     txn_s2s_flow: '4',
                     hash: hash
                 };
+                var s2sIp = (document.getElementById(prefix + 's2s_client_ip') || {}).value || '';
+                var s2sDev = (document.getElementById(prefix + 's2s_device_info') || {}).value || navigator.userAgent;
+                if (s2sIp) params.s2s_client_ip = s2sIp;
+                if (s2sDev) params.s2s_device_info = s2sDev;
+                var lastname = (document.getElementById(prefix + 'lastname') || {}).value || '';
+                if (lastname) params.lastname = lastname;
+                var address1 = (document.getElementById(prefix + 'address1') || {}).value || '';
+                var address2 = (document.getElementById(prefix + 'address2') || {}).value || '';
+                var city = (document.getElementById(prefix + 'city') || {}).value || '';
+                var state = (document.getElementById(prefix + 'state') || {}).value || '';
+                var country = (document.getElementById(prefix + 'country') || {}).value || '';
+                var zipcode = (document.getElementById(prefix + 'zipcode') || {}).value || '';
+                if (address1) params.address1 = address1;
+                if (address2) params.address2 = address2;
+                if (city) params.city = city;
+                if (state) params.state = state;
+                if (country) params.country = country;
+                if (zipcode) params.zipcode = zipcode;
+                if (udf1) params.udf1 = udf1;
+                if (udf2) params.udf2 = udf2;
+                if (udf3) params.udf3 = udf3;
+                if (udf4) params.udf4 = udf4;
+                if (udf5) params.udf5 = udf5;
                 var storec = document.getElementById(prefix + 'store_card').value;
                 if (storec === '1') {
                     params.store_card = '1';
@@ -13319,26 +14964,53 @@ nodeCartDetailsUsage +
                 var pafirstname = document.getElementById(prefix + 'firstname').value.trim();
                 var paemail = document.getElementById(prefix + 'email').value.trim();
                 var paphone = document.getElementById(prefix + 'phone').value.trim();
-                var paudf1='',paudf2='',paudf3='',paudf4='',paudf5='';
+                var paudf1 = (document.getElementById(prefix + 'udf1') || {}).value || '';
+                var paudf2 = (document.getElementById(prefix + 'udf2') || {}).value || '';
+                var paudf3 = (document.getElementById(prefix + 'udf3') || {}).value || '';
+                var paudf4 = (document.getElementById(prefix + 'udf4') || {}).value || '';
+                var paudf5 = (document.getElementById(prefix + 'udf5') || {}).value || '';
                 var pahashStr = key+'|'+patxnid+'|'+paamount+'|'+paproductinfo+'|'+pafirstname+'|'+paemail+'|'+paudf1+'|'+paudf2+'|'+paudf3+'|'+paudf4+'|'+paudf5+'||||||'+salt;
                 var pahash = smSHA512(pahashStr);
-                var paBasePath = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'');
-                var paSurl = paBasePath + '/callback.php';
+                var paSurl = (document.getElementById(prefix + 'surl') || {}).value || getCallbackUrl();
+                var paFurl = (document.getElementById(prefix + 'furl') || {}).value || getCallbackUrl();
+                var paPg = (document.getElementById(prefix + 'pg') || {}).value || 'CC';
+                var paBankcode = (document.getElementById(prefix + 'bankcode') || {}).value || paPg;
                 params = {
                     key: key, txnid: patxnid, amount: paamount, productinfo: paproductinfo,
                     firstname: pafirstname, email: paemail, phone: paphone,
-                    pg: 'CC', bankcode: 'CC',
+                    pg: paPg, bankcode: paBankcode,
                     ccnum: document.getElementById(prefix + 'ccnum').value.trim(),
                     ccname: document.getElementById(prefix + 'ccname').value.trim(),
                     ccexpmon: document.getElementById(prefix + 'ccexpmon').value.trim(),
                     ccexpyr: document.getElementById(prefix + 'ccexpyr').value.trim(),
                     ccvv: document.getElementById(prefix + 'ccvv').value.trim(),
                     surl: paSurl,
-                    furl: paSurl,
+                    furl: paFurl,
                     txn_s2s_flow: '4',
                     pre_authorize: '1',
                     hash: pahash
                 };
+                var paS2sIp = (document.getElementById(prefix + 's2s_client_ip') || {}).value || '';
+                var paS2sDev = (document.getElementById(prefix + 's2s_device_info') || {}).value || navigator.userAgent;
+                if (paS2sIp) params.s2s_client_ip = paS2sIp;
+                if (paS2sDev) params.s2s_device_info = paS2sDev;
+                if (paudf1) params.udf1 = paudf1;
+                if (paudf2) params.udf2 = paudf2;
+                if (paudf3) params.udf3 = paudf3;
+                if (paudf4) params.udf4 = paudf4;
+                if (paudf5) params.udf5 = paudf5;
+                var paAddr1 = (document.getElementById(prefix + 'address1') || {}).value || '';
+                var paAddr2 = (document.getElementById(prefix + 'address2') || {}).value || '';
+                var paCity = (document.getElementById(prefix + 'city') || {}).value || '';
+                var paState = (document.getElementById(prefix + 'state') || {}).value || '';
+                var paCountry = (document.getElementById(prefix + 'country') || {}).value || '';
+                var paZipcode = (document.getElementById(prefix + 'zipcode') || {}).value || '';
+                if (paAddr1) params.address1 = paAddr1;
+                if (paAddr2) params.address2 = paAddr2;
+                if (paCity) params.city = paCity;
+                if (paState) params.state = paState;
+                if (paCountry) params.country = paCountry;
+                if (paZipcode) params.zipcode = paZipcode;
             } else if (flow === 'token') {
                 prefix = 'sc_tok_pay_';
                 key = document.getElementById(prefix + 'key').value.trim();
@@ -13350,25 +15022,55 @@ nodeCartDetailsUsage +
                 var tokfirstname = document.getElementById(prefix + 'firstname').value.trim();
                 var tokemail = document.getElementById(prefix + 'email').value.trim();
                 var tokphone = document.getElementById(prefix + 'phone').value.trim();
-                var tokudf1='',tokudf2='',tokudf3='',tokudf4='',tokudf5='';
+                var tokudf1 = (document.getElementById(prefix + 'udf1') || {}).value || '';
+                var tokudf2 = (document.getElementById(prefix + 'udf2') || {}).value || '';
+                var tokudf3 = (document.getElementById(prefix + 'udf3') || {}).value || '';
+                var tokudf4 = (document.getElementById(prefix + 'udf4') || {}).value || '';
+                var tokudf5 = (document.getElementById(prefix + 'udf5') || {}).value || '';
                 var tokhashStr = key+'|'+toktxnid+'|'+tokamount+'|'+tokproductinfo+'|'+tokfirstname+'|'+tokemail+'|'+tokudf1+'|'+tokudf2+'|'+tokudf3+'|'+tokudf4+'|'+tokudf5+'||||||'+salt;
                 var tokhash = smSHA512(tokhashStr);
                 var tokenVal = document.getElementById(prefix + 'token').value.trim();
                 var tokccvv = document.getElementById(prefix + 'ccvv').value.trim();
                 var tokuc = document.getElementById(prefix + 'user_cred').value.trim();
-                var tokSurl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
+                var tokPg = (document.getElementById(prefix + 'pg') || {}).value || 'CC';
+                var tokBankcode = (document.getElementById(prefix + 'bankcode') || {}).value || tokPg;
+                var tokStorecardTokenType = (document.getElementById(prefix + 'storecard_token_type') || {}).value || '';
+                var tokSurl = (document.getElementById(prefix + 'surl') || {}).value || getCallbackUrl();
+                var tokFurl = (document.getElementById(prefix + 'furl') || {}).value || getCallbackUrl();
+                var tokS2sIp = (document.getElementById(prefix + 's2s_client_ip') || {}).value || '';
+                var tokS2sDev = (document.getElementById(prefix + 's2s_device_info') || {}).value || navigator.userAgent;
                 params = {
                     key: key, txnid: toktxnid, amount: tokamount, productinfo: tokproductinfo,
                     firstname: tokfirstname, email: tokemail, phone: tokphone,
-                    pg: 'CC', bankcode: 'CC',
+                    pg: tokPg, bankcode: tokBankcode,
                     surl: tokSurl,
-                    furl: tokSurl,
+                    furl: tokFurl,
                     txn_s2s_flow: '4',
                     store_card_token: tokenVal,
                     ccvv: tokccvv,
                     user_credentials: tokuc,
                     hash: tokhash
                 };
+                if (tokS2sIp) params.s2s_client_ip = tokS2sIp;
+                if (tokS2sDev) params.s2s_device_info = tokS2sDev;
+                if (tokStorecardTokenType && tokStorecardTokenType !== '0') params.storecard_token_type = tokStorecardTokenType;
+                var tokAddr1 = (document.getElementById(prefix + 'address1') || {}).value || '';
+                var tokAddr2 = (document.getElementById(prefix + 'address2') || {}).value || '';
+                var tokCity = (document.getElementById(prefix + 'city') || {}).value || '';
+                var tokState = (document.getElementById(prefix + 'state') || {}).value || '';
+                var tokCountry = (document.getElementById(prefix + 'country') || {}).value || '';
+                var tokZipcode = (document.getElementById(prefix + 'zipcode') || {}).value || '';
+                if (tokAddr1) params.address1 = tokAddr1;
+                if (tokAddr2) params.address2 = tokAddr2;
+                if (tokCity) params.city = tokCity;
+                if (tokState) params.state = tokState;
+                if (tokCountry) params.country = tokCountry;
+                if (tokZipcode) params.zipcode = tokZipcode;
+                if (tokudf1) params.udf1 = tokudf1;
+                if (tokudf2) params.udf2 = tokudf2;
+                if (tokudf3) params.udf3 = tokudf3;
+                if (tokudf4) params.udf4 = tokudf4;
+                if (tokudf5) params.udf5 = tokudf5;
             }
             return { params: params, key: key, salt: salt };
         }
@@ -13463,7 +15165,9 @@ nodeCartDetailsUsage +
                         if (ctype) label += ' | ' + ctype;
                         if (cmode) label += ' (' + cmode + ')';
                         if (c.card_name) label += ' — ' + c.card_name;
-                        cards.push({ token: c.card_token, networkToken: '', issuerToken: '', label: label, masked: masked, type: ctype, mode: cmode, name: c.card_name || '' });
+                        var ucNt = (c.network_token && c.network_token.token_value) ? c.network_token.token_value : '';
+                        var ucIt = (c.issuer_token && c.issuer_token.token_value) ? c.issuer_token.token_value : '';
+                        cards.push({ token: c.card_token, networkToken: ucNt, issuerToken: ucIt, label: label, masked: masked, type: ctype, mode: cmode, name: c.card_name || '', networkTokenMeta: c.network_token || null, issuerTokenMeta: c.issuer_token || null });
                     }
                 }
             }
@@ -13527,9 +15231,38 @@ nodeCartDetailsUsage +
 
         function smPopulateM3NTTokenDropdown(cards) {
             _m3ntPayuTokens = [];
+            _m3ntNetworkTokens = [];
+            _m3ntIssuerTokens = [];
             for (var i = 0; i < cards.length; i++) {
-                if (cards[i].token) {
-                    _m3ntPayuTokens.push({ val: cards[i].token, label: cards[i].label });
+                var c = cards[i];
+                if (c.token) {
+                    _m3ntPayuTokens.push({ val: c.token, label: c.label });
+                }
+                if (c.networkToken) {
+                    var ntExists = false;
+                    for (var ni = 0; ni < _m3ntNetworkTokens.length; ni++) {
+                        if (_m3ntNetworkTokens[ni].val === c.networkToken) { ntExists = true; break; }
+                    }
+                    if (!ntExists) {
+                        var ntLbl = c.networkToken.substring(0, 6) + '...' + c.networkToken.slice(-4);
+                        if (c.masked) ntLbl += ' | ' + c.masked;
+                        if (c.type) ntLbl += ' | ' + c.type;
+                        if (c.name) ntLbl += ' — ' + c.name;
+                        _m3ntNetworkTokens.push({ val: c.networkToken, label: ntLbl });
+                    }
+                }
+                if (c.issuerToken) {
+                    var itExists = false;
+                    for (var ii = 0; ii < _m3ntIssuerTokens.length; ii++) {
+                        if (_m3ntIssuerTokens[ii].val === c.issuerToken) { itExists = true; break; }
+                    }
+                    if (!itExists) {
+                        var itLbl = c.issuerToken.substring(0, 6) + '...' + c.issuerToken.slice(-4);
+                        if (c.masked) itLbl += ' | ' + c.masked;
+                        if (c.type) itLbl += ' | ' + c.type;
+                        if (c.name) itLbl += ' — ' + c.name;
+                        _m3ntIssuerTokens.push({ val: c.issuerToken, label: itLbl });
+                    }
                 }
             }
             smRefreshM3NTDropdown();
@@ -14070,7 +15803,10 @@ nodeCartDetailsUsage +
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        var _verifyFinalPollTimer = null;
+
         function smCardSendVerifyPreAuthFinal() {
+            if (_verifyFinalPollTimer) { clearTimeout(_verifyFinalPollTimer); _verifyFinalPollTimer = null; }
             var key = document.getElementById('sc_pa_final_verify_key').value.trim();
             var salt = document.getElementById('sc_pa_final_verify_salt').value.trim();
             var txnid = document.getElementById('sc_pa_final_verify_txnid').value.trim();
@@ -14087,7 +15823,6 @@ nodeCartDetailsUsage +
             var panel = document.getElementById('scPaFinalVerifyReqRes');
             panel.style.display = 'block';
 
-            // Ensure request + cURL are visible even if user skips "Preview"
             document.getElementById('scPaFinalVerifyRequestView').textContent = JSON.stringify(
                 { endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params },
                 null,
@@ -14102,14 +15837,54 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending';
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Verifying...';
             document.getElementById('scPaFinalVerifyResponseView').textContent = 'Waiting...';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            _smVerifyFinalPoll(params, 1);
+        }
+
+        function _smVerifyFinalPoll(params, attempt) {
+            var maxAttempts = 8;
+            var intervalMs = 10000;
 
             fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
-    
-                .then(function(result) { smCardDisplayVerifyPreAuthFinal(result); })
-                .catch(function(err) { document.getElementById('scPaFinalVerifyStatusBadge').className = 'sm-status-badge error'; document.getElementById('scPaFinalVerifyStatusBadge').textContent = 'Failed'; document.getElementById('scPaFinalVerifyResponseView').textContent = 'Error: ' + err.message; });
+                .then(function(result) {
+                    var resp = result.response || result;
+                    var txnDetails = resp && resp.transaction_details ? resp.transaction_details : null;
+                    var firstTxn = txnDetails ? Object.values(txnDetails)[0] : null;
+                    var unmapped = firstTxn ? (firstTxn.unmappedstatus || '').toLowerCase() : '';
+
+                    if (unmapped === 'auth' && attempt < maxAttempts) {
+                        var secsLeft = Math.round((maxAttempts - attempt) * intervalMs / 1000);
+                        var badge = document.getElementById('scPaFinalVerifyStatusBadge');
+                        badge.className = 'sm-status-badge pending';
+                        badge.innerHTML = '<span class="sm-loading-spinner"></span> Waiting for capture (attempt ' + attempt + '/' + maxAttempts + ')';
+                        document.getElementById('scPaFinalVerifyResponseView').textContent = JSON.stringify(resp, null, 2);
+                        var guide = document.getElementById('scPaFinalVerifyResponseGuide');
+                        var explain = document.getElementById('scPaFinalVerifyResponseExplain');
+                        guide.style.display = 'block';
+                        explain.innerHTML =
+                            '<div class="sm-info-box" style="border-left:4px solid #ff9800;background:rgba(255,152,0,0.04);padding:1rem;">' +
+                            '<strong style="color:#e65100;">&#9203; Capture in progress &mdash; please wait</strong>' +
+                            '<p style="margin:0.5rem 0 0;">The response shows <code>unmappedstatus: "auth"</code>. PayU processes captures via a background cron that runs <strong>every ~1 minute</strong>. ' +
+                            'The status will automatically update to <code>"captured"</code> once the cron completes.</p>' +
+                            '<p style="margin:0.5rem 0 0;font-weight:600;">Auto-retrying every 10 seconds&hellip; Attempt ' + attempt + ' of ' + maxAttempts + ' (~' + secsLeft + 's remaining)</p>' +
+                            '<div style="margin-top:0.75rem;background:#fff3e0;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.85rem;">' +
+                            '<strong>Tip:</strong> In production, captures are processed faster. In the test/sandbox environment, allow up to 1&ndash;2 minutes for the status to change.</div>' +
+                            '</div>';
+                        _verifyFinalPollTimer = setTimeout(function() { _smVerifyFinalPoll(params, attempt + 1); }, intervalMs);
+                    } else {
+                        smCardDisplayVerifyPreAuthFinal(result);
+                    }
+                })
+                .catch(function(err) {
+                    document.getElementById('scPaFinalVerifyStatusBadge').className = 'sm-status-badge error';
+                    document.getElementById('scPaFinalVerifyStatusBadge').textContent = 'Failed';
+                    document.getElementById('scPaFinalVerifyResponseView').textContent = 'Error: ' + err.message;
+                });
         }
 
         function smCardDisplayVerifyPreAuthFinal(result) {
+            if (_verifyFinalPollTimer) { clearTimeout(_verifyFinalPollTimer); _verifyFinalPollTimer = null; }
             var badge = document.getElementById('scPaFinalVerifyStatusBadge');
             var respView = document.getElementById('scPaFinalVerifyResponseView');
             var guide = document.getElementById('scPaFinalVerifyResponseGuide');
@@ -14118,7 +15893,6 @@ nodeCartDetailsUsage +
             respView.textContent = JSON.stringify(result.response || result, null, 2);
             smRenderVerifyStatus('scPaFinalVerify', result);
 
-            // Extract transaction details from verify_payment response
             var resp = result.response || result;
             var txnDetails = resp && resp.transaction_details ? resp.transaction_details : null;
             var firstTxn = txnDetails ? Object.values(txnDetails)[0] : null;
@@ -14137,14 +15911,13 @@ nodeCartDetailsUsage +
                     '</div>';
             } else if (unmapped === 'auth') {
                 badge.className = 'sm-status-badge warning';
-                badge.textContent = 'Still Auth';
+                badge.textContent = 'Still Auth (retries exhausted)';
                 guide.style.display = 'block';
                 explain.innerHTML =
                     '<div class="sm-info-box warning">' +
-                    '<strong>⚠ unmappedstatus is still "auth"</strong>' +
-                    '<p>The verify response shows <code>unmappedstatus: "auth"</code> even after capture. This is a known behaviour in the <strong>PayU UAT/sandbox environment</strong> — the sandbox does not always update <code>unmappedstatus</code> to <code>"captured"</code> after a capture call.</p>' +
-                    '<p><strong>In production</strong>, after a successful capture, <code>unmappedstatus</code> will correctly return <code>"captured"</code>.</p>' +
-                    '<p>To confirm the capture went through, check that your <strong>Capture API call returned a success response</strong> (status: 1, transaction_details with captured amount). That is the authoritative confirmation.</p>' +
+                    '<strong>&#9888; unmappedstatus is still "auth" after all retries</strong>' +
+                    '<p>The capture cron may still be processing. Please wait another minute and click <strong>Verify Final Status</strong> again.</p>' +
+                    '<p>PayU\'s background cron runs approximately every <strong>1 minute</strong>. Once it processes your capture request, <code>unmappedstatus</code> will change to <code>"captured"</code>.</p>' +
                     '</div>';
             } else if (status === 'failure' || unmapped === 'failed') {
                 badge.className = 'sm-status-badge error';
@@ -14189,6 +15962,7 @@ nodeCartDetailsUsage +
                     if (result.response) {
                         var allCards = smExtractAllCardTokens(result.response);
                         smPopulateTokenDropdown('sc_tok_pay_token_select', 'sc_tok_pay_token', allCards);
+                        smPopulateTokenDropdown('sc_m2_del_var2_select', 'sc_m2_del_var2', allCards);
                         if (allCards.length > 0) {
                             var tokenField = document.getElementById('sc_tok_pay_token');
                             if (tokenField) tokenField.value = allCards[0].token;
@@ -14244,9 +16018,13 @@ nodeCartDetailsUsage +
             var var1 = document.getElementById('sc_tok_del_var1').value.trim();
             var var2 = document.getElementById('sc_tok_del_var2').value.trim();
             if (!key || !salt || !var1 || !var2) { alert('Fill all fields'); return; }
+            var delVar3 = (document.getElementById('sc_tok_del_var3') || {}).value || '';
+            var delVar4 = (document.getElementById('sc_tok_del_var4') || {}).value || '';
             var hashStr = key + '|delete_payment_instrument|' + var1 + '|' + salt;
             var hash = smSHA512(hashStr);
             var params = { key: key, command: 'delete_payment_instrument', var1: var1, var2: var2, hash: hash };
+            if (delVar3) params.var3 = delVar3;
+            if (delVar4) params.var4 = delVar4;
             var panel = document.getElementById('scTokDelReqRes');
             panel.style.display = 'block';
             var badge = document.getElementById('scTokDelStatusBadge');
@@ -14257,6 +16035,32 @@ nodeCartDetailsUsage +
     
                 .then(function(result) { smCardGenericDisplay('scTokDel', result); })
                 .catch(function(err) { document.getElementById('scTokDelStatusBadge').className = 'sm-status-badge error'; document.getElementById('scTokDelStatusBadge').textContent = 'Failed'; document.getElementById('scTokDelResponseView').textContent = 'Error: ' + err.message; });
+        }
+
+        // --- Delete Payment Instrument (Model 2) ---
+        function smCardM2DeleteInstrument() {
+            var key = document.getElementById('sc_m2_del_key').value.trim();
+            var salt = document.getElementById('sc_m2_del_salt').value.trim();
+            var var1 = document.getElementById('sc_m2_del_var1').value.trim();
+            var var2 = document.getElementById('sc_m2_del_var2').value.trim();
+            if (!key || !salt || !var1 || !var2) { alert('Fill all fields'); return; }
+            var delVar3 = (document.getElementById('sc_m2_del_var3') || {}).value || '';
+            var delVar4 = (document.getElementById('sc_m2_del_var4') || {}).value || '';
+            var hashStr = key + '|delete_payment_instrument|' + var1 + '|' + salt;
+            var hash = smSHA512(hashStr);
+            var params = { key: key, command: 'delete_payment_instrument', var1: var1, var2: var2, hash: hash };
+            if (delVar3) params.var3 = delVar3;
+            if (delVar4) params.var4 = delVar4;
+            var panel = document.getElementById('scM2DelReqRes');
+            panel.style.display = 'block';
+            var badge = document.getElementById('scM2DelStatusBadge');
+            badge.className = 'sm-status-badge pending';
+            badge.innerHTML = '<span class="sm-loading-spinner"></span> Deleting...';
+            document.getElementById('scM2DelResponseView').textContent = 'Waiting...';
+            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+    
+                .then(function(result) { smCardGenericDisplay('scM2Del', result); })
+                .catch(function(err) { document.getElementById('scM2DelStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM2DelStatusBadge').textContent = 'Failed'; document.getElementById('scM2DelResponseView').textContent = 'Error: ' + err.message; });
         }
 
         // Expose seamless functions globally
@@ -14411,12 +16215,14 @@ nodeCartDetailsUsage +
             var var6 = document.getElementById('sc_m3_spi_var6').value.trim();
             var var7 = document.getElementById('sc_m3_spi_var7').value.trim();
             var var8 = document.getElementById('sc_m3_spi_var8').value.trim();
+            var var3 = (document.getElementById('sc_m3_spi_var3') || {}).value || 'CC';
+            var var4 = (document.getElementById('sc_m3_spi_var4') || {}).value || 'CC';
             var var10 = document.getElementById('sc_m3_spi_var10').value;
             var var11 = document.getElementById('sc_m3_spi_var11').value;
             if (!key || !salt || !var1 || !var6) { alert('Fill Key, Salt, User Credentials and Card Number'); return; }
             var hashStr = key + '|save_payment_instrument|' + var1 + '|' + salt;
             var hash = smSHA512(hashStr);
-            var params = { key: key, command: 'save_payment_instrument', var1: var1, var2: var2, var3: 'CC', var4: 'CC', var5: var5, var6: var6, var7: var7, var8: var8, var10: var10, var11: var11, hash: hash };
+            var params = { key: key, command: 'save_payment_instrument', var1: var1, var2: var2, var3: var3, var4: var4, var5: var5, var6: var6, var7: var7, var8: var8, var10: var10, var11: var11, hash: hash };
             var panel = document.getElementById('scM3SpiReqRes');
             panel.style.display = 'block';
             document.getElementById('scM3SpiRequestView').textContent = JSON.stringify({ endpoint: 'https://test.payu.in/merchant/postservice.php?form=2', method: 'POST', params: params }, null, 2);
@@ -14468,12 +16274,43 @@ nodeCartDetailsUsage +
             var ccexpmon = document.getElementById('sc_m2ft_ccexpmon').value.trim();
             var ccexpyr = document.getElementById('sc_m2ft_ccexpyr').value.trim();
             var ccvv = document.getElementById('sc_m2ft_ccvv').value.trim();
+            var pg = (document.getElementById('sc_m2ft_pg') || {}).value || 'CC';
+            var bankcode = (document.getElementById('sc_m2ft_bankcode') || {}).value || pg;
+            var store_card = (document.getElementById('sc_m2ft_store_card') || {}).value || '1';
             var user_cred = document.getElementById('sc_m2ft_user_cred').value.trim();
             if (!key || !salt || !ccnum || !ccvv) { alert('Fill Key, Salt, Card Number and CVV'); return null; }
-            var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|||||||||||'+salt;
+            var udf1 = (document.getElementById('sc_m2ft_udf1') || {}).value || '';
+            var udf2 = (document.getElementById('sc_m2ft_udf2') || {}).value || '';
+            var udf3 = (document.getElementById('sc_m2ft_udf3') || {}).value || '';
+            var udf4 = (document.getElementById('sc_m2ft_udf4') || {}).value || '';
+            var udf5 = (document.getElementById('sc_m2ft_udf5') || {}).value || '';
+            var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|'+udf1+'|'+udf2+'|'+udf3+'|'+udf4+'|'+udf5+'||||||'+salt;
             var hash = smSHA512(hashStr);
-            var surl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
-            return { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'CC', bankcode:'CC', ccnum:ccnum, ccname:ccname, ccexpmon:ccexpmon, ccexpyr:ccexpyr, ccvv:ccvv, store_card:'1', user_credentials:user_cred, txn_s2s_flow:'4', hash:hash };
+            var surl = (document.getElementById('sc_m2ft_surl') || {}).value || getCallbackUrl();
+            var furl = (document.getElementById('sc_m2ft_furl') || {}).value || getCallbackUrl();
+            var s2sIp = (document.getElementById('sc_m2ft_s2s_client_ip') || {}).value || '';
+            var s2sDev = (document.getElementById('sc_m2ft_s2s_device_info') || {}).value || navigator.userAgent;
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:furl, pg:pg, bankcode:bankcode, ccnum:ccnum, ccname:ccname, ccexpmon:ccexpmon, ccexpyr:ccexpyr, ccvv:ccvv, store_card:store_card, user_credentials:user_cred, txn_s2s_flow:'4', hash:hash };
+            if (s2sIp) params.s2s_client_ip = s2sIp;
+            if (s2sDev) params.s2s_device_info = s2sDev;
+            var address1 = (document.getElementById('sc_m2ft_address1') || {}).value || '';
+            var address2 = (document.getElementById('sc_m2ft_address2') || {}).value || '';
+            var city = (document.getElementById('sc_m2ft_city') || {}).value || '';
+            var state = (document.getElementById('sc_m2ft_state') || {}).value || '';
+            var country = (document.getElementById('sc_m2ft_country') || {}).value || '';
+            var zipcode = (document.getElementById('sc_m2ft_zipcode') || {}).value || '';
+            if (address1) params.address1 = address1;
+            if (address2) params.address2 = address2;
+            if (city) params.city = city;
+            if (state) params.state = state;
+            if (country) params.country = country;
+            if (zipcode) params.zipcode = zipcode;
+            if (udf1) params.udf1 = udf1;
+            if (udf2) params.udf2 = udf2;
+            if (udf3) params.udf3 = udf3;
+            if (udf4) params.udf4 = udf4;
+            if (udf5) params.udf5 = udf5;
+            return params;
         }
         function smM2FTPreview() {
             var params = smM2FTBuildParams(); if (!params) return;
@@ -14542,11 +16379,41 @@ nodeCartDetailsUsage +
             var ccexpmon = document.getElementById('sc_m3ft_ccexpmon').value.trim();
             var ccexpyr = document.getElementById('sc_m3ft_ccexpyr').value.trim();
             var ccvv = document.getElementById('sc_m3ft_ccvv').value.trim();
+            var pg = (document.getElementById('sc_m3ft_pg') || {}).value || 'CC';
+            var bankcode = (document.getElementById('sc_m3ft_bankcode') || {}).value || 'CC';
             if (!key || !salt || !ccnum || !ccvv) { alert('Fill Key, Salt, Card Number and CVV'); return null; }
             var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|||||||||||'+salt;
             var hash = smSHA512(hashStr);
-            var surl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
-            return { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'CC', bankcode:'CC', ccnum:ccnum, ccname:ccname, ccexpmon:ccexpmon, ccexpyr:ccexpyr, ccvv:ccvv, txn_s2s_flow:'4', hash:hash };
+            var surl = (document.getElementById('sc_m3ft_surl') || {}).value || getCallbackUrl();
+            var furl = (document.getElementById('sc_m3ft_furl') || {}).value || getCallbackUrl();
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:furl, pg:pg, bankcode:bankcode, ccnum:ccnum, ccname:ccname, ccexpmon:ccexpmon, ccexpyr:ccexpyr, ccvv:ccvv, txn_s2s_flow:'4', hash:hash };
+            var s2sIp = (document.getElementById('sc_m3ft_s2s_client_ip') || {}).value || '';
+            var s2sDev = (document.getElementById('sc_m3ft_s2s_device_info') || {}).value || navigator.userAgent;
+            if (s2sIp) params.s2s_client_ip = s2sIp;
+            if (s2sDev) params.s2s_device_info = s2sDev;
+            var address1 = (document.getElementById('sc_m3ft_address1') || {}).value || '';
+            var address2 = (document.getElementById('sc_m3ft_address2') || {}).value || '';
+            var city = (document.getElementById('sc_m3ft_city') || {}).value || '';
+            var state = (document.getElementById('sc_m3ft_state') || {}).value || '';
+            var country = (document.getElementById('sc_m3ft_country') || {}).value || '';
+            var zipcode = (document.getElementById('sc_m3ft_zipcode') || {}).value || '';
+            if (address1) params.address1 = address1;
+            if (address2) params.address2 = address2;
+            if (city) params.city = city;
+            if (state) params.state = state;
+            if (country) params.country = country;
+            if (zipcode) params.zipcode = zipcode;
+            var udf1 = (document.getElementById('sc_m3ft_udf1') || {}).value || '';
+            var udf2 = (document.getElementById('sc_m3ft_udf2') || {}).value || '';
+            var udf3 = (document.getElementById('sc_m3ft_udf3') || {}).value || '';
+            var udf4 = (document.getElementById('sc_m3ft_udf4') || {}).value || '';
+            var udf5 = (document.getElementById('sc_m3ft_udf5') || {}).value || '';
+            if (udf1) params.udf1 = udf1;
+            if (udf2) params.udf2 = udf2;
+            if (udf3) params.udf3 = udf3;
+            if (udf4) params.udf4 = udf4;
+            if (udf5) params.udf5 = udf5;
+            return params;
         }
         function smM3FTPreview() {
             var params = smM3FTBuildParams(); if (!params) return;
@@ -14601,8 +16468,14 @@ nodeCartDetailsUsage +
             if (!key || !salt || !token || !ccvv) { alert('Fill Key, Salt, Token and CVV'); return null; }
             var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|||||||||||'+salt;
             var hash = smSHA512(hashStr);
-            var surl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
-            return { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'CC', bankcode:'CC', store_card_token:token, user_credentials:user_cred, ccvv:ccvv, storecard_token_type:'0', txn_s2s_flow:'4', hash:hash };
+            var surl = (document.getElementById('sc_m3rpt_surl') || {}).value || getCallbackUrl();
+            var furl = (document.getElementById('sc_m3rpt_furl') || {}).value || getCallbackUrl();
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:furl, pg:'CC', bankcode:'CC', store_card_token:token, user_credentials:user_cred, ccvv:ccvv, storecard_token_type:'0', txn_s2s_flow:'4', hash:hash };
+            var s2sIp = (document.getElementById('sc_m3rpt_s2s_client_ip') || {}).value || '';
+            var s2sDev = (document.getElementById('sc_m3rpt_s2s_device_info') || {}).value || navigator.userAgent;
+            if (s2sIp) params.s2s_client_ip = s2sIp;
+            if (s2sDev) params.s2s_device_info = s2sDev;
+            return params;
         }
         function smM3RPTPreview() {
             var params = smM3RPTBuildParams(); if (!params) return;
@@ -14647,9 +16520,9 @@ nodeCartDetailsUsage +
             if (networkFields) networkFields.style.display = val === '1' ? 'block' : 'none';
             if (issuerFields) issuerFields.style.display = val === '2' ? 'block' : 'none';
             if (tokenHint) {
-                if (val === '0') tokenHint.textContent = 'PayU token (card_token) from Get User Cards API';
-                else if (val === '1') tokenHint.textContent = 'Network token DPAN from get_payment_details';
-                else tokenHint.textContent = 'Issuer token value from issuer response';
+                if (val === '0') tokenHint.textContent = 'PayU token (card_token) from Get User Cards or Get Payment Instrument';
+                else if (val === '1') tokenHint.textContent = 'Network token (token_value) from get_payment_instrument or get_payment_details';
+                else tokenHint.textContent = 'Issuer token (token_value) from get_payment_instrument or get_payment_details';
             }
             if (ucHint) {
                 ucHint.textContent = val === '0' ? 'Mandatory — must match value used during card storage' : 'Optional for Network/Issuer token';
@@ -14676,9 +16549,36 @@ nodeCartDetailsUsage +
             if (tokenType === '0' && !userCred) { alert('User Credentials is mandatory for PayU Token (storecard_token_type=0)'); return null; }
             var hashStr = key+'|'+txnid+'|'+amount+'|'+productinfo+'|'+firstname+'|'+email+'|||||||||||'+salt;
             var hash = smSHA512(hashStr);
-            var surl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'') + '/callback.php';
-            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:surl, pg:'CC', bankcode:'CC', store_card_token:storeCardToken, storecard_token_type:tokenType, txn_s2s_flow:'4', s2s_client_ip:'10.200.12.12', s2s_device_info:navigator.userAgent, hash:hash };
+            var surl = (document.getElementById('sc_m3nt_surl') || {}).value || getCallbackUrl();
+            var furl = (document.getElementById('sc_m3nt_furl') || {}).value || getCallbackUrl();
+            var ntS2sIp = (document.getElementById('sc_m3nt_s2s_client_ip') || {}).value || '10.200.12.12';
+            var ntS2sDev = (document.getElementById('sc_m3nt_s2s_device_info') || {}).value || navigator.userAgent;
+            var pg = (document.getElementById('sc_m3nt_pg') || {}).value || 'CC';
+            var bankcode = (document.getElementById('sc_m3nt_bankcode') || {}).value || 'CC';
+            var params = { key:key, txnid:txnid, amount:amount, productinfo:productinfo, firstname:firstname, email:email, phone:phone, surl:surl, furl:furl, pg:pg, bankcode:bankcode, store_card_token:storeCardToken, storecard_token_type:tokenType, txn_s2s_flow:'4', s2s_client_ip:ntS2sIp, s2s_device_info:ntS2sDev, hash:hash };
             if (userCred) params.user_credentials = userCred;
+            var address1 = (document.getElementById('sc_m3nt_address1') || {}).value || '';
+            var address2 = (document.getElementById('sc_m3nt_address2') || {}).value || '';
+            var city = (document.getElementById('sc_m3nt_city') || {}).value || '';
+            var state = (document.getElementById('sc_m3nt_state') || {}).value || '';
+            var country = (document.getElementById('sc_m3nt_country') || {}).value || '';
+            var zipcode = (document.getElementById('sc_m3nt_zipcode') || {}).value || '';
+            if (address1) params.address1 = address1;
+            if (address2) params.address2 = address2;
+            if (city) params.city = city;
+            if (state) params.state = state;
+            if (country) params.country = country;
+            if (zipcode) params.zipcode = zipcode;
+            var udf1 = (document.getElementById('sc_m3nt_udf1') || {}).value || '';
+            var udf2 = (document.getElementById('sc_m3nt_udf2') || {}).value || '';
+            var udf3 = (document.getElementById('sc_m3nt_udf3') || {}).value || '';
+            var udf4 = (document.getElementById('sc_m3nt_udf4') || {}).value || '';
+            var udf5 = (document.getElementById('sc_m3nt_udf5') || {}).value || '';
+            if (udf1) params.udf1 = udf1;
+            if (udf2) params.udf2 = udf2;
+            if (udf3) params.udf3 = udf3;
+            if (udf4) params.udf4 = udf4;
+            if (udf5) params.udf5 = udf5;
             if (tokenType === '1') {
                 var ccexpmon = document.getElementById('sc_m3nt_ccexpmon').value.trim();
                 var ccexpyr = document.getElementById('sc_m3nt_ccexpyr').value.trim();
@@ -14762,9 +16662,14 @@ nodeCartDetailsUsage +
             var var1 = document.getElementById('sc_m3_cry_var1').value.trim();
             var var2 = document.getElementById('sc_m3_cry_var2').value.trim();
             if (!key || !salt || !var1 || !var2) { alert('Fill Key, Salt, User Credentials and Token'); return; }
+            var var3 = (document.getElementById('sc_m3_cry_var3') || {}).value || '1';
+            var var4 = (document.getElementById('sc_m3_cry_var4') || {}).value || '';
+            var var5 = (document.getElementById('sc_m3_cry_var5') || {}).value || '';
             var hashStr = key + '|get_payment_details|' + var1 + '|' + salt;
             var hash = smSHA512(hashStr);
-            var params = { key: key, command: 'get_payment_details', var1: var1, var2: var2, var3: '1', hash: hash };
+            var params = { key: key, command: 'get_payment_details', var1: var1, var2: var2, var3: var3, hash: hash };
+            if (var4) params.var4 = var4;
+            if (var5) params.var5 = var5;
             var panel = document.getElementById('scM3CryReqRes'); panel.style.display = 'block';
             document.getElementById('scM3CryRequestView').textContent = JSON.stringify({ endpoint:'https://test.payu.in/merchant/postservice.php?form=2', method:'POST', params:params }, null, 2);
             var badge = document.getElementById('scM3CryStatusBadge');
@@ -14931,6 +16836,7 @@ nodeCartDetailsUsage +
         window.smCardGetUserCards = smCardGetUserCards;
         window.smCardGetPaymentInstrument = smCardGetPaymentInstrument;
         window.smCardDeleteInstrument = smCardDeleteInstrument;
+        window.smCardM2DeleteInstrument = smCardM2DeleteInstrument;
         /* Make prereq Merchant Key items clickable */
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {

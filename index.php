@@ -3427,19 +3427,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-upiflow" onclick="smNavTo(this,'sm-upiflow')"><span class="nav-icon">1</span> Intent / QR Flow</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-payment" onclick="smNavTo(this,'sm-payment')"><span class="nav-icon">2</span> Initiate Payment</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-verify" onclick="smNavTo(this,'sm-verify')"><span class="nav-icon">3</span> Verify Payment</li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-upi-cancel" onclick="smNavTo(this,'sm-upi-cancel')"><span class="nav-icon">4</span> Cancel / Refund</li>
-                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-upi-check-status" onclick="smNavTo(this,'sm-upi-check-status')"><span class="nav-icon">5</span> Check Action Status</li>
 
                         <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">UPI OTM (Pre-Authorize) <span class="nav-group-arrow">&#9660;</span></li>
-                        <!-- Normal Capture flow steps (shown by default) -->
+                        <!-- Normal Capture flow steps (all visible) -->
                         <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-nav-multi" data-section="sm-otm" onclick="smNavTo(this,'sm-otm')"><span class="nav-icon otm-step-num" data-normal="1" data-multi="1">1</span> <span class="otm-nav-label" data-normal="UPI OTM Transaction" data-multi="UPI OTM Transaction">UPI OTM Transaction</span></li>
                         <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-nav-multi" data-section="sm-otm-verify-auth" onclick="smNavTo(this,'sm-otm-verify-auth')"><span class="nav-icon otm-step-num" data-normal="2" data-multi="2">2</span> <span class="otm-nav-label" data-normal="Verify Payment Auth" data-multi="Verify Payment Auth">Verify Payment Auth</span></li>
-                        <!-- Normal Capture Path: shown after user picks "Capture" -->
-                        <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-normal-capture-path" data-section="sm-capture" onclick="smNavTo(this,'sm-capture')" style="display:none;"><span class="nav-icon otm-step-num" data-normal="3">3</span> <span class="otm-nav-label" data-normal="Capture Transaction">Capture Transaction</span></li>
-                        <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-normal-capture-path" data-section="sm-otm-verify-cap" onclick="smNavTo(this,'sm-otm-verify-cap')" style="display:none;"><span class="nav-icon otm-step-num" data-normal="4">4</span> <span class="otm-nav-label" data-normal="Verify Payment Capture">Verify Payment Capture</span></li>
-                        <!-- Normal Cancel Path: shown after user picks "Cancel" -->
-                        <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-normal-cancel-path" data-section="sm-cancel" onclick="smNavTo(this,'sm-cancel')" style="display:none;"><span class="nav-icon otm-step-num" data-normal="3">3</span> <span class="otm-nav-label" data-normal="Cancel Transaction">Cancel Transaction</span></li>
-                        <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-normal-cancel-path" data-section="sm-otm-status" onclick="smNavTo(this,'sm-otm-status')" style="display:none;"><span class="nav-icon otm-step-num" data-normal="4">4</span> <span class="otm-nav-label" data-normal="OTM Status Check">OTM Status Check</span></li>
+                        <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-normal-capture-path" data-section="sm-capture" onclick="smNavTo(this,'sm-capture')"><span class="nav-icon otm-step-num" data-normal="3">3</span> <span class="otm-nav-label" data-normal="Capture Transaction">Capture Transaction</span></li>
+                        <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-normal-capture-path" data-section="sm-otm-verify-cap" onclick="smNavTo(this,'sm-otm-verify-cap')"><span class="nav-icon otm-step-num" data-normal="4">4</span> <span class="otm-nav-label" data-normal="Verify Payment Capture">Verify Payment Capture</span></li>
+                        <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-normal-cancel-path" data-section="sm-cancel" onclick="smNavTo(this,'sm-cancel')"><span class="nav-icon otm-step-num" data-normal="5">5</span> <span class="otm-nav-label" data-normal="Cancel Transaction">Cancel Transaction</span></li>
+                        <li class="seamless-nav-item seamless-nav-sub otm-nav-normal otm-normal-cancel-path" data-section="sm-otm-status" onclick="smNavTo(this,'sm-otm-status')"><span class="nav-icon otm-step-num" data-normal="6">6</span> <span class="otm-nav-label" data-normal="OTM Status Check">OTM Status Check</span></li>
                         <!-- Multi Capture flow (unchanged) -->
                         <li class="seamless-nav-item seamless-nav-sub otm-nav-multi" data-section="sm-otm-status" onclick="smNavTo(this,'sm-otm-status')" style="display:none;"><span class="nav-icon otm-step-num" data-multi="3">3</span> <span class="otm-nav-label" data-multi="OTM Status Check">OTM Status Check</span></li>
                         <li class="seamless-nav-item seamless-nav-sub otm-nav-multi" data-section="sm-capture" onclick="smNavTo(this,'sm-capture')" style="display:none;"><span class="nav-icon otm-step-num" data-multi="4">4</span> <span class="otm-nav-label" data-multi="Capture Transaction">Capture Transaction</span></li>
@@ -3454,6 +3450,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-predebit" onclick="smNavTo(this,'sm-predebit')"><span class="nav-icon">5</span> Pre-Debit Notification</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-si" onclick="smNavTo(this,'sm-si')"><span class="nav-icon">6</span> SI Transaction</li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-si-verify" onclick="smNavTo(this,'sm-si-verify')"><span class="nav-icon">7</span> Verify SI Payment</li>
+
+                        <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">Cancel / Refund &amp; Status <span class="nav-group-arrow">&#9660;</span></li>
+                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-upi-cancel" onclick="smNavTo(this,'sm-upi-cancel')"><span class="nav-icon">1</span> Cancel / Refund</li>
+                        <li class="seamless-nav-item seamless-nav-sub" data-section="sm-upi-check-status" onclick="smNavTo(this,'sm-upi-check-status')"><span class="nav-icon">2</span> Check Action Status</li>
 
                         <li class="seamless-nav-group-label" onclick="smToggleNavGroup(this)" style="cursor:pointer">Tools &amp; Utilities <span class="nav-group-arrow">&#9660;</span></li>
                         <li class="seamless-nav-item seamless-nav-sub" data-section="sm-troubleshoot" onclick="smNavTo(this,'sm-troubleshoot')"><span class="nav-icon">&#128295;</span> Troubleshooting</li>
@@ -3522,6 +3522,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <span>Status</span><span class="sm-flow-sep">&rarr;</span>
                                     <span>Modify</span><span class="sm-flow-sep">&rarr;</span>
                                     <span>SI Txn</span>
+                                </div>
+                                <span class="sm-product-card-btn">Start Flow <span class="sm-btn-arrow">&rarr;</span></span>
+                            </div>
+                            <div class="sm-product-card sm-card-onetime" onclick="smNavTo(document.querySelector('[data-section=sm-upi-cancel]'),'sm-upi-cancel')">
+                                <div class="sm-product-card-icon-wrap"><span class="sm-product-card-icon">&#128260;</span></div>
+                                <h3>Cancel / Refund &amp; Status</h3>
+                                <p>Cancel a pending UPI transaction, initiate refunds for completed payments, and check the status of any action.</p>
+                                <div class="sm-product-card-flow">
+                                    <span>Cancel</span><span class="sm-flow-sep">&bull;</span>
+                                    <span>Refund</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Check Status</span>
                                 </div>
                                 <span class="sm-product-card-btn">Start Flow <span class="sm-btn-arrow">&rarr;</span></span>
                             </div>
@@ -6396,7 +6407,7 @@ sha512(PRiQvJ|verify_payment|TXN_1234567890|mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</c
                         </div>
 
                         <div class="sm-next-btn-wrapper">
-                            <button class="button" onclick="smVerifyNextStep()">Next: Continue &rarr;</button>
+                            <button class="button sm-btn-flow-complete" onclick="smNavTo(document.querySelector('[data-section=sm-overview]'), 'sm-overview')">&#10003; Flow Completed &mdash; Back to Choose Your Flow</button>
                         </div>
                     </div>
 
@@ -8204,6 +8215,7 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                         <li class="cards-nav-item cards-nav-sub cards-nav-api" data-cust-group="m2-rpt" onclick="cardsNavToApi(this,'sm-cards-token','pay','nav-m2-pay-rpt','m2','repeat')">Payment API (_payment)</li>
                         <li class="cards-nav-item cards-nav-sub cards-nav-api" data-cust-group="m2-rpt" onclick="cardsNavToApi(this,'sm-cards-token','pay','nav-m2-3ds','m2','repeat')">Handle 3DS / Submit OTP</li>
                         <li class="cards-nav-item cards-nav-sub cards-nav-api" data-cust-group="m2-rpt" onclick="cardsNavToApi(this,'sm-cards-token','post','nav-m2-verify','m2','repeat')">Verify Payment API</li>
+                        <li class="cards-nav-item cards-nav-sub cards-nav-api" data-cust-group="m2-rpt" onclick="cardsNavToApi(this,'sm-cards-token','post','nav-m2-delete','m2','repeat')">Delete Payment Instrument</li>
 
                         <!-- Model 3 -->
                         <li class="cards-nav-sub cards-nav-model-label" onclick="cardsToggleSubGroup(this)">Model 3: REST API <span class="cards-nav-group-arrow">&#9660;</span></li>
@@ -8262,30 +8274,46 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
 
                     <!-- Section: Cards Overview (Product Cards) -->
                     <div class="seamless-section active" id="cards-overview">
-                        <h2>Choose Your Integration Flow</h2>
-                        <p class="cards-overview-subtitle">Select the card payment product you want to integrate. Each card walks you through the complete flow &mdash; from initiation to verification.</p>
+                        <div class="sm-ov-header">
+                            <h2>Choose Your Integration Flow</h2>
+                            <p class="sm-overview-subtitle">Select the card payment product you want to integrate. Each card walks you through the complete flow &mdash; from initiation to verification.</p>
+                        </div>
 
-                        <div class="cards-product-grid">
-                            <div class="cards-product-card" onclick="cardsNavTo(document.querySelector('[data-section=sm-cards-normal]'),'sm-cards-normal')">
-                                <div class="cards-product-card-icon">&#128179;</div>
+                        <div class="sm-product-grid">
+                            <div class="sm-product-card sm-card-onetime" onclick="cardsNavTo(document.querySelector('[data-section=sm-cards-normal]'),'sm-cards-normal')">
+                                <div class="sm-product-card-badge">Most Popular</div>
+                                <div class="sm-product-card-icon-wrap"><span class="sm-product-card-icon">&#128179;</span></div>
                                 <h3>Normal S2S Card Payment</h3>
                                 <p>Standard server-to-server card payment with 3DS authentication. The most common card integration.</p>
-                                <div class="cards-product-card-flow">BIN Check &rarr; Payment &rarr; 3DS/OTP &rarr; Verify</div>
-                                <span class="cards-product-card-btn">Start Flow &rarr;</span>
+                                <div class="sm-product-card-flow">
+                                    <span>BIN Check</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Payment</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>3DS/OTP</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Verify</span>
+                                </div>
+                                <span class="sm-product-card-btn">Start Flow <span class="sm-btn-arrow">&rarr;</span></span>
                             </div>
-                            <div class="cards-product-card" onclick="cardsNavTo(document.querySelector('[data-section=sm-cards-preauth]'),'sm-cards-preauth')">
-                                <div class="cards-product-card-icon">&#128274;</div>
+                            <div class="sm-product-card sm-card-otm" onclick="cardsNavTo(document.querySelector('[data-section=sm-cards-preauth]'),'sm-cards-preauth')">
+                                <div class="sm-product-card-icon-wrap"><span class="sm-product-card-icon">&#128274;</span></div>
                                 <h3>Pre-Auth Card Payment</h3>
                                 <p>Hold funds first, capture later. Ideal for hotels, rentals, and e-commerce.</p>
-                                <div class="cards-product-card-flow">BIN Check &rarr; Auth &rarr; 3DS/OTP &rarr; Capture/Cancel</div>
-                                <span class="cards-product-card-btn">Start Flow &rarr;</span>
+                                <div class="sm-product-card-flow">
+                                    <span>BIN Check</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Auth</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>3DS/OTP</span><span class="sm-flow-sep">&rarr;</span>
+                                    <span>Capture/Cancel</span>
+                                </div>
+                                <span class="sm-product-card-btn">Start Flow <span class="sm-btn-arrow">&rarr;</span></span>
                             </div>
-                            <div class="cards-product-card" onclick="cardsNavTo(document.querySelector('[data-section=sm-cards-token]'),'sm-cards-token')">
-                                <div class="cards-product-card-icon">&#128737;</div>
+                            <div class="sm-product-card sm-card-autopay" onclick="cardsNavTo(document.querySelector('[data-section=sm-cards-token]'),'sm-cards-token')">
+                                <div class="sm-product-card-icon-wrap"><span class="sm-product-card-icon">&#128737;</span></div>
                                 <h3>Tokenization</h3>
                                 <p>Save cards securely, pay with tokens &mdash; PayU, Network &amp; Issuer tokens.</p>
-                                <div class="cards-product-card-flow">Model 2: Zero Code &bull; Model 3: REST API</div>
-                                <span class="cards-product-card-btn">Start Flow &rarr;</span>
+                                <div class="sm-product-card-flow">
+                                    <span>Model 2: Zero Code</span><span class="sm-flow-sep">&bull;</span>
+                                    <span>Model 3: REST API</span>
+                                </div>
+                                <span class="sm-product-card-btn">Start Flow <span class="sm-btn-arrow">&rarr;</span></span>
                             </div>
                             <!-- Cross-Border (PACB) and Subscriptions hidden — coming in next release -->
                             <!--
@@ -8430,7 +8458,7 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                             </table>
                                         </div>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; Get BIN Info</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>Merchant Key <span class="required">*</span></label>
@@ -8478,6 +8506,7 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                                     </select>
                                                     <small class="sm-field-hint">Set to 1 for additional fields like is_zero_redirect_supported</small>
                                                 </div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button" onclick="smCardGetBinInfoPreview()">Preview Request</button>
@@ -8560,7 +8589,7 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                             </table>
                                         </div>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; Check isDomestic</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>Merchant Key <span class="required">*</span></label>
@@ -8577,6 +8606,7 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                                     <input type="text" id="sc_domestic_bin" value="550690" maxlength="6" placeholder="e.g. 550690">
                                                     <small class="sm-field-hint">Enter exactly the first 6 digits of the card number</small>
                                                 </div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button" onclick="smCardCheckDomesticPreview()">Preview Request</button>
@@ -8690,35 +8720,45 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                         <table class="sm-table" style="margin-top:0.75rem;">
                                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
                                             <tbody>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>key</code></td><td><strong>Yes</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>txnid</code></td><td><strong>Yes</strong></td><td>Unique transaction ID generated by the merchant. PayU rejects duplicate txnids.</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>amount</code></td><td><strong>Yes</strong></td><td>Payment amount for the transaction</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>productinfo</code></td><td><strong>Yes</strong></td><td>Brief description of the product</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>firstname</code></td><td><strong>Yes</strong></td><td>Customer first name</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>email</code></td><td><strong>Yes</strong></td><td>Customer email address</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>phone</code></td><td><strong>Yes</strong></td><td>Customer phone number</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>surl</code></td><td><strong>Yes</strong></td><td>Success URL &mdash; PayU redirects here on successful transaction</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>furl</code></td><td><strong>Yes</strong></td><td>Failure URL &mdash; PayU redirects here on failed transaction</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>hash</code></td><td><strong>Yes</strong></td><td>SHA-512 hash (see Generate Payment Hash step above)</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>pg</code></td><td><strong>Yes</strong></td><td><code>CC</code> for Credit Card, <code>DC</code> for Debit Card</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>bankcode</code></td><td><strong>Yes</strong></td><td><code>CC</code> for Credit Card, <code>DC</code> for Debit Card</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>txn_s2s_flow</code></td><td><strong>Yes</strong></td><td>Must be <code>4</code> for Cards Decoupled (S2S) flow</td></tr>
-                                                <tr><td><code>ccnum</code></td><td><strong>Yes</strong></td><td>13&ndash;19 digit card number (15 for AMEX, 13&ndash;19 for Maestro). Validated with LUHN algorithm.</td></tr>
-                                                <tr><td><code>ccexpmon</code></td><td><strong>Yes</strong></td><td>Card expiry month in MM format (e.g. <code>01</code>, <code>12</code>)</td></tr>
-                                                <tr><td><code>ccexpyr</code></td><td><strong>Yes</strong></td><td>Card expiry year in YYYY format (e.g. <code>2030</code>)</td></tr>
-                                                <tr><td><code>ccvv</code></td><td><strong>Yes</strong></td><td>3-digit CVV (4-digit CID for AMEX)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>ccname</code></td><td>No</td><td>Name on card as entered by the customer</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>lastname</code></td><td>No</td><td>Customer last name (alphabets only)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>curl</code></td><td>No</td><td>Cancel URL &mdash; PayU redirects here if transaction is cancelled</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf1</code>&ndash;<code>udf5</code></td><td>No</td><td>User-defined fields to store additional info per transaction</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>s2s_device_info</code></td><td>No</td><td>Customer device user-agent string</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>s2s_client_ip</code></td><td>No</td><td>Customer IP address</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>store_card</code></td><td>No</td><td>Set to <code>1</code> to tokenize the card for future use</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU during onboarding</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>txnid</code></td><td><strong>Mandatory</strong></td><td>Unique transaction ID generated by the merchant. PayU rejects duplicate txnids.</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>amount</code></td><td><strong>Mandatory</strong></td><td>Payment amount for the transaction</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>productinfo</code></td><td><strong>Mandatory</strong></td><td>Brief description of the product</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>firstname</code></td><td><strong>Mandatory</strong></td><td>Customer first name</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>email</code></td><td><strong>Mandatory</strong></td><td>Customer email address</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>phone</code></td><td><strong>Mandatory</strong></td><td>Customer phone number</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>pg</code></td><td><strong>Mandatory</strong></td><td>Payment gateway type. <code>CC</code> for Credit Card, <code>DC</code> for Debit Card</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td>Bank code for the card type (e.g. <code>CC</code>, <code>DC</code>, <code>AMEX</code>)</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccnum</code></td><td><strong>Mandatory</strong></td><td>13&ndash;19 digit card number (15 for AMEX, 13&ndash;19 for Maestro). Validated with LUHN algorithm.</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccname</code></td><td><strong>Mandatory</strong></td><td>Name on card as entered by the customer</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccvv</code></td><td><strong>Mandatory</strong></td><td>3-digit CVV (4-digit CID for AMEX)</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccexpmon</code></td><td><strong>Mandatory</strong></td><td>Card expiry month in MM format (e.g. <code>01</code>, <code>12</code>)</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccexpyr</code></td><td><strong>Mandatory</strong></td><td>Card expiry year in YYYY format (e.g. <code>2030</code>)</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>surl</code></td><td><strong>Mandatory</strong></td><td>Success URL &mdash; PayU redirects here on successful transaction</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL &mdash; PayU redirects here on failed transaction</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash: <code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)</code></td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong></td><td>Must be <code>4</code> for Cards Decoupled (S2S) flow</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong></td><td>The source IP of the customer</td></tr>
+                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong></td><td>The customer agent&rsquo;s device information (User-Agent string)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>zipcode</code></td><td>Optional</td><td>Customer&rsquo;s PIN code (6 digits)</td></tr>
+                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>address1</code></td><td>Optional <span style="font-size:0.7rem;color:#e65100;">(recommended)</span></td><td>Billing address line 1 (up to 100 characters). Recommended for higher approval rate.</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>address2</code></td><td>Optional</td><td>Billing address line 2 (up to 100 characters)</td></tr>
+                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>city</code></td><td>Optional <span style="font-size:0.7rem;color:#e65100;">(recommended)</span></td><td>Customer city (max 50 characters). Recommended for higher approval rate.</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>state</code></td><td>Optional</td><td>Customer state (max 50 characters)</td></tr>
+                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>country</code></td><td>Optional <span style="font-size:0.7rem;color:#e65100;">(recommended)</span></td><td>Customer country (max 50 characters). Recommended for higher approval rate.</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>lastname</code></td><td>Optional</td><td>Customer last name (alphabets only)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>udf1</code></td><td>Optional</td><td>User-defined field 1 (up to 255 characters)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>udf2</code></td><td>Optional</td><td>User-defined field 2 (up to 255 characters)</td></tr>
+                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>udf3</code></td><td>Optional <span style="font-size:0.7rem;color:#e65100;">(recommended)</span></td><td>Date of Birth (DOB) of buyer in DD-MM-YYYY. Recommended for higher approval rate.</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>udf4</code></td><td>Optional</td><td>User-defined field 4 (up to 255 characters)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>udf5</code></td><td>Optional</td><td>User-defined field 5 (up to 255 characters)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>store_card</code></td><td>Optional</td><td>Set to <code>1</code> to tokenize the card for future use</td></tr>
                                                 <tr style="background:#f9f9f9;"><td><code>user_credentials</code></td><td>Conditional</td><td>Required if <code>store_card=1</code>. Format: <code>merchantKey:uniqueCustomerId</code></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Merchant Credentials</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory">
+                                            <h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>Merchant Key <span class="required">*</span></label>
@@ -8729,7 +8769,6 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                                     <input type="password" id="sc_pay_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli">
                                                 </div>
                                             </div>
-                                            <h4>Transaction Details</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>Transaction ID (txnid) <span class="required">*</span></label>
@@ -8763,15 +8802,14 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                                     <input type="text" id="sc_pay_phone" value="9876543210">
                                                 </div>
                                             </div>
-                                            <h4>Card Details</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>Card Number <span class="required">*</span></label>
                                                     <input type="text" id="sc_pay_ccnum" value="5123456789012346" placeholder="13-19 digits">
                                                 </div>
                                                 <div class="sm-form-group">
-                                                    <label>Name on Card <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label>
-                                                    <input type="text" id="sc_pay_ccname" value="Test User">
+                                                    <label>Name on Card (ccname) <span class="required">*</span></label>
+                                                    <input type="text" id="sc_pay_ccname" value="Ashish Kumar">
                                                 </div>
                                             </div>
                                             <div class="sm-form-row">
@@ -8790,28 +8828,42 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                                     <input type="password" id="sc_pay_ccvv" value="123" placeholder="3-4 digits">
                                                 </div>
                                                 <div class="sm-form-group">
-                                                    <label>PG / Bank Code <span class="required">*</span></label>
-                                                    <select id="sc_pay_pg">
-                                                        <option value="CC">CC (Credit Card)</option>
-                                                        <option value="DC">DC (Debit Card)</option>
-                                                    </select>
-                                                    <small class="sm-field-hint">Sets both <code>pg</code> and <code>bankcode</code> parameters</small>
+                                                    <label>PG <span class="required">*</span></label>
+                                                    <input type="text" id="sc_pay_pg" value="CC" placeholder="e.g. CC, DC">
                                                 </div>
                                             </div>
-                                            <h4>S2S Parameters</h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group">
+                                                    <label>Bank Code (bankcode) <span class="required">*</span></label>
+                                                    <input type="text" id="sc_pay_bankcode" value="CC" placeholder="e.g. CC, DC, AMEX">
+                                                </div>
+                                            </div>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>Success URL (surl) <span class="required">*</span></label>
-                                                    <input type="text" id="sc_pay_surl" value="https://test.payu.in/admin/test_response">
+                                                    <input type="text" id="sc_pay_surl" value="">
                                                 </div>
                                                 <div class="sm-form-group">
                                                     <label>Failure URL (furl) <span class="required">*</span></label>
-                                                    <input type="text" id="sc_pay_furl" value="https://test.payu.in/admin/test_response">
+                                                    <input type="text" id="sc_pay_furl" value="">
                                                 </div>
                                             </div>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
-                                                    <label>Store Card <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label>
+                                                    <label>Client IP (s2s_client_ip) <span class="required">*</span></label>
+                                                    <input type="text" id="sc_pay_s2s_client_ip" value="10.200.12.12" placeholder="e.g. 10.200.12.12">
+                                                </div>
+                                                <div class="sm-form-group">
+                                                    <label>Device Info (s2s_device_info) <span class="required">*</span></label>
+                                                    <input type="text" id="sc_pay_s2s_device_info" value="" placeholder="Auto-filled with User-Agent">
+                                                </div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-pay-section sm-pay-section-conditional">
+                                            <h4>Conditional Parameters</h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group">
+                                                    <label>Store Card <small style="color:#92400e;">&mdash; set to 1 to tokenize</small></label>
                                                     <select id="sc_pay_store_card">
                                                         <option value="0">0 - Don't Store</option>
                                                         <option value="1" selected>1 - Store Card</option>
@@ -8819,10 +8871,38 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                                     <small class="sm-field-hint">Set to 1 to tokenize the card for future use</small>
                                                 </div>
                                                 <div class="sm-form-group">
-                                                    <label>User Credentials <span style="color:#6b7280;font-size:0.75rem;">(conditional)</span></label>
+                                                    <label>User Credentials <small style="color:#92400e;">&mdash; required if store_card=1</small></label>
                                                     <input type="text" id="sc_pay_user_cred" value="" placeholder="key:customer_id (for storing)">
                                                     <small class="sm-field-hint">Required if <code>store_card=1</code>. Format: <code>merchantKey:uniqueCustomerId</code></small>
                                                 </div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-pay-section sm-pay-section-optional">
+                                            <h4>Optional Parameters <small style="font-weight:normal;color:#818cf8;font-size:0.8rem;">(included in request only if filled)</small></h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Address Line 1 (address1) <span style="color:#e65100;font-size:0.75rem;">recommended</span></label><input type="text" id="sc_pay_address1" value="" placeholder="e.g. PayU, Bestech Business Tower, Gurgaon"></div>
+                                                <div class="sm-form-group"><label>Address Line 2 (address2)</label><input type="text" id="sc_pay_address2" value="" placeholder="e.g. Sohna Road"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>City <span style="color:#e65100;font-size:0.75rem;">recommended</span></label><input type="text" id="sc_pay_city" value="" placeholder="e.g. Gurgaon"></div>
+                                                <div class="sm-form-group"><label>State</label><input type="text" id="sc_pay_state" value="" placeholder="e.g. Haryana"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Country <span style="color:#e65100;font-size:0.75rem;">recommended</span></label><input type="text" id="sc_pay_country" value="" placeholder="e.g. India"></div>
+                                                <div class="sm-form-group"><label>Zipcode</label><input type="text" id="sc_pay_zipcode" value="" placeholder="6-digit PIN code e.g. 122018"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF1</label><input type="text" id="sc_pay_udf1" value="" placeholder="User Defined Field 1"></div>
+                                                <div class="sm-form-group"><label>UDF2</label><input type="text" id="sc_pay_udf2" value="" placeholder="User Defined Field 2"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF3</label><input type="text" id="sc_pay_udf3" value="" placeholder="User Defined Field 3"></div>
+                                                <div class="sm-form-group"><label>UDF4</label><input type="text" id="sc_pay_udf4" value="" placeholder="User Defined Field 4"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF5</label><input type="text" id="sc_pay_udf5" value="" placeholder="User Defined Field 5"></div>
+                                                <div class="sm-form-group"><label>Last Name (lastname)</label><input type="text" id="sc_pay_lastname" value="" placeholder="Customer last name"></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button sm-btn-secondary" onclick="smCardPreviewPayment('normal')">Preview Request</button>
@@ -8909,9 +8989,11 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                                 </tbody>
                                             </table>
                                             <div class="sm-interactive-form" style="margin-top:0.75rem;">
+                                                <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                                 <div class="sm-form-row">
                                                     <div class="sm-form-group"><label>Reference ID <span class="required">*</span></label><input type="text" id="sc_otp_refid" placeholder="Auto-filled from payment response"><small class="sm-field-hint">From <code>metaData.referenceId</code> in the payment response</small></div>
                                                     <div class="sm-form-group"><label>OTP <span class="required">*</span></label><input type="text" id="sc_otp_value" value="123456"><small class="sm-field-hint">Test environment OTP: <code>123456</code></small></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                     <button class="button sm-btn-primary" onclick="smCardSubmitOtp('normal')">&#9658; Submit OTP</button>
@@ -9034,6 +9116,7 @@ bankWindow.document.close();</code></pre>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>Merchant Key <span class="required">*</span></label>
@@ -9049,6 +9132,7 @@ bankWindow.document.close();</code></pre>
                                                     <label>Transaction ID <span class="required">*</span></label>
                                                     <input type="text" id="sc_verify_txnid" placeholder="Same txnid used in payment">
                                                 </div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button sm-btn-primary" onclick="smCardVerifyPayment('normal')">Verify Payment</button>
@@ -9236,53 +9320,55 @@ bankWindow.document.close();</code></pre>
                                             </table>
                                         </div>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; Get BIN Info</h4>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group">
-                                                    <label>Merchant Key <span class="required">*</span></label>
-                                                    <input type="text" id="sc_pa_bin_key" value="a4vGC2">
+                                            <div class="sm-pay-section sm-pay-section-mandatory">
+                                                <h4>Mandatory Parameters</h4>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group">
+                                                        <label>Merchant Key <span class="required">*</span></label>
+                                                        <input type="text" id="sc_pa_bin_key" value="a4vGC2">
+                                                    </div>
+                                                    <div class="sm-form-group">
+                                                        <label>Merchant Salt <span class="required">*</span></label>
+                                                        <input type="password" id="sc_pa_bin_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli">
+                                                    </div>
                                                 </div>
-                                                <div class="sm-form-group">
-                                                    <label>Merchant Salt <span class="required">*</span></label>
-                                                    <input type="password" id="sc_pa_bin_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli">
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group">
+                                                        <label>var1 &ndash; Request Type <span class="required">*</span></label>
+                                                        <select id="sc_pa_bin_var1" onchange="smBinVar1Changed('sc_pa_bin_')">
+                                                            <option value="1" selected>1 &ndash; Single BIN lookup</option>
+                                                            <option value="2">2 &ndash; Feature-based BIN list</option>
+                                                            <option value="3">3 &ndash; All BINs (paginated)</option>
+                                                        </select>
+                                                        <small class="sm-field-hint">Determines the type of query</small>
+                                                    </div>
+                                                    <div class="sm-form-group" id="sc_pa_bin_var2_group">
+                                                        <label>var2 &ndash; BIN / Feature Code</label>
+                                                        <input type="text" id="sc_pa_bin_value" value="550690" maxlength="9" placeholder="e.g. 550690">
+                                                        <small class="sm-field-hint" id="sc_pa_bin_var2_hint">BIN number (first 6&ndash;9 digits) for single lookup</small>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group">
-                                                    <label>var1 &ndash; Request Type <span class="required">*</span></label>
-                                                    <select id="sc_pa_bin_var1" onchange="smBinVar1Changed('sc_pa_bin_')">
-                                                        <option value="1" selected>1 &ndash; Single BIN lookup</option>
-                                                        <option value="2">2 &ndash; Feature-based BIN list</option>
-                                                        <option value="3">3 &ndash; All BINs (paginated)</option>
-                                                    </select>
-                                                    <small class="sm-field-hint">Determines the type of query</small>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group">
+                                                        <label>var3 &ndash; Start Index</label>
+                                                        <input type="text" id="sc_pa_bin_var3" value="0" placeholder="0">
+                                                        <small class="sm-field-hint">Pagination start index (default: 0)</small>
+                                                    </div>
+                                                    <div class="sm-form-group">
+                                                        <label>var4 &ndash; Records Per Page</label>
+                                                        <input type="text" id="sc_pa_bin_var4" value="0" placeholder="100">
+                                                        <small class="sm-field-hint">Number of records (1&ndash;1000, default: 100)</small>
+                                                    </div>
                                                 </div>
-                                                <div class="sm-form-group" id="sc_pa_bin_var2_group">
-                                                    <label>var2 &ndash; BIN / Feature Code</label>
-                                                    <input type="text" id="sc_pa_bin_value" value="550690" maxlength="9" placeholder="e.g. 550690">
-                                                    <small class="sm-field-hint" id="sc_pa_bin_var2_hint">BIN number (first 6&ndash;9 digits) for single lookup</small>
-                                                </div>
-                                            </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group">
-                                                    <label>var3 &ndash; Start Index</label>
-                                                    <input type="text" id="sc_pa_bin_var3" value="0" placeholder="0">
-                                                    <small class="sm-field-hint">Pagination start index (default: 0)</small>
-                                                </div>
-                                                <div class="sm-form-group">
-                                                    <label>var4 &ndash; Records Per Page</label>
-                                                    <input type="text" id="sc_pa_bin_var4" value="0" placeholder="100">
-                                                    <small class="sm-field-hint">Number of records (1&ndash;1000, default: 100)</small>
-                                                </div>
-                                            </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group">
-                                                    <label>var5 &ndash; Enhanced Features</label>
-                                                    <select id="sc_pa_bin_var5">
-                                                        <option value="0">0 &ndash; Standard response</option>
-                                                        <option value="1" selected>1 &ndash; Include zero redirect &amp; SI support</option>
-                                                    </select>
-                                                    <small class="sm-field-hint">Set to 1 for additional fields</small>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group">
+                                                        <label>var5 &ndash; Enhanced Features</label>
+                                                        <select id="sc_pa_bin_var5">
+                                                            <option value="0">0 &ndash; Standard response</option>
+                                                            <option value="1" selected>1 &ndash; Include zero redirect &amp; SI support</option>
+                                                        </select>
+                                                        <small class="sm-field-hint">Set to 1 for additional fields</small>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="sm-form-actions">
@@ -9425,6 +9511,9 @@ bankWindow.document.close();</code></pre>
                                                 <tr style="background:rgba(230,81,0,0.04);"><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL &mdash; PayU redirects here on failed authorization</td></tr>
                                                 <tr style="background:rgba(230,81,0,0.04);"><td><code>pre_authorize</code></td><td><strong>Mandatory</strong></td><td>Must be <code>1</code> for pre-authorization. This holds funds without debiting.</td></tr>
                                                 <tr style="background:rgba(230,81,0,0.04);"><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash (see Generate Payment Hash step above). <code>pre_authorize</code> is NOT included in hash.</td></tr>
+                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong></td><td>Must be <code>4</code> for Cards Decoupled (S2S) flow</td></tr>
+                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong></td><td>The source IP of the customer</td></tr>
+                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong></td><td>The customer agent&rsquo;s device information (User-Agent string)</td></tr>
                                                 <tr style="background:#f9f9f9;"><td><code>address1</code></td><td>Optional</td><td>Billing address line 1 (recommended for fraud detection)</td></tr>
                                                 <tr style="background:#f9f9f9;"><td><code>address2</code></td><td>Optional</td><td>Billing address line 2</td></tr>
                                                 <tr style="background:#f9f9f9;"><td><code>city</code></td><td>Optional</td><td>Customer city</td></tr>
@@ -9435,7 +9524,8 @@ bankWindow.document.close();</code></pre>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Transaction Details</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory">
+                                            <h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>Merchant Key <span class="required">*</span></label>
@@ -9479,7 +9569,6 @@ bankWindow.document.close();</code></pre>
                                                     <input type="text" id="sc_pa_pay_phone" value="9876543210">
                                                 </div>
                                             </div>
-                                            <h4>Card Details</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>Card Number <span class="required">*</span></label>
@@ -9505,9 +9594,61 @@ bankWindow.document.close();</code></pre>
                                                     <label>CVV <span class="required">*</span></label>
                                                     <input type="password" id="sc_pa_pay_ccvv" value="123">
                                                 </div>
+                                                <div class="sm-form-group">
+                                                    <label>PG <span class="required">*</span></label>
+                                                    <input type="text" id="sc_pa_pay_pg" value="CC" placeholder="e.g. CC, DC">
+                                                </div>
                                             </div>
-                                            <div class="sm-info-box" style="margin-top:1rem;background:linear-gradient(135deg,rgba(16,132,109,.1),rgba(72,187,120,.05));border-left:4px solid var(--accent-primary,#10846D);">
-                                                <strong><code>pre_authorize = 1</code></strong> is automatically included in this request. This holds funds without debiting the customer.
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group">
+                                                    <label>Bank Code (bankcode) <span class="required">*</span></label>
+                                                    <input type="text" id="sc_pa_pay_bankcode" value="CC" placeholder="e.g. CC, DC, AMEX">
+                                                    <small class="sm-field-hint">Bank code for the card (e.g. <code>CC</code>, <code>DC</code>, <code>AMEX</code>)</small>
+                                                </div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Success URL (surl) <span class="required">*</span></label><input type="text" id="sc_pa_pay_surl" value=""></div>
+                                                <div class="sm-form-group"><label>Failure URL (furl) <span class="required">*</span></label><input type="text" id="sc_pa_pay_furl" value=""></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Client IP (s2s_client_ip) <span class="required">*</span></label><input type="text" id="sc_pa_pay_s2s_client_ip" value="10.200.12.12" placeholder="e.g. 10.200.12.12"></div>
+                                                <div class="sm-form-group"><label>Device Info (s2s_device_info) <span class="required">*</span></label><input type="text" id="sc_pa_pay_s2s_device_info" value="" placeholder="Auto-filled with User-Agent"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group">
+                                                    <label>Pre-Authorize (pre_authorize) <span class="required">*</span></label>
+                                                    <select id="sc_pa_pay_pre_authorize">
+                                                        <option value="1" selected>1 &mdash; Hold funds (pre-authorization)</option>
+                                                    </select>
+                                                    <small class="sm-field-hint">Must be <code>1</code> for pre-authorization. Holds funds without debiting.</small>
+                                                </div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-pay-section sm-pay-section-optional">
+                                            <h4>Optional Parameters <small style="font-weight:normal;color:#818cf8;font-size:0.8rem;">(included in request only if filled)</small></h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Address Line 1</label><input type="text" id="sc_pa_pay_address1" value="" placeholder="Billing address line 1"></div>
+                                                <div class="sm-form-group"><label>Address Line 2</label><input type="text" id="sc_pa_pay_address2" value="" placeholder="Billing address line 2"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>City</label><input type="text" id="sc_pa_pay_city" value="" placeholder="City"></div>
+                                                <div class="sm-form-group"><label>State</label><input type="text" id="sc_pa_pay_state" value="" placeholder="State"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Country</label><input type="text" id="sc_pa_pay_country" value="" placeholder="Country"></div>
+                                                <div class="sm-form-group"><label>Zipcode</label><input type="text" id="sc_pa_pay_zipcode" value="" placeholder="Billing zip code"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF1</label><input type="text" id="sc_pa_pay_udf1" value="" placeholder="User Defined Field 1"></div>
+                                                <div class="sm-form-group"><label>UDF2</label><input type="text" id="sc_pa_pay_udf2" value="" placeholder="User Defined Field 2"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF3</label><input type="text" id="sc_pa_pay_udf3" value="" placeholder="User Defined Field 3"></div>
+                                                <div class="sm-form-group"><label>UDF4</label><input type="text" id="sc_pa_pay_udf4" value="" placeholder="User Defined Field 4"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF5</label><input type="text" id="sc_pa_pay_udf5" value="" placeholder="User Defined Field 5"></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button sm-btn-secondary" onclick="smCardPreviewPayment('preauth')">Preview Request</button>
@@ -9590,14 +9731,17 @@ bankWindow.document.close();</code></pre>
                                                 </tbody>
                                             </table>
                                             <div class="sm-interactive-form" style="margin-top:0.75rem;">
-                                                <div class="sm-form-row">
-                                                    <div class="sm-form-group"><label>Reference ID <span class="required">*</span></label><input type="text" id="sc_pa_otp_refid" placeholder="Auto-filled from payment response"><small class="sm-field-hint">From <code>metaData.referenceId</code> in the payment response</small></div>
-                                                    <div class="sm-form-group"><label>OTP <span class="required">*</span></label><input type="text" id="sc_pa_otp_value" value="123456"><small class="sm-field-hint">Test environment OTP: <code>123456</code></small></div>
-                                            </div>
-                                            <div class="sm-form-actions">
+                                                <div class="sm-pay-section sm-pay-section-mandatory">
+                                                    <h4>Mandatory Parameters</h4>
+                                                    <div class="sm-form-row">
+                                                        <div class="sm-form-group"><label>Reference ID <span class="required">*</span></label><input type="text" id="sc_pa_otp_refid" placeholder="Auto-filled from payment response"><small class="sm-field-hint">From <code>metaData.referenceId</code> in the payment response</small></div>
+                                                        <div class="sm-form-group"><label>OTP <span class="required">*</span></label><input type="text" id="sc_pa_otp_value" value="123456"><small class="sm-field-hint">Test environment OTP: <code>123456</code></small></div>
+                                                    </div>
+                                                </div>
+                                                <div class="sm-form-actions">
                                                     <button class="button sm-btn-primary" onclick="smCardSubmitOtp('preauth')">&#9658; Submit OTP</button>
                                                     <button class="button" onclick="smCardResendOtp('preauth')">&#8635; Resend OTP</button>
-                                            </div>
+                                                </div>
                                         </div>
                                         <div id="scPaOtpReqRes" class="sm-req-res-panel" style="display:none;margin-top:1rem;">
                                             <div class="sm-res-panel">
@@ -9756,31 +9900,31 @@ bankWindow.document.close();</code></pre>
                                         </div>
 
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Cancel Request</h4>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group">
-                                                    <label>Merchant Key <span class="required">*</span></label>
-                                                    <input type="text" id="sc_pa_cancel_key" value="a4vGC2">
+                                            <div class="sm-pay-section sm-pay-section-mandatory">
+                                                <h4>Mandatory Parameters</h4>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group">
+                                                        <label>Merchant Key <span class="required">*</span></label>
+                                                        <input type="text" id="sc_pa_cancel_key" value="a4vGC2">
+                                                    </div>
+                                                    <div class="sm-form-group">
+                                                        <label>Merchant Salt <span class="required">*</span></label>
+                                                        <input type="password" id="sc_pa_cancel_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli">
+                                                    </div>
                                                 </div>
-                                                <div class="sm-form-group">
-                                                    <label>Merchant Salt <span class="required">*</span></label>
-                                                    <input type="password" id="sc_pa_cancel_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli">
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group">
+                                                        <label>PayU ID (mihpayid) <span class="required">*</span></label>
+                                                        <input type="text" id="sc_pa_cancel_payuid" placeholder="From pre-auth / verify_payment response">
+                                                        <small class="sm-field-hint">var1 = PayU transaction reference ID</small>
+                                                    </div>
+                                                    <div class="sm-form-group">
+                                                        <label>Cancel Token (var2) <span class="required">*</span></label>
+                                                        <input type="text" id="sc_pa_cancel_tokenid" placeholder="Merchant unique reference (e.g. Authorize123)">
+                                                        <small class="sm-field-hint">var2 = Merchant unique reference number</small>
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group">
-                                                    <label>PayU ID (mihpayid) <span class="required">*</span></label>
-                                                    <input type="text" id="sc_pa_cancel_payuid" placeholder="From pre-auth / verify_payment response">
-                                                    <small class="sm-field-hint">var1 = PayU transaction reference ID</small>
-                                                </div>
-                                                <div class="sm-form-group">
-                                                    <label>Cancel Token (var2) <span class="required">*</span></label>
-                                                    <input type="text" id="sc_pa_cancel_tokenid" placeholder="Merchant unique reference (e.g. Authorize123)">
-                                                    <small class="sm-field-hint">var2 = Merchant unique reference number</small>
-                                                </div>
-                                            </div>
-
                                             <div class="sm-form-actions">
                                                 <button class="button sm-btn-secondary" onclick="smCardPreviewCancelPreAuth()">Preview Request</button>
                                                 <button class="button sm-btn-primary" onclick="smCardSendCancelPreAuth()">Cancel Transaction</button>
@@ -9830,33 +9974,36 @@ bankWindow.document.close();</code></pre>
                                             <strong>Response:</strong> On success, the response contains <code>"status": 1</code>, <code>"msg": "Capture Request Queued"</code>, a <code>request_id</code>, and <code>bank_ref_num</code>. Always verify the final status using <code>verify_payment</code> after capture.
                                         </div>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group">
-                                                    <label>Merchant Key <span class="required">*</span></label>
-                                                    <input type="text" id="sc_cap_key" value="a4vGC2">
+                                            <div class="sm-pay-section sm-pay-section-mandatory">
+                                                <h4>Mandatory Parameters</h4>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group">
+                                                        <label>Merchant Key <span class="required">*</span></label>
+                                                        <input type="text" id="sc_cap_key" value="a4vGC2">
+                                                    </div>
+                                                    <div class="sm-form-group">
+                                                        <label>Merchant Salt <span class="required">*</span></label>
+                                                        <input type="password" id="sc_cap_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli">
+                                                    </div>
                                                 </div>
-                                                <div class="sm-form-group">
-                                                    <label>Merchant Salt <span class="required">*</span></label>
-                                                    <input type="password" id="sc_cap_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli">
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group">
+                                                        <label>PayU ID (mihpayid) <span class="required">*</span></label>
+                                                        <input type="text" id="sc_cap_payuid" placeholder="From verify_payment response">
+                                                        <small class="sm-field-hint">var1 = PayU's transaction reference ID</small>
+                                                    </div>
+                                                    <div class="sm-form-group">
+                                                        <label>Unique Request ID <span class="required">*</span></label>
+                                                        <input type="text" id="sc_cap_reqid" placeholder="e.g. mihpayid_cap">
+                                                        <small class="sm-field-hint">var2 = Unique identifier for this capture request</small>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group">
-                                                    <label>PayU ID (mihpayid) <span class="required">*</span></label>
-                                                    <input type="text" id="sc_cap_payuid" placeholder="From verify_payment response">
-                                                    <small class="sm-field-hint">var1 = PayU's transaction reference ID</small>
-                                                </div>
-                                                <div class="sm-form-group">
-                                                    <label>Unique Request ID <span class="required">*</span></label>
-                                                    <input type="text" id="sc_cap_reqid" placeholder="e.g. mihpayid_cap">
-                                                    <small class="sm-field-hint">var2 = Unique identifier for this capture request</small>
-                                                </div>
-                                            </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group">
-                                                    <label>Capture Amount <span class="required">*</span></label>
-                                                    <input type="text" id="sc_cap_amount" placeholder="Amount to capture (&le; authorized)">
-                                                    <small class="sm-field-hint">var3 = Amount to capture (can be partial)</small>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group">
+                                                        <label>Capture Amount <span class="required">*</span></label>
+                                                        <input type="text" id="sc_cap_amount" placeholder="Amount to capture (&le; authorized)">
+                                                        <small class="sm-field-hint">var3 = Amount to capture (can be partial)</small>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="sm-form-actions">
@@ -9895,6 +10042,10 @@ bankWindow.document.close();</code></pre>
                                             &bull; After pre-auth: <code>unmappedstatus = auth</code> (funds held)<br>
                                             &bull; After capture: <code>unmappedstatus = captured</code> (funds debited)<br>
                                             &bull; If cancelled: <code>unmappedstatus = auth</code> with cancellation reflected
+                                        </div>
+                                        <div class="sm-info-box" style="margin-top:0.75rem;border-left:4px solid #ff9800;background:rgba(255,152,0,0.04);">
+                                            <strong>&#9203; Note: Capture takes ~1 minute to process</strong>
+                                            <p style="margin:0.25rem 0 0;">PayU processes capture requests via a background cron that runs every <strong>~1 minute</strong>. After clicking &ldquo;Verify Final Status&rdquo;, if the status is still <code>auth</code>, the tool will <strong>automatically retry every 10 seconds</strong> (up to ~80 seconds) until the status changes to <code>captured</code>.</p>
                                         </div>
 
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -10061,7 +10212,7 @@ bankWindow.document.close();</code></pre>
                                             </table>
                                         </div>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; Get BIN Info</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m2_bin_key" value="a4vGC2"></div>
                                                 <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m2_bin_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
@@ -10092,6 +10243,7 @@ bankWindow.document.close();</code></pre>
                                                         <option value="1" selected>1 &ndash; Include zero redirect &amp; SI support</option>
                                                     </select>
                                                 </div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button" onclick="smTokM2GetBinInfoPreview()">Preview Request</button>
@@ -10153,12 +10305,14 @@ bankWindow.document.close();</code></pre>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_tok_uc_key" value="a4vGC2"></div>
                                                 <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_tok_uc_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
                                             </div>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>User Credentials (var1) <span class="required">*</span></label><input type="text" id="sc_tok_uc_var1" value="a4vGC2:test_customer1" placeholder="merchantKey:uniqueCustomerId"><small class="sm-field-hint">Format: merchantKey:userId &mdash; e.g. <code>a4vGC2:test_customer1</code></small></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions"><button class="button sm-btn-primary" onclick="smCardGetUserCards()">Get Saved Cards</button></div>
                                         </div>
@@ -10261,34 +10415,80 @@ bankWindow.document.close();</code></pre>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; First-Time Payment with Card Save</h4>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m2ft_key" value="a4vGC2"></div>
-                                                <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m2ft_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
+                                            <div class="sm-pay-section sm-pay-section-mandatory">
+                                                <h4>Mandatory Parameters</h4>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m2ft_key" value="a4vGC2"></div>
+                                                    <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m2ft_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Transaction ID (txnid) <span class="required">*</span></label><div style="display:flex;gap:0.5rem;align-items:center;"><input type="text" id="sc_m2ft_txnid" placeholder="Auto-generated" style="flex:1;"><button type="button" onclick="smNewTxnId('sc_m2ft_txnid','TXN_')" style="padding:0.5rem 1rem;background:#10846D;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;white-space:nowrap;">New Txn ID</button></div></div>
+                                                    <div class="sm-form-group"><label>Amount <span class="required">*</span></label><input type="text" id="sc_m2ft_amount" value="10.00"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Product Info <span class="required">*</span></label><input type="text" id="sc_m2ft_productinfo" value="Test Product"></div>
+                                                    <div class="sm-form-group"><label>First Name <span class="required">*</span></label><input type="text" id="sc_m2ft_firstname" value="Test"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Email <span class="required">*</span></label><input type="text" id="sc_m2ft_email" value="test@example.com"></div>
+                                                    <div class="sm-form-group"><label>Phone <span class="required">*</span></label><input type="text" id="sc_m2ft_phone" value="9876543210"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Card Number <span class="required">*</span></label><input type="text" id="sc_m2ft_ccnum" value="5506900480000008" maxlength="19"><small class="sm-field-hint">Test cards: <code>5506900480000008</code> (MC) &bull; <code>4895370077346937</code> (Visa) &mdash; OTP: <code>123456</code></small></div>
+                                                    <div class="sm-form-group"><label>Name on Card <span class="required">*</span></label><input type="text" id="sc_m2ft_ccname" value="Test User"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Expiry Month <span class="required">*</span></label><input type="text" id="sc_m2ft_ccexpmon" value="05" maxlength="2" placeholder="MM"></div>
+                                                    <div class="sm-form-group"><label>Expiry Year <span class="required">*</span></label><input type="text" id="sc_m2ft_ccexpyr" value="2030" maxlength="4" placeholder="YYYY"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>CVV <span class="required">*</span></label><input type="password" id="sc_m2ft_ccvv" value="123" maxlength="4"></div>
+                                                    <div class="sm-form-group"><label>PG <span class="required">*</span></label><input type="text" id="sc_m2ft_pg" value="CC" placeholder="e.g. CC, DC"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Bank Code (bankcode) <span class="required">*</span></label><input type="text" id="sc_m2ft_bankcode" value="CC" placeholder="e.g. CC, DC, AMEX"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Success URL (surl) <span class="required">*</span></label><input type="text" id="sc_m2ft_surl" value=""></div>
+                                                    <div class="sm-form-group"><label>Failure URL (furl) <span class="required">*</span></label><input type="text" id="sc_m2ft_furl" value=""></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Client IP (s2s_client_ip) <span class="required">*</span></label><input type="text" id="sc_m2ft_s2s_client_ip" value="10.200.12.12"></div>
+                                                    <div class="sm-form-group"><label>Device Info (s2s_device_info) <span class="required">*</span></label><input type="text" id="sc_m2ft_s2s_device_info" value="" placeholder="Auto-filled with User-Agent"></div>
+                                                </div>
                                             </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group"><label>Transaction ID (txnid) <span class="required">*</span></label><div style="display:flex;gap:0.5rem;align-items:center;"><input type="text" id="sc_m2ft_txnid" placeholder="Auto-generated" style="flex:1;"><button type="button" onclick="smNewTxnId('sc_m2ft_txnid','TXN_')" style="padding:0.5rem 1rem;background:#10846D;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;white-space:nowrap;">New Txn ID</button></div></div>
-                                                <div class="sm-form-group"><label>Amount <span class="required">*</span></label><input type="text" id="sc_m2ft_amount" value="10.00"></div>
+                                            <div class="sm-pay-section sm-pay-section-conditional">
+                                                <h4>Conditional Parameters</h4>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Store Card (store_card) <span class="required">*</span></label><input type="text" id="sc_m2ft_store_card" value="1" placeholder="1 = save card"><small class="sm-field-hint"><code>1</code> = customer consent to save card</small></div>
+                                                    <div class="sm-form-group"><label>User Credentials <span class="required">*</span></label><input type="text" id="sc_m2ft_user_cred" value="a4vGC2:test_customer1" placeholder="key:customerId"><small class="sm-field-hint">Format: <code>merchantKey:uniqueUserId</code></small></div>
+                                                </div>
                                             </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group"><label>Product Info <span class="required">*</span></label><input type="text" id="sc_m2ft_productinfo" value="Test Product"></div>
-                                                <div class="sm-form-group"><label>First Name <span class="required">*</span></label><input type="text" id="sc_m2ft_firstname" value="Test"></div>
-                                            </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group"><label>Email <span class="required">*</span></label><input type="text" id="sc_m2ft_email" value="test@example.com"></div>
-                                                <div class="sm-form-group"><label>Phone <span class="required">*</span></label><input type="text" id="sc_m2ft_phone" value="9876543210"></div>
-                                            </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group"><label>Card Number <span class="required">*</span></label><input type="text" id="sc_m2ft_ccnum" value="5506900480000008" maxlength="19"><small class="sm-field-hint">Test cards: <code>5506900480000008</code> (MC) &bull; <code>4895370077346937</code> (Visa) &mdash; OTP: <code>123456</code></small></div>
-                                                <div class="sm-form-group"><label>Name on Card <span class="required">*</span></label><input type="text" id="sc_m2ft_ccname" value="Test User"></div>
-                                            </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group"><label>Expiry Month <span class="required">*</span></label><input type="text" id="sc_m2ft_ccexpmon" value="05" maxlength="2" placeholder="MM"></div>
-                                                <div class="sm-form-group"><label>Expiry Year <span class="required">*</span></label><input type="text" id="sc_m2ft_ccexpyr" value="2030" maxlength="4" placeholder="YYYY"></div>
-                                            </div>
-                                            <div class="sm-form-row">
-                                                <div class="sm-form-group"><label>CVV <span class="required">*</span></label><input type="password" id="sc_m2ft_ccvv" value="123" maxlength="4"></div>
-                                                <div class="sm-form-group"><label>User Credentials <span class="required">*</span></label><input type="text" id="sc_m2ft_user_cred" value="a4vGC2:test_customer1" placeholder="key:customerId"></div>
+                                            <div class="sm-pay-section sm-pay-section-optional">
+                                                <h4>Optional Parameters <small style="font-weight:normal;color:#818cf8;font-size:0.8rem;">(included in request only if filled)</small></h4>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Address Line 1</label><input type="text" id="sc_m2ft_address1" value="" placeholder="Billing address line 1"></div>
+                                                    <div class="sm-form-group"><label>Address Line 2</label><input type="text" id="sc_m2ft_address2" value="" placeholder="Billing address line 2"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>City</label><input type="text" id="sc_m2ft_city" value="" placeholder="City"></div>
+                                                    <div class="sm-form-group"><label>State</label><input type="text" id="sc_m2ft_state" value="" placeholder="State"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>Country</label><input type="text" id="sc_m2ft_country" value="" placeholder="Country"></div>
+                                                    <div class="sm-form-group"><label>Zipcode</label><input type="text" id="sc_m2ft_zipcode" value="" placeholder="6-digit PIN code"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>UDF1</label><input type="text" id="sc_m2ft_udf1" value="" placeholder="User Defined Field 1"></div>
+                                                    <div class="sm-form-group"><label>UDF2</label><input type="text" id="sc_m2ft_udf2" value="" placeholder="User Defined Field 2"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>UDF3</label><input type="text" id="sc_m2ft_udf3" value="" placeholder="User Defined Field 3"></div>
+                                                    <div class="sm-form-group"><label>UDF4</label><input type="text" id="sc_m2ft_udf4" value="" placeholder="User Defined Field 4"></div>
+                                                </div>
+                                                <div class="sm-form-row">
+                                                    <div class="sm-form-group"><label>UDF5</label><input type="text" id="sc_m2ft_udf5" value="" placeholder="User Defined Field 5"></div>
+                                                </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button" onclick="smM2FTPreview()">Preview Request</button>
@@ -10341,13 +10541,16 @@ bankWindow.document.close();</code></pre>
                                                 <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s User-Agent string</td></tr>
                                                 <tr style="background:#f9f9f9;"><td><code>ccvv</code></td><td>Optional</td><td>CVV &mdash; not required for saved card transactions</td></tr>
                                                 <tr style="background:#f9f9f9;"><td><code>storecard_token_type</code></td><td>Optional</td><td><code>0</code> for PayU token hub (default if omitted)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>address1</code>, <code>address2</code></td><td>Optional</td><td>Billing address (recommended for fraud detection)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td>Optional</td><td>Billing address details</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>udf1</code>&ndash;<code>udf5</code></td><td>Optional</td><td>User-defined fields for additional transaction info</td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:0.75rem;border-left:4px solid #7b1fa2;">
                                             <strong>Not needed for repeat:</strong> <code>ccnum</code>, <code>ccname</code>, <code>ccexpmon</code>, <code>ccexpyr</code>, <code>store_card</code> &mdash; card details are resolved from the token by PayU.
                                         </div>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; Pay with Saved Token</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_tok_pay_key" value="a4vGC2"></div>
                                                 <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_tok_pay_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
@@ -10373,7 +10576,51 @@ bankWindow.document.close();</code></pre>
                                                 <div class="sm-form-group"><label>CVV <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label><input type="password" id="sc_tok_pay_ccvv" value="123"><small class="sm-field-hint">Optional for saved card transactions. Test CVV: <code>123</code></small></div>
                                             </div>
                                             <div class="sm-form-row">
-                                                <div class="sm-form-group"><label>User Credentials <span class="required">*</span></label><input type="text" id="sc_tok_pay_user_cred" value="a4vGC2:test_customer1" placeholder="key:customerId"></div>
+                                                <div class="sm-form-group"><label>Token Type (storecard_token_type) <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label>
+                                                    <select id="sc_tok_pay_storecard_token_type" style="width:100%;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;">
+                                                        <option value="0" selected>0 &mdash; PayU Token Hub (default)</option>
+                                                    </select>
+                                                    <small class="sm-field-hint"><code>0</code> for PayU token hub (default if omitted)</small>
+                                                </div>
+                                                <div class="sm-form-group"><label>User Credentials <span class="required">*</span></label><input type="text" id="sc_tok_pay_user_cred" value="a4vGC2:test_customer1" placeholder="key:customerId"><small class="sm-field-hint">Format: <code>merchantKey:uniqueUserId</code></small></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>PG <span class="required">*</span></label><input type="text" id="sc_tok_pay_pg" value="CC" placeholder="e.g. CC, DC"></div>
+                                                <div class="sm-form-group"><label>Bank Code (bankcode) <span class="required">*</span></label><input type="text" id="sc_tok_pay_bankcode" value="CC" placeholder="e.g. CC, DC, AMEX"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Success URL (surl) <span class="required">*</span></label><input type="text" id="sc_tok_pay_surl" value=""></div>
+                                                <div class="sm-form-group"><label>Failure URL (furl) <span class="required">*</span></label><input type="text" id="sc_tok_pay_furl" value=""></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Client IP (s2s_client_ip) <span class="required">*</span></label><input type="text" id="sc_tok_pay_s2s_client_ip" value="10.200.12.12"></div>
+                                                <div class="sm-form-group"><label>Device Info (s2s_device_info) <span class="required">*</span></label><input type="text" id="sc_tok_pay_s2s_device_info" value="" placeholder="Auto-filled with User-Agent"></div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-pay-section sm-pay-section-optional"><h4>Optional Parameters <small style="font-weight:normal;color:#818cf8;font-size:0.8rem;">(included in request only if filled)</small></h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Address Line 1</label><input type="text" id="sc_tok_pay_address1" value="" placeholder="Billing address line 1"></div>
+                                                <div class="sm-form-group"><label>Address Line 2</label><input type="text" id="sc_tok_pay_address2" value="" placeholder="Billing address line 2"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>City</label><input type="text" id="sc_tok_pay_city" value="" placeholder="City"></div>
+                                                <div class="sm-form-group"><label>State</label><input type="text" id="sc_tok_pay_state" value="" placeholder="State"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Country</label><input type="text" id="sc_tok_pay_country" value="" placeholder="Country"></div>
+                                                <div class="sm-form-group"><label>Zipcode</label><input type="text" id="sc_tok_pay_zipcode" value="" placeholder="6-digit PIN code"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF1</label><input type="text" id="sc_tok_pay_udf1" value="" placeholder="User Defined Field 1"></div>
+                                                <div class="sm-form-group"><label>UDF2</label><input type="text" id="sc_tok_pay_udf2" value="" placeholder="User Defined Field 2"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF3</label><input type="text" id="sc_tok_pay_udf3" value="" placeholder="User Defined Field 3"></div>
+                                                <div class="sm-form-group"><label>UDF4</label><input type="text" id="sc_tok_pay_udf4" value="" placeholder="User Defined Field 4"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF5</label><input type="text" id="sc_tok_pay_udf5" value="" placeholder="User Defined Field 5"></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button" onclick="smCardPreviewPayment('token')">Preview Request</button>
@@ -10452,9 +10699,11 @@ bankWindow.document.close();</code></pre>
                                             </tbody>
                                         </table>
                                             <div class="sm-interactive-form" style="margin-top:0.75rem;">
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                     <div class="sm-form-group"><label>Reference ID <span class="required">*</span></label><input type="text" id="sc_tok_otp_refid" placeholder="Auto-filled from payment response"><small class="sm-field-hint">From <code>metaData.referenceId</code> in the payment response</small></div>
                                                 <div class="sm-form-group"><label>OTP <span class="required">*</span></label><input type="text" id="sc_tok_otp_value" value="123456"><small class="sm-field-hint">Test environment OTP: <code>123456</code></small></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                     <button class="button sm-btn-primary" onclick="smCardSubmitOtp('token')">&#9658; Submit OTP</button>
@@ -10544,7 +10793,9 @@ bankWindow.document.close();</code></pre>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row"><div class="sm-form-group"><label>Transaction ID <span class="required">*</span></label><input type="text" id="sc_tok_verify_txnid" placeholder="txnid from payment"></div></div>
+                                            </div>
                                             <div class="sm-form-actions"><button class="button sm-btn-primary" onclick="smCardVerifyPayment('token')">Verify Payment</button></div>
                                         </div>
                                         <div id="scTokVerifyReqRes" class="sm-req-res-panel" style="display:none;margin-top:1rem;">
@@ -10573,6 +10824,55 @@ cardnum=XXXXXXXXXXXX2346
 mode=CC
 unmappedstatus=captured</code></pre></div>
                                         <div class="sm-info-box warning" style="margin-top:1rem;"><strong>Reverse Hash Verification</strong><p>Always verify <code>sha512(SALT|status||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key)</code> before trusting callback data.</p></div>
+                                    </div></div>
+                                    <div class="sm-timeline-item" id="nav-m2-delete"><div class="sm-timeline-marker">9</div><div class="sm-timeline-content">
+                                        <strong>Delete Payment Instrument (Delete Saved Card)</strong>
+                                        <p>Remove a saved token when the customer revokes consent or the card expires. Use <code>delete_payment_instrument</code> (or <code>delete_user_card</code>) API.</p>
+                                        <div class="sm-api-badge">POST <code>https://test.payu.in/merchant/postservice.php?form=2</code></div>
+                                        <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
+                                        <div class="sm-api-badge">Hash: <code>sha512(key|delete_payment_instrument|var1|salt)</code></div>
+                                        <table class="sm-table" style="margin-top:0.75rem;">
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <tbody>
+                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
+                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>delete_payment_instrument</code> &mdash; fixed value for this API</td></tr>
+                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>User credentials: <code>merchantKey:userId</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><strong>Mandatory</strong></td><td>Card token (<code>cardToken</code>) to delete</td></tr>
+                                                <tr><td><code>var3</code></td><td>Optional</td><td>Network token value (if deleting specific network token)</td></tr>
+                                                <tr><td><code>var4</code></td><td>Optional</td><td>Issuer token value (if deleting specific issuer token)</td></tr>
+                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|delete_payment_instrument|var1|salt)</code></td></tr>
+                                            </tbody>
+                                        </table>
+                                        <div class="sm-interactive-form" style="margin-top:1rem;">
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m2_del_key" value="a4vGC2"></div>
+                                                <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m2_del_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>User Credentials (var1) <span class="required">*</span></label><input type="text" id="sc_m2_del_var1" value="a4vGC2:test_customer1"></div>
+                                                <div class="sm-form-group"><label>Token to Delete (var2) <span class="required">*</span></label>
+                                                    <select id="sc_m2_del_var2_select" style="display:none;width:100%;padding:0.5rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;margin-bottom:0.35rem;background:#f0fdf4;border-color:#22c55e;cursor:pointer;" onchange="document.getElementById('sc_m2_del_var2').value=this.value"></select>
+                                                    <input type="text" id="sc_m2_del_var2" placeholder="Enter card token or auto-filled from Get User Cards">
+                                                    <small class="sm-field-hint">Select from dropdown (populated after <strong>Get User Cards</strong>) or enter manually.</small>
+                                                </div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-pay-section sm-pay-section-optional"><h4>Optional Parameters</h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Network Token (var3) <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label><input type="text" id="sc_m2_del_var3" value="" placeholder="Network token to delete"><small class="sm-field-hint">Optional &mdash; specify to delete a specific network token</small></div>
+                                                <div class="sm-form-group"><label>Issuer Token (var4) <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label><input type="text" id="sc_m2_del_var4" value="" placeholder="Issuer token to delete"><small class="sm-field-hint">Optional &mdash; specify to delete a specific issuer token</small></div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-form-actions"><button class="button sm-btn-primary" onclick="smCardM2DeleteInstrument()">Delete Instrument</button></div>
+                                        </div>
+                                        <div id="scM2DelReqRes" class="sm-req-res-panel" style="display:none;margin-top:1rem;">
+                                            <div class="sm-res-panel">
+                                                <div class="sm-panel-header"><span>Response Received</span><button onclick="smCopyCode(this)" class="sm-copy-btn">Copy</button></div>
+                                                <div id="scM2DelStatusBadge" class="sm-status-badge"></div>
+                                                <pre><code id="scM2DelResponseView"></code></pre>
+                                            </div>
+                                        </div>
                                     </div></div>
                                 </div>
                             </div>
@@ -10819,7 +11119,7 @@ unmappedstatus=captured</code></pre></div>
                                         </div>
                                     </div></div>
                                     <div class="sm-timeline-item" id="nav-m3-cryptogram"><div class="sm-timeline-marker">4</div><div class="sm-timeline-content">
-                                        <strong>Get Cryptogram (TAVV) <span class="sm-api-badge" style="font-size:0.7rem;">Network token only</span></strong>
+                                        <strong>Get Cryptogram (TAVV)</strong>
                                         <p>For network token transactions processed outside PayU, retrieve the cryptogram (TAVV) needed for authentication. Call <code>get_payment_details</code> with <code>var3=1</code> to request cryptogram.</p>
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/merchant/postservice.php?form=2</code></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
@@ -10838,7 +11138,7 @@ unmappedstatus=captured</code></pre></div>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; Get Cryptogram</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m3_cry_key" value="a4vGC2"></div>
                                                 <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m3_cry_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
@@ -10850,6 +11150,21 @@ unmappedstatus=captured</code></pre></div>
                                                     <input type="text" id="sc_m3_cry_var2" placeholder="Auto-filled from Get User Cards / Get Payment Instrument">
                                                     <small class="sm-field-hint">Select from dropdown (populated after <strong>Get Payment Instrument</strong> or <strong>Get User Cards</strong>) or enter manually.</small>
                                                 </div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Amount (var3) <span class="required">*</span></label><input type="text" id="sc_m3_cry_var3" value="1" placeholder="Transaction amount"><small class="sm-field-hint">Amount for cryptogram generation (e.g. <code>1</code>)</small></div>
+                                                <div class="sm-form-group"><label>Currency (var4) <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label><input type="text" id="sc_m3_cry_var4" value="INR" placeholder="e.g. INR"><small class="sm-field-hint">Currency code. Default: <code>INR</code></small></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Token Type (var5) <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label>
+                                                    <select id="sc_m3_cry_var5">
+                                                        <option value="">Not specified (default)</option>
+                                                        <option value="NETWORK">NETWORK</option>
+                                                        <option value="PAYU">PAYU</option>
+                                                    </select>
+                                                    <small class="sm-field-hint">Token type for cryptogram: <code>NETWORK</code> or <code>PAYU</code></small>
+                                                </div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions"><button class="button sm-btn-primary" onclick="smM3GetCryptogram()">Get Cryptogram</button></div>
                                         </div>
@@ -10883,12 +11198,14 @@ unmappedstatus=captured</code></pre></div>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m3_puc_key" value="a4vGC2"></div>
                                                 <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m3_puc_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
                                             </div>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>User Credentials (var1) <span class="required">*</span></label><input type="text" id="sc_m3_puc_var1" value="a4vGC2:test_customer1" placeholder="merchantKey:uniqueCustomerId"><small class="sm-field-hint">Format: merchantKey:userId &mdash; must match what was used during card save</small></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions"><button class="button sm-btn-primary" onclick="smM3GetUserCardsPayU()">Get Saved Cards</button></div>
                                         </div>
@@ -10976,6 +11293,8 @@ unmappedstatus=captured</code></pre></div>
                                                 <tr style="background:rgba(230,81,0,0.04);"><td><code>ccvv</code></td><td><strong>Mandatory</strong></td><td>3-digit CVV (4-digit CID for AMEX)</td></tr>
                                                 <tr style="background:rgba(230,81,0,0.04);"><td><code>ccexpmon</code></td><td><strong>Mandatory</strong></td><td>Card expiry month in MM format</td></tr>
                                                 <tr style="background:rgba(230,81,0,0.04);"><td><code>ccexpyr</code></td><td><strong>Mandatory</strong></td><td>Card expiry year in YYYY format</td></tr>
+                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>pg</code></td><td><strong>Mandatory</strong></td><td><code>CC</code> for Credit Card</td></tr>
+                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td>Card bank code (e.g. <code>CC</code>, <code>AMEX</code>)</td></tr>
                                                 <tr style="background:rgba(230,81,0,0.04);"><td><code>surl</code></td><td><strong>Mandatory</strong></td><td>Success URL &mdash; PayU redirects here on success</td></tr>
                                                 <tr style="background:rgba(230,81,0,0.04);"><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL &mdash; PayU redirects here on failure</td></tr>
                                                 <tr style="background:rgba(230,81,0,0.04);"><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash (see Generate Payment Hash step)</td></tr>
@@ -10983,11 +11302,14 @@ unmappedstatus=captured</code></pre></div>
                                                 <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s IP address</td></tr>
                                                 <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s User-Agent string</td></tr>
                                                 <tr style="background:#f9f9f9;"><td><code>user_credentials</code></td><td>Optional</td><td><code>merchantKey:userId</code> &mdash; not required for Model 3 first-time (tokenization is done via <code>save_payment_instrument</code>)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>address1</code>, <code>address2</code></td><td>Optional</td><td>Billing address (recommended for fraud detection)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td>Optional</td><td>Billing address details</td></tr>
                                                 <tr style="background:#f9f9f9;"><td><code>udf1</code>&ndash;<code>udf5</code></td><td>Optional</td><td>User-defined fields for additional transaction info</td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; First-Time Card Payment (Model 3)</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory">
+                                            <h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m3ft_key" value="a4vGC2"></div>
                                                 <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m3ft_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
@@ -11014,6 +11336,45 @@ unmappedstatus=captured</code></pre></div>
                                             </div>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>CVV <span class="required">*</span></label><input type="password" id="sc_m3ft_ccvv" value="123" maxlength="4"></div>
+                                                <div class="sm-form-group"><label>PG <span class="required">*</span></label><input type="text" id="sc_m3ft_pg" value="CC" placeholder="e.g. CC, DC"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Bank Code (bankcode) <span class="required">*</span></label><input type="text" id="sc_m3ft_bankcode" value="CC" placeholder="e.g. CC, DC, AMEX"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Success URL (surl) <span class="required">*</span></label><input type="text" id="sc_m3ft_surl" value=""></div>
+                                                <div class="sm-form-group"><label>Failure URL (furl) <span class="required">*</span></label><input type="text" id="sc_m3ft_furl" value=""></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Client IP (s2s_client_ip) <span class="required">*</span></label><input type="text" id="sc_m3ft_s2s_client_ip" value="10.200.12.12"></div>
+                                                <div class="sm-form-group"><label>Device Info (s2s_device_info) <span class="required">*</span></label><input type="text" id="sc_m3ft_s2s_device_info" value="" placeholder="Auto-filled with User-Agent"></div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-pay-section sm-pay-section-optional">
+                                            <h4>Optional Parameters <small style="font-weight:normal;color:#818cf8;font-size:0.8rem;">(included in request only if filled)</small></h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Address Line 1</label><input type="text" id="sc_m3ft_address1" value="" placeholder="Billing address line 1"></div>
+                                                <div class="sm-form-group"><label>Address Line 2</label><input type="text" id="sc_m3ft_address2" value="" placeholder="Billing address line 2"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>City</label><input type="text" id="sc_m3ft_city" value="" placeholder="City"></div>
+                                                <div class="sm-form-group"><label>State</label><input type="text" id="sc_m3ft_state" value="" placeholder="State"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Country</label><input type="text" id="sc_m3ft_country" value="" placeholder="Country"></div>
+                                                <div class="sm-form-group"><label>Zipcode</label><input type="text" id="sc_m3ft_zipcode" value="" placeholder="6-digit PIN code"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF1</label><input type="text" id="sc_m3ft_udf1" value="" placeholder="User Defined Field 1"></div>
+                                                <div class="sm-form-group"><label>UDF2</label><input type="text" id="sc_m3ft_udf2" value="" placeholder="User Defined Field 2"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF3</label><input type="text" id="sc_m3ft_udf3" value="" placeholder="User Defined Field 3"></div>
+                                                <div class="sm-form-group"><label>UDF4</label><input type="text" id="sc_m3ft_udf4" value="" placeholder="User Defined Field 4"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF5</label><input type="text" id="sc_m3ft_udf5" value="" placeholder="User Defined Field 5"></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button" onclick="smM3FTPreview()">Preview Request</button>
@@ -11067,7 +11428,7 @@ unmappedstatus=captured</code></pre></div>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; Repeat Payment with PayU Token</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m3rpt_key" value="a4vGC2"></div>
                                                 <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m3rpt_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
@@ -11094,6 +11455,15 @@ unmappedstatus=captured</code></pre></div>
                                             </div>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>User Credentials <span class="required">*</span></label><input type="text" id="sc_m3rpt_user_cred" value="a4vGC2:test_customer1" placeholder="key:userId"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Success URL (surl) <span class="required">*</span></label><input type="text" id="sc_m3rpt_surl" value=""></div>
+                                                <div class="sm-form-group"><label>Failure URL (furl) <span class="required">*</span></label><input type="text" id="sc_m3rpt_furl" value=""></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Client IP (s2s_client_ip) <span class="required">*</span></label><input type="text" id="sc_m3rpt_s2s_client_ip" value="10.200.12.12"></div>
+                                                <div class="sm-form-group"><label>Device Info (s2s_device_info) <span class="required">*</span></label><input type="text" id="sc_m3rpt_s2s_device_info" value="" placeholder="Auto-filled with User-Agent"></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button" onclick="smM3RPTPreview()">Preview Request</button>
@@ -11147,6 +11517,9 @@ unmappedstatus=captured</code></pre></div>
                                                 <tr style="background:rgba(255,152,0,0.06);"><td><code>additional_info</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#e65100;">(Network/Issuer)</span></td><td>JSON with TAVV, TRID, last4Digits &mdash; mandatory when <code>storecard_token_type=1</code> or <code>2</code></td></tr>
                                                 <tr style="background:rgba(255,152,0,0.06);"><td><code>ccexpmon</code> / <code>ccexpyr</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#e65100;">(Network/Issuer)</span></td><td>Token expiry month/year &mdash; required for Network &amp; Issuer tokens</td></tr>
                                                 <tr style="background:#f9f9f9;"><td><code>ccvv</code></td><td>Optional</td><td>CVV &mdash; optional for saved card / token transactions</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>address1</code>, <code>address2</code></td><td>Optional</td><td>Billing address (recommended for fraud detection)</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td>Optional</td><td>Billing address details</td></tr>
+                                                <tr style="background:#f9f9f9;"><td><code>udf1</code>&ndash;<code>udf5</code></td><td>Optional</td><td>User-defined fields for additional transaction info</td></tr>
                                             </tbody>
                                         </table>
                                         <div style="margin-top:1rem;border:1px solid #1976d2;border-radius:10px;overflow:hidden;background:#fff;">
@@ -11180,12 +11553,12 @@ unmappedstatus=captured</code></pre></div>
                                                     </tbody>
                                                 </table>
                                                 <div style="margin-top:0.6rem;padding:0.45rem 0.7rem;background:#fff8e1;border-left:3px solid #ff8f00;border-radius:4px;font-size:0.82rem;color:#5d4037;line-height:1.5;">
-                                                    <strong>Tip:</strong> For <strong>Network &amp; Issuer Tokens</strong>, you must first call <code>get_payment_instrument</code> to get the <code>card_token</code>, then call <code>get_payment_details</code> (Cryptogram) with that token to obtain the TAVV/cryptogram data needed for payment. For <strong>PayU Token</strong>, simply call <code>get_user_cards</code> &mdash; the <code>card_token</code> in the response is your <code>store_card_token</code>.
+                                                    <strong>Tip:</strong> For <strong>Network &amp; Issuer Tokens</strong>, you must first call <strong>Get Payment Instrument</strong> to get the <code>card_token</code>, then call <strong>Get Cryptogram (TAVV)</strong> with that token to obtain the TAVV/cryptogram data needed for payment. For <strong>PayU Token</strong>, simply call <strong>Get User Cards API</strong> &mdash; the <code>card_token</code> in the response is your <code>Store Card Token</code>.
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; Repeat Payment with Token</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <!-- Token Type Selector -->
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
@@ -11222,6 +11595,20 @@ unmappedstatus=captured</code></pre></div>
                                                 </div>
                                                 <div class="sm-form-group"><label>User Credentials (key:customerId)</label><input type="text" id="sc_m3nt_user_cred" value="a4vGC2:test_customer1" placeholder="e.g. a4vGC2:customer_123"><small class="sm-field-hint" id="sc_m3nt_uc_hint">Optional for Network/Issuer token</small></div>
                                             </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>PG <span class="required">*</span></label><input type="text" id="sc_m3nt_pg" value="CC" placeholder="e.g. CC, DC"></div>
+                                                <div class="sm-form-group"><label>Bank Code (bankcode) <span class="required">*</span></label><input type="text" id="sc_m3nt_bankcode" value="CC" placeholder="e.g. CC, DC, AMEX"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Success URL (surl) <span class="required">*</span></label><input type="text" id="sc_m3nt_surl" value=""></div>
+                                                <div class="sm-form-group"><label>Failure URL (furl) <span class="required">*</span></label><input type="text" id="sc_m3nt_furl" value=""></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Client IP (s2s_client_ip) <span class="required">*</span></label><input type="text" id="sc_m3nt_s2s_client_ip" value="10.200.12.12"></div>
+                                                <div class="sm-form-group"><label>Device Info (s2s_device_info) <span class="required">*</span></label><input type="text" id="sc_m3nt_s2s_device_info" value="" placeholder="Auto-filled with User-Agent"></div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-pay-section sm-pay-section-conditional"><h4>Conditional Parameters</h4>
                                             <!-- PayU Token fields -->
                                             <div id="sc_m3nt_payu_fields" style="display:none;">
                                                 <div class="sm-info-box" style="margin:0.5rem 0;border-left:4px solid #1976d2;padding:0.5rem 0.75rem;background:rgba(25,118,210,0.04);font-size:0.85rem;">
@@ -11273,8 +11660,34 @@ unmappedstatus=captured</code></pre></div>
                                                 </div>
                                                 <div class="sm-form-row">
                                                     <div class="sm-form-group"><label>tokenReferenceId <span class="required">*</span></label><input type="text" id="sc_m3nt_iss_tokenrefid" placeholder="From details.token_refernce_id"><small class="sm-field-hint">Token reference ID from Cryptogram response</small></div>
-                                                    <div class="sm-form-group"><label>tokenBank <span class="required">*</span></label><input type="text" id="sc_m3nt_iss_tokenbank" placeholder="e.g. HDFC"><small class="sm-field-hint">Issuing bank name (e.g. HDFC, ICICI)</small></div>
+                                                    <div class="sm-form-group"><label>tokenBank <span class="required">*</span></label><input type="text" id="sc_m3nt_iss_tokenbank" value="HDFC" placeholder="e.g. HDFC"><small class="sm-field-hint">Issuing bank name (e.g. HDFC, ICICI)</small></div>
                                                 </div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-pay-section sm-pay-section-optional"><h4>Optional Parameters <small style="font-weight:normal;color:#818cf8;font-size:0.8rem;">(included in request only if filled)</small></h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Address Line 1</label><input type="text" id="sc_m3nt_address1" value="" placeholder="Billing address line 1"></div>
+                                                <div class="sm-form-group"><label>Address Line 2</label><input type="text" id="sc_m3nt_address2" value="" placeholder="Billing address line 2"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>City</label><input type="text" id="sc_m3nt_city" value="" placeholder="City"></div>
+                                                <div class="sm-form-group"><label>State</label><input type="text" id="sc_m3nt_state" value="" placeholder="State"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Country</label><input type="text" id="sc_m3nt_country" value="" placeholder="Country"></div>
+                                                <div class="sm-form-group"><label>Zipcode</label><input type="text" id="sc_m3nt_zipcode" value="" placeholder="6-digit PIN code"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF1</label><input type="text" id="sc_m3nt_udf1" value="" placeholder="User Defined Field 1"></div>
+                                                <div class="sm-form-group"><label>UDF2</label><input type="text" id="sc_m3nt_udf2" value="" placeholder="User Defined Field 2"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF3</label><input type="text" id="sc_m3nt_udf3" value="" placeholder="User Defined Field 3"></div>
+                                                <div class="sm-form-group"><label>UDF4</label><input type="text" id="sc_m3nt_udf4" value="" placeholder="User Defined Field 4"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>UDF5</label><input type="text" id="sc_m3nt_udf5" value="" placeholder="User Defined Field 5"></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                 <button class="button" onclick="smM3NTPreview()">Preview Request</button>
@@ -11353,9 +11766,11 @@ unmappedstatus=captured</code></pre></div>
                                             </tbody>
                                         </table>
                                             <div class="sm-interactive-form" style="margin-top:0.75rem;">
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                     <div class="sm-form-group"><label>Reference ID <span class="required">*</span></label><input type="text" id="sc_m3_otp_refid" placeholder="Auto-filled from payment response"><small class="sm-field-hint">From <code>metaData.referenceId</code> in the payment response</small></div>
                                                 <div class="sm-form-group"><label>OTP <span class="required">*</span></label><input type="text" id="sc_m3_otp_value" value="123456"><small class="sm-field-hint">Test environment OTP: <code>123456</code></small></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions">
                                                     <button class="button sm-btn-primary" onclick="smM3SubmitOtp()">&#9658; Submit OTP</button>
@@ -11483,7 +11898,7 @@ bankWindow.document.close();</code></pre>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
-                                            <h4>Try It &ndash; Save Payment Instrument</h4>
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m3_spi_key" value="a4vGC2"></div>
                                                 <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m3_spi_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
@@ -11491,6 +11906,16 @@ bankWindow.document.close();</code></pre>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>User Credentials (var1) <span class="required">*</span></label><input type="text" id="sc_m3_spi_var1" value="a4vGC2:test_customer1" placeholder="key:userId"></div>
                                                 <div class="sm-form-group"><label>Card Name (var2) <span class="required">*</span></label><input type="text" id="sc_m3_spi_var2" value="Test Card" placeholder="e.g. My HDFC Visa"></div>
+                                            </div>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>PG (var3) <span class="required">*</span></label>
+                                                    <select id="sc_m3_spi_var3"><option value="CC">CC (Credit Card)</option><option value="DC">DC (Debit Card)</option></select>
+                                                    <small class="sm-field-hint">Payment gateway type</small>
+                                                </div>
+                                                <div class="sm-form-group"><label>Bank Code (var4) <span class="required">*</span></label>
+                                                    <select id="sc_m3_spi_var4"><option value="CC">CC</option><option value="DC">DC</option><option value="AMEX">AMEX</option></select>
+                                                    <small class="sm-field-hint">Bank code for the card type</small>
+                                                </div>
                                             </div>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Card Holder Name (var5) <span class="required">*</span></label><input type="text" id="sc_m3_spi_var5" value="Test User"></div>
@@ -11503,6 +11928,7 @@ bankWindow.document.close();</code></pre>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>AFA Consent (var10)</label><select id="sc_m3_spi_var10"><option value="true">true</option><option value="false">false</option></select></div>
                                                 <div class="sm-form-group"><label>Tokenization Consent (var11)</label><select id="sc_m3_spi_var11"><option value="true">true</option><option value="false">false</option></select></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions"><button class="button sm-btn-primary" onclick="smTokM3SaveInstrument()">Save Payment Instrument</button></div>
                                         </div>
@@ -11540,6 +11966,7 @@ bankWindow.document.close();</code></pre>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
+                                            <div class="sm-pay-section sm-pay-section-mandatory"><h4>Mandatory Parameters</h4>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group"><label>Merchant Key <span class="required">*</span></label><input type="text" id="sc_m3_del_key" value="a4vGC2"></div>
                                                 <div class="sm-form-group"><label>Merchant Salt <span class="required">*</span></label><input type="password" id="sc_m3_del_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli"></div>
@@ -11551,6 +11978,13 @@ bankWindow.document.close();</code></pre>
                                                     <input type="text" id="sc_tok_del_var2" placeholder="Auto-filled from Get Payment Instrument">
                                                     <small class="sm-field-hint">Select from dropdown (populated after <strong>Get Payment Instrument</strong> or <strong>Get User Cards</strong>) or enter manually.</small>
                                                 </div>
+                                            </div>
+                                            </div>
+                                            <div class="sm-pay-section sm-pay-section-optional"><h4>Optional Parameters</h4>
+                                            <div class="sm-form-row">
+                                                <div class="sm-form-group"><label>Network Token (var3) <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label><input type="text" id="sc_tok_del_var3" value="" placeholder="Network token to delete"><small class="sm-field-hint">Optional &mdash; specify to delete a specific network token</small></div>
+                                                <div class="sm-form-group"><label>Issuer Token (var4) <span style="color:#6b7280;font-size:0.75rem;">(optional)</span></label><input type="text" id="sc_tok_del_var4" value="" placeholder="Issuer token to delete"><small class="sm-field-hint">Optional &mdash; specify to delete a specific issuer token</small></div>
+                                            </div>
                                             </div>
                                             <div class="sm-form-actions"><button class="button sm-btn-primary" onclick="smCardDeleteInstrument()">Delete Instrument</button></div>
                                         </div>
@@ -15223,9 +15657,6 @@ public class PayUHash {
 }</code></pre>
                         </div>
 
-                        <div class="sm-next-btn-wrapper">
-                            <button class="button" onclick="smNbNavTo(document.querySelector('[data-section=sm-nb-status]'), 'sm-nb-status')">Next: Check Bank Status &rarr;</button>
-                        </div>
                     </div>
 
                 </div>

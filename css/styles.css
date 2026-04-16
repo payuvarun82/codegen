@@ -165,36 +165,36 @@
         .header-flow-select select {
             padding: 0.5rem 1.2rem;
             border-radius: 8px;
-            border: 2px solid rgba(255,255,255,0.4);
+            border: 2px solid rgba(255,255,255,0.5);
             font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            background: rgba(255,255,255,0.15);
-            color: #fff;
+            background-color: #ffffff;
+            color: #064e3b;
             min-width: 180px;
             transition: all 0.2s;
             appearance: none;
             -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23064e3b'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 0.8rem center;
             padding-right: 2.2rem;
         }
 
         .header-flow-select select:hover {
-            border-color: rgba(255,255,255,0.7);
-            background: rgba(255,255,255,0.25);
+            border-color: #fff;
+            background-color: #f0fdf4;
         }
 
         .header-flow-select select:focus {
             outline: none;
             border-color: #fff;
-            box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
         }
 
         .header-flow-select select option {
-            background: #2d4a3e;
-            color: #fff;
+            background: #ffffff;
+            color: #064e3b;
         }
 
         .header-actions {
@@ -3132,11 +3132,11 @@
            ================================================================ */
 
         #sm-overview {
-            --ov-primary: #0e7490;
-            --ov-primary-dark: #155e75;
-            --ov-accent: #06b6d4;
-            --ov-bg-light: #ecfeff;
-            --ov-border: #a5f3fc;
+            --ov-primary: #10846D;
+            --ov-primary-dark: #065f46;
+            --ov-accent: #34d399;
+            --ov-bg-light: #ecfdf5;
+            --ov-border: #a7f3d0;
         }
 
         /* --- Header --- */
@@ -3213,6 +3213,11 @@
         #sm-overview .sm-product-card:hover::before {
             opacity: 1;
         }
+        /* --- Per-card accent top bar --- */
+        #sm-overview .sm-card-onetime::before  { background: linear-gradient(90deg, #10846D, #34d399); }
+        #sm-overview .sm-card-otm::before       { background: linear-gradient(90deg, #10846D, #34d399); }
+        #sm-overview .sm-card-autopay::before   { background: linear-gradient(90deg, #10846D, #34d399); }
+        #sm-overview .sm-card-troubleshoot::before { background: linear-gradient(90deg, #10846D, #34d399); }
 
         /* --- "Most Popular" Badge --- */
         #sm-overview .sm-product-card-badge {
@@ -3240,6 +3245,20 @@
             margin-bottom: 1rem;
             font-size: 1.5rem;
             transition: transform 0.3s ease;
+        }
+        #sm-overview .sm-card-onetime .sm-product-card-icon-wrap {
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            color: #10846D;
+        }
+        #sm-overview .sm-card-otm .sm-product-card-icon-wrap {
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            color: #10846D;
+        }
+        #sm-overview .sm-card-autopay .sm-product-card-icon-wrap {
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            color: #10846D;
+        }
+        #sm-overview .sm-card-troubleshoot .sm-product-card-icon-wrap {
             background: linear-gradient(135deg, #ecfdf5, #d1fae5);
             color: #10846D;
         }
@@ -3256,8 +3275,11 @@
             font-size: 1.08rem;
             font-weight: 700;
             margin: 0 0 0.4rem;
-            color: #10846D;
         }
+        #sm-overview .sm-card-onetime h3      { color: #10846D; }
+        #sm-overview .sm-card-otm h3           { color: #10846D; }
+        #sm-overview .sm-card-autopay h3       { color: #10846D; }
+        #sm-overview .sm-card-troubleshoot h3  { color: #10846D; }
 
         /* --- Card Description --- */
         #sm-overview .sm-product-card p {
@@ -3280,12 +3302,26 @@
             border-radius: 10px;
             margin-bottom: 1rem;
             letter-spacing: 0.01em;
-            background: #ecfdf5;
-            color: #10846D;
         }
         #sm-overview .sm-product-card-flow .sm-flow-sep {
             color: #a7f3d0;
             margin: 0 0.1rem;
+        }
+        #sm-overview .sm-card-onetime .sm-product-card-flow {
+            background: #ecfdf5;
+            color: #10846D;
+        }
+        #sm-overview .sm-card-otm .sm-product-card-flow {
+            background: #ecfdf5;
+            color: #10846D;
+        }
+        #sm-overview .sm-card-autopay .sm-product-card-flow {
+            background: #ecfdf5;
+            color: #10846D;
+        }
+        #sm-overview .sm-card-troubleshoot .sm-product-card-flow {
+            background: #ecfdf5;
+            color: #10846D;
         }
 
         /* --- CTA Button --- */
@@ -3295,9 +3331,13 @@
             gap: 0.4rem;
             font-size: 0.85rem;
             font-weight: 700;
-            color: #10846D;
             transition: gap 0.25s ease;
         }
+        #sm-overview .sm-card-onetime .sm-product-card-btn      { color: #10846D; }
+        #sm-overview .sm-card-otm .sm-product-card-btn           { color: #10846D; }
+        #sm-overview .sm-card-autopay .sm-product-card-btn       { color: #10846D; }
+        #sm-overview .sm-card-troubleshoot .sm-product-card-btn  { color: #10846D; }
+
         #sm-overview .sm-product-card-btn .sm-btn-arrow {
             transition: transform 0.25s ease;
             display: inline-block;
@@ -3305,6 +3345,12 @@
         #sm-overview .sm-product-card:hover .sm-product-card-btn .sm-btn-arrow {
             transform: translateX(4px);
         }
+
+        /* --- Per-card hover border accent --- */
+        #sm-overview .sm-card-onetime:hover      { border-color: #6ee7b7; }
+        #sm-overview .sm-card-otm:hover           { border-color: #6ee7b7; }
+        #sm-overview .sm-card-autopay:hover       { border-color: #6ee7b7; }
+        #sm-overview .sm-card-troubleshoot:hover  { border-color: #6ee7b7; }
 
         /* --- Simulator Box --- */
         #sm-overview .sm-ov-simulator-box {
@@ -3703,8 +3749,8 @@
             gap: 1rem;
             margin: 1rem 0 1.5rem;
             padding: 1rem 1.25rem;
-            background: linear-gradient(135deg, #f0f9ff 0%, #ecfeff 50%, #f0fdfa 100%);
-            border: 1px solid #bae6fd;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0fdf4 100%);
+            border: 1px solid #a7f3d0;
             border-left: 4px solid #0ea5e9;
             border-radius: 12px;
             transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
@@ -3721,7 +3767,7 @@
             width: 44px;
             height: 44px;
             border-radius: 12px;
-            background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+            background: linear-gradient(135deg, #10846D, #059669);
             color: #fff;
             display: flex;
             align-items: center;
@@ -3749,7 +3795,7 @@
             text-transform: uppercase;
             letter-spacing: 0.06em;
             color: #fff;
-            background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+            background: linear-gradient(135deg, #10846D, #059669);
             padding: 0.15rem 0.5rem;
             border-radius: 20px;
         }
@@ -4229,13 +4275,13 @@
         .sm-guide-overview p { color: var(--text-secondary); line-height: 1.7; margin: 0; }
 
         .sm-guide-prereqs {
-            background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 50%, #f0f9ff 100%);
-            border: 1px solid #a5f3fc;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9f7 100%);
+            border: 1px solid #a7f3d0;
             border-radius: 14px;
             padding: 1.5rem 1.5rem 1.25rem;
         }
         .sm-guide-prereqs h3 {
-            color: #155e75;
+            color: #065f46;
             font-size: 1.05rem;
             font-weight: 700;
             margin-bottom: 1rem;
@@ -4250,7 +4296,7 @@
             width: 50px;
             height: 3px;
             border-radius: 3px;
-            background: linear-gradient(90deg, #0e7490, #06b6d4);
+            background: linear-gradient(90deg, #10846D, #34d399);
         }
 
         .sm-prereq-list {
@@ -4270,8 +4316,8 @@
             transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
         }
         .sm-prereq-item:hover {
-            border-color: #a5f3fc;
-            box-shadow: 0 4px 16px rgba(14, 116, 144, 0.10);
+            border-color: #a7f3d0;
+            box-shadow: 0 4px 16px rgba(16, 132, 109, 0.10);
             transform: translateY(-2px);
         }
 
@@ -4279,7 +4325,7 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #0e7490, #0891b2);
+            background: linear-gradient(135deg, #10846D, #059669);
             color: #fff;
             display: flex;
             align-items: center;
@@ -4287,11 +4333,11 @@
             font-size: 0.85rem;
             font-weight: 700;
             flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(14, 116, 144, 0.25);
+            box-shadow: 0 2px 6px rgba(16, 132, 109, 0.25);
         }
 
-        .sm-prereq-item:nth-child(1) .sm-prereq-icon { background: linear-gradient(135deg, #0e7490, #155e75); }
-        .sm-prereq-item:nth-child(2) .sm-prereq-icon { background: linear-gradient(135deg, #0891b2, #06b6d4); }
+        .sm-prereq-item:nth-child(1) .sm-prereq-icon { background: linear-gradient(135deg, #10846D, #065f46); }
+        .sm-prereq-item:nth-child(2) .sm-prereq-icon { background: linear-gradient(135deg, #059669, #10846D); }
         .sm-prereq-item:nth-child(3) .sm-prereq-icon { background: linear-gradient(135deg, #0d9488, #14b8a6); }
         .sm-prereq-item:nth-child(4) .sm-prereq-icon { background: linear-gradient(135deg, #059669, #10b981); }
         .sm-prereq-item:nth-child(5) .sm-prereq-icon { background: linear-gradient(135deg, #7c3aed, #8b5cf6); }
@@ -4305,8 +4351,8 @@
         }
         .sm-prereq-item small, .sm-prereq-item div { font-size: 0.84rem; color: #64748b; line-height: 1.55; }
         .sm-prereq-item code {
-            background: rgba(14, 116, 144, 0.08);
-            color: #0e7490;
+            background: rgba(16, 132, 109, 0.08);
+            color: #10846D;
             padding: 0.1em 0.4em;
             border-radius: 4px;
             font-size: 0.82rem;
@@ -5164,21 +5210,21 @@
 
         /* --- Color Variables per Intent Type --- */
         #sm-upiflow {
-            --generic-color: #3b82f6;
-            --generic-color-dark: #1d4ed8;
-            --generic-bg: #eff6ff;
-            --generic-bg-light: #f0f7ff;
-            --generic-border: #bfdbfe;
-            --specific-color: #f59e0b;
-            --specific-color-dark: #d97706;
-            --specific-bg: #fffbeb;
-            --specific-bg-light: #fef9ee;
-            --specific-border: #fde68a;
-            --smart-color: #8b5cf6;
-            --smart-color-dark: #6d28d9;
-            --smart-bg: #f5f3ff;
-            --smart-bg-light: #faf8ff;
-            --smart-border: #ddd6fe;
+            --generic-color: #10846D;
+            --generic-color-dark: #065f46;
+            --generic-bg: #ecfdf5;
+            --generic-bg-light: #f0fdf4;
+            --generic-border: #a7f3d0;
+            --specific-color: #059669;
+            --specific-color-dark: #047857;
+            --specific-bg: #ecfdf5;
+            --specific-bg-light: #f0fdf4;
+            --specific-border: #a7f3d0;
+            --smart-color: #0d9488;
+            --smart-color-dark: #0f766e;
+            --smart-bg: #ecfdf5;
+            --smart-bg-light: #f0fdf4;
+            --smart-border: #a7f3d0;
         }
 
         /* --- Tab Buttons --- */
@@ -5214,7 +5260,7 @@
             background: linear-gradient(135deg, var(--generic-color), var(--generic-color-dark));
             color: #fff;
             border-color: transparent;
-            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+            box-shadow: 0 4px 14px rgba(16, 132, 109, 0.35);
         }
 
         #sm-upiflow .sm-tab[data-tab="specific"] {
@@ -5228,7 +5274,7 @@
             background: linear-gradient(135deg, var(--specific-color), var(--specific-color-dark));
             color: #fff;
             border-color: transparent;
-            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
         }
 
         #sm-upiflow .sm-tab[data-tab="smart"] {
@@ -5242,7 +5288,7 @@
             background: linear-gradient(135deg, var(--smart-color), var(--smart-color-dark));
             color: #fff;
             border-color: transparent;
-            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
         }
 
         /* --- Flow Diagram per Tab --- */
@@ -5252,7 +5298,7 @@
         }
         #upi-generic .sm-flow-num {
             background: linear-gradient(135deg, var(--generic-color), var(--generic-color-dark));
-            box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 3px 10px rgba(16, 132, 109, 0.3);
         }
         #upi-generic .sm-flow-arrow {
             color: var(--generic-color);
@@ -5264,7 +5310,7 @@
         }
         #upi-specific .sm-flow-num {
             background: linear-gradient(135deg, var(--specific-color), var(--specific-color-dark));
-            box-shadow: 0 3px 10px rgba(245, 158, 11, 0.3);
+            box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);
         }
         #upi-specific .sm-flow-arrow {
             color: var(--specific-color);
@@ -5276,7 +5322,7 @@
         }
         #upi-smart .sm-flow-num {
             background: linear-gradient(135deg, var(--smart-color), var(--smart-color-dark));
-            box-shadow: 0 3px 10px rgba(139, 92, 246, 0.3);
+            box-shadow: 0 3px 10px rgba(13, 148, 136, 0.3);
         }
         #upi-smart .sm-flow-arrow {
             color: var(--smart-color);
@@ -5288,7 +5334,7 @@
         }
         #upi-generic .sm-step:hover {
             border-color: var(--generic-color);
-            box-shadow: 0 2px 12px rgba(59, 130, 246, 0.12);
+            box-shadow: 0 2px 12px rgba(16, 132, 109, 0.12);
         }
 
         #upi-specific .sm-step-num {
@@ -5296,7 +5342,7 @@
         }
         #upi-specific .sm-step:hover {
             border-color: var(--specific-color);
-            box-shadow: 0 2px 12px rgba(245, 158, 11, 0.12);
+            box-shadow: 0 2px 12px rgba(5, 150, 105, 0.12);
         }
 
         #upi-smart .sm-step-num {
@@ -5304,7 +5350,7 @@
         }
         #upi-smart .sm-step:hover {
             border-color: var(--smart-color);
-            box-shadow: 0 2px 12px rgba(139, 92, 246, 0.12);
+            box-shadow: 0 2px 12px rgba(13, 148, 136, 0.12);
         }
 
         /* --- Info Boxes per Tab --- */
@@ -5337,21 +5383,21 @@
 
         /* --- Code Block Headers per Tab --- */
         #upi-generic .sm-code-header {
-            background: linear-gradient(135deg, #1e3a5f, #1a2744);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #upi-generic .sm-code-header button:hover {
             background: var(--generic-color);
         }
 
         #upi-specific .sm-code-header {
-            background: linear-gradient(135deg, #4a3520, #3d2b16);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #upi-specific .sm-code-header button:hover {
             background: var(--specific-color);
         }
 
         #upi-smart .sm-code-header {
-            background: linear-gradient(135deg, #2d1b4e, #231540);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #upi-smart .sm-code-header button:hover {
             background: var(--smart-color);
@@ -5389,13 +5435,13 @@
             width: 60px;
             height: 3px;
             border-radius: 3px;
-            background: linear-gradient(90deg, var(--generic-color), var(--smart-color));
+            background: linear-gradient(90deg, #10846D, #34d399);
         }
 
         /* --- Main Overview flow diagram (above tabs) --- */
         #sm-upiflow .sm-step-guide .sm-flow-diagram {
-            background: linear-gradient(135deg, #f0fdf9, #ecfeff, #f0f5ff);
-            border-color: #d1e7e4;
+            background: linear-gradient(135deg, #f0fdf4, #ecfdf5, #f0f9f7);
+            border-color: #d1fae5;
         }
         #sm-upiflow .sm-step-guide .sm-flow-num {
             background: linear-gradient(135deg, #10846D, #065f46);
@@ -5405,7 +5451,7 @@
         /* --- Overview step-guide section accent strip --- */
         #sm-upiflow .sm-guide-overview {
             border-left: 4px solid transparent;
-            border-image: linear-gradient(180deg, var(--generic-color), var(--smart-color)) 1;
+            border-image: linear-gradient(180deg, #10846D, #34d399) 1;
         }
 
         /* --- Testing Tip box at bottom --- */
@@ -5415,21 +5461,21 @@
         }
 
         /* --- Prereq icons in main guide --- */
-        #sm-upiflow .sm-step-guide .sm-prereq-item:nth-child(1) .sm-prereq-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
-        #sm-upiflow .sm-step-guide .sm-prereq-item:nth-child(2) .sm-prereq-icon { background: linear-gradient(135deg, #10b981, #059669); }
-        #sm-upiflow .sm-step-guide .sm-prereq-item:nth-child(3) .sm-prereq-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
-        #sm-upiflow .sm-step-guide .sm-prereq-item:nth-child(4) .sm-prereq-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        #sm-upiflow .sm-step-guide .sm-prereq-item:nth-child(1) .sm-prereq-icon { background: linear-gradient(135deg, #10846D, #065f46); }
+        #sm-upiflow .sm-step-guide .sm-prereq-item:nth-child(2) .sm-prereq-icon { background: linear-gradient(135deg, #059669, #047857); }
+        #sm-upiflow .sm-step-guide .sm-prereq-item:nth-child(3) .sm-prereq-icon { background: linear-gradient(135deg, #0d9488, #0f766e); }
+        #sm-upiflow .sm-step-guide .sm-prereq-item:nth-child(4) .sm-prereq-icon { background: linear-gradient(135deg, #10846D, #064e3b); }
 
         /* ===== Initiate Payment — Enhanced Styling ===== */
 
         #sm-payment {
-            --pay-primary: #0e7490;
-            --pay-primary-dark: #155e75;
-            --pay-accent: #06b6d4;
-            --pay-bg-light: #ecfeff;
-            --pay-bg-tint: #f0fdfa;
-            --pay-border: #a5f3fc;
-            --pay-mand-color: #0e7490;
+            --pay-primary: #10846D;
+            --pay-primary-dark: #065f46;
+            --pay-accent: #34d399;
+            --pay-bg-light: #ecfdf5;
+            --pay-bg-tint: #f0fdf4;
+            --pay-border: #a7f3d0;
+            --pay-mand-color: #10846D;
             --pay-cond-color: #d97706;
             --pay-opt-color: #6366f1;
         }
@@ -5459,18 +5505,18 @@
             color: var(--pay-primary);
         }
 
-        #sm-payment .sm-step-guide .sm-prereq-item:nth-child(1) .sm-prereq-icon { background: linear-gradient(135deg, #0e7490, #155e75); }
-        #sm-payment .sm-step-guide .sm-prereq-item:nth-child(2) .sm-prereq-icon { background: linear-gradient(135deg, #0891b2, #06b6d4); }
-        #sm-payment .sm-step-guide .sm-prereq-item:nth-child(3) .sm-prereq-icon { background: linear-gradient(135deg, #0d9488, #14b8a6); }
+        #sm-payment .sm-step-guide .sm-prereq-item:nth-child(1) .sm-prereq-icon { background: linear-gradient(135deg, #10846D, #065f46); }
+        #sm-payment .sm-step-guide .sm-prereq-item:nth-child(2) .sm-prereq-icon { background: linear-gradient(135deg, #059669, #10846D); }
+        #sm-payment .sm-step-guide .sm-prereq-item:nth-child(3) .sm-prereq-icon { background: linear-gradient(135deg, #0d9488, #10846D); }
 
         /* --- Flow diagram --- */
         #sm-payment .sm-flow-diagram {
-            background: linear-gradient(135deg, #ecfeff, #f0fdfa, #f0f9ff);
+            background: linear-gradient(135deg, #ecfdf5, #f0fdf4, #f0f9f7);
             border-color: var(--pay-border);
         }
         #sm-payment .sm-flow-num {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            box-shadow: 0 3px 12px rgba(14, 116, 144, 0.3);
+            box-shadow: 0 3px 12px rgba(16, 132, 109, 0.3);
         }
         #sm-payment .sm-flow-arrow {
             color: var(--pay-accent);
@@ -5482,7 +5528,7 @@
         }
         #sm-payment .sm-step:hover {
             border-color: var(--pay-primary);
-            box-shadow: 0 2px 12px rgba(14, 116, 144, 0.1);
+            box-shadow: 0 2px 12px rgba(16, 132, 109, 0.1);
         }
 
         /* --- API Reference heading with underline --- */
@@ -5517,7 +5563,7 @@
 
         /* --- Hash formula block --- */
         #sm-payment .sm-code-header {
-            background: linear-gradient(135deg, #164e63, #0e3a4a);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #sm-payment .sm-code-header button:hover {
             background: var(--pay-accent);
@@ -5526,7 +5572,7 @@
         /* --- Interactive form container --- */
         #sm-payment .sm-interactive-form {
             border: 2px solid transparent;
-            border-image: linear-gradient(135deg, var(--pay-border), #e0e7ff) 1;
+            border-image: linear-gradient(135deg, var(--pay-border), #d1fae5) 1;
             border-radius: 0;
             position: relative;
         }
@@ -5565,8 +5611,8 @@
         }
 
         #sm-payment .sm-pay-section-mandatory {
-            background: linear-gradient(135deg, #f0fdfa, #ecfeff);
-            border: 1px solid #a5f3fc;
+            background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+            border: 1px solid #a7f3d0;
         }
         #sm-payment .sm-pay-section-mandatory::before { background: var(--pay-mand-color); }
         #sm-payment .sm-pay-section-mandatory h4 {
@@ -5648,51 +5694,7 @@
             margin-top: 2rem;
         }
 
-        /* --- Request & Response panels --- */
-        #sm-payment .sm-req-panel,
-        #sm-payment .sm-res-panel {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-
-        #sm-payment .sm-req-panel .sm-panel-header {
-            background: linear-gradient(135deg, #164e63, #155e75);
-            color: #ecfeff;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-payment .sm-res-panel .sm-panel-header {
-            background: linear-gradient(135deg, #0e3a4a, #134e4a);
-            color: #ccfbf1;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-payment .sm-req-panel .sm-panel-header .sm-copy-btn,
-        #sm-payment .sm-res-panel .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-payment .sm-req-panel .sm-panel-header .sm-copy-btn:hover,
-        #sm-payment .sm-res-panel .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-
-        #sm-payment .sm-req-panel pre,
-        #sm-payment .sm-res-panel pre {
-            background: #0c1a25;
-            color: #a5f3fc;
-            border-radius: 0 0 12px 12px;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- Request & Response panels (uses base defaults) --- */
 
         /* --- Status badge --- */
         #sm-payment .sm-status-badge {
@@ -5721,36 +5723,21 @@
         /* --- Deeplink Guide box --- */
         #sm-payment #smPayDeeplinkGuide > div {
             border: 1px solid #99f6e4 !important;
-            background: linear-gradient(135deg, #f0fdfa, #ecfeff) !important;
-            box-shadow: 0 2px 10px rgba(14, 116, 144, 0.08);
+            background: linear-gradient(135deg, #f0fdfa, #ecfdf5) !important;
+            box-shadow: 0 2px 10px rgba(16, 132, 109, 0.08);
         }
 
         /* --- QR Section --- */
         #sm-payment .sm-qr-section {
-            background: linear-gradient(135deg, #ecfeff, #f0fdfa);
+            background: linear-gradient(135deg, #ecfdf5, #f0fdfa);
             border: 1px solid var(--pay-border);
             border-radius: 14px;
             padding: 1.5rem 2rem;
-            box-shadow: 0 2px 10px rgba(14, 116, 144, 0.06);
+            box-shadow: 0 2px 10px rgba(16, 132, 109, 0.06);
         }
         #sm-payment .sm-qr-section h4 {
             color: var(--pay-primary);
             font-size: 1.05rem;
-        }
-        #sm-payment .sm-qr-deeplink-box .sm-panel-header {
-            background: linear-gradient(135deg, #164e63, #0e3a4a);
-            color: #a5f3fc;
-            border-bottom: none;
-            border-radius: 10px 10px 0 0;
-        }
-        #sm-payment .sm-qr-deeplink-box .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-payment .sm-qr-deeplink-box .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
         }
         #sm-payment .sm-qr-deeplink-box pre {
             border-radius: 0 0 10px 10px;
@@ -5761,7 +5748,7 @@
             background: #fff;
             border-radius: 14px;
             border: 2px solid var(--pay-border);
-            box-shadow: 0 4px 16px rgba(14, 116, 144, 0.1);
+            box-shadow: 0 4px 16px rgba(16, 132, 109, 0.1);
         }
 
         /* --- Response Guide --- */
@@ -5800,43 +5787,15 @@
         }
         #sm-payment .sm-response-field code {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            box-shadow: 0 1px 4px rgba(14, 116, 144, 0.2);
+            box-shadow: 0 1px 4px rgba(16, 132, 109, 0.2);
         }
 
-        /* --- cURL section --- */
-        #sm-payment .sm-curl-section {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-payment .sm-curl-section .sm-panel-header {
-            background: linear-gradient(135deg, #1e3a5f, #164e63);
-            color: #a5f3fc;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-        }
-        #sm-payment .sm-curl-section .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-payment .sm-curl-section .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-payment .sm-curl-section pre {
-            background: #0c1a25;
-            color: #67e8f9;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- cURL section (uses base defaults) --- */
 
         /* --- Next step actions inside response --- */
         #sm-payment .sm-next-step-actions {
             padding: 1rem;
-            background: linear-gradient(135deg, #ecfeff, #f0fdfa);
+            background: linear-gradient(135deg, #ecfdf5, #f0fdfa);
             border-radius: 10px;
             border: 1px solid var(--pay-border);
             display: flex;
@@ -5847,13 +5806,13 @@
         /* ===== Verify Payment — Same Color Palette as Initiate Payment ===== */
 
         #sm-verify {
-            --pay-primary: #0e7490;
-            --pay-primary-dark: #155e75;
-            --pay-accent: #06b6d4;
-            --pay-bg-light: #ecfeff;
+            --pay-primary: #10846D;
+            --pay-primary-dark: #065f46;
+            --pay-accent: #34d399;
+            --pay-bg-light: #ecfdf5;
             --pay-bg-tint: #f0fdfa;
-            --pay-border: #a5f3fc;
-            --pay-mand-color: #0e7490;
+            --pay-border: #a7f3d0;
+            --pay-mand-color: #10846D;
         }
 
         #sm-verify > h2 {
@@ -5877,17 +5836,17 @@
         }
         #sm-verify .sm-guide-overview h3 { color: var(--pay-primary); }
 
-        #sm-verify .sm-step-guide .sm-prereq-item:nth-child(1) .sm-prereq-icon { background: linear-gradient(135deg, #0e7490, #155e75); }
-        #sm-verify .sm-step-guide .sm-prereq-item:nth-child(2) .sm-prereq-icon { background: linear-gradient(135deg, #0891b2, #06b6d4); }
-        #sm-verify .sm-step-guide .sm-prereq-item:nth-child(3) .sm-prereq-icon { background: linear-gradient(135deg, #0d9488, #14b8a6); }
+        #sm-verify .sm-step-guide .sm-prereq-item:nth-child(1) .sm-prereq-icon { background: linear-gradient(135deg, #10846D, #065f46); }
+        #sm-verify .sm-step-guide .sm-prereq-item:nth-child(2) .sm-prereq-icon { background: linear-gradient(135deg, #059669, #10846D); }
+        #sm-verify .sm-step-guide .sm-prereq-item:nth-child(3) .sm-prereq-icon { background: linear-gradient(135deg, #0d9488, #10846D); }
 
         #sm-verify .sm-flow-diagram {
-            background: linear-gradient(135deg, #ecfeff, #f0fdfa, #f0f9ff);
+            background: linear-gradient(135deg, #ecfdf5, #f0fdf4, #f0f9f7);
             border-color: var(--pay-border);
         }
         #sm-verify .sm-flow-num {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            box-shadow: 0 3px 12px rgba(14, 116, 144, 0.3);
+            box-shadow: 0 3px 12px rgba(16, 132, 109, 0.3);
         }
         #sm-verify .sm-flow-arrow { color: var(--pay-accent); }
 
@@ -5896,7 +5855,7 @@
         }
         #sm-verify .sm-step:hover {
             border-color: var(--pay-primary);
-            box-shadow: 0 2px 12px rgba(14, 116, 144, 0.1);
+            box-shadow: 0 2px 12px rgba(16, 132, 109, 0.1);
         }
 
         #sm-verify > h3 {
@@ -5928,7 +5887,7 @@
         #sm-verify .sm-table tbody tr:hover { background: var(--pay-bg-light); }
 
         #sm-verify .sm-code-header {
-            background: linear-gradient(135deg, #164e63, #0e3a4a);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #sm-verify .sm-code-header button:hover { background: var(--pay-accent); }
 
@@ -5955,48 +5914,7 @@
             padding: 1.5rem;
             margin-top: 2rem;
         }
-        #sm-verify .sm-req-panel,
-        #sm-verify .sm-res-panel {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-verify .sm-req-panel .sm-panel-header {
-            background: linear-gradient(135deg, #164e63, #155e75);
-            color: #ecfeff;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-verify .sm-res-panel .sm-panel-header {
-            background: linear-gradient(135deg, #0e3a4a, #134e4a);
-            color: #ccfbf1;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-verify .sm-req-panel .sm-panel-header .sm-copy-btn,
-        #sm-verify .sm-res-panel .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-verify .sm-req-panel .sm-panel-header .sm-copy-btn:hover,
-        #sm-verify .sm-res-panel .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-verify .sm-req-panel pre,
-        #sm-verify .sm-res-panel pre {
-            background: #0c1a25;
-            color: #a5f3fc;
-            border-radius: 0 0 12px 12px;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- #sm-verify panels use base defaults --- */
 
         #sm-verify .sm-status-badge {
             padding: 0.5rem 1rem;
@@ -6054,41 +5972,14 @@
         }
         #sm-verify .sm-response-field code {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            box-shadow: 0 1px 4px rgba(14, 116, 144, 0.2);
+            box-shadow: 0 1px 4px rgba(16, 132, 109, 0.2);
         }
 
-        #sm-verify .sm-curl-section {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-verify .sm-curl-section .sm-panel-header {
-            background: linear-gradient(135deg, #1e3a5f, #164e63);
-            color: #a5f3fc;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-        }
-        #sm-verify .sm-curl-section .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-verify .sm-curl-section .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-verify .sm-curl-section pre {
-            background: #0c1a25;
-            color: #67e8f9;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- #sm-verify cURL uses base defaults --- */
 
         #sm-verify .sm-next-step-actions {
             padding: 1rem;
-            background: linear-gradient(135deg, #ecfeff, #f0fdfa);
+            background: linear-gradient(135deg, #ecfdf5, #f0fdfa);
             border-radius: 10px;
             border: 1px solid var(--pay-border);
             display: flex;
@@ -6099,12 +5990,12 @@
         /* ===== Cancel / Refund Transaction — Same Color Palette ===== */
 
         #sm-upi-cancel {
-            --pay-primary: #0e7490;
-            --pay-primary-dark: #155e75;
-            --pay-accent: #06b6d4;
-            --pay-bg-light: #ecfeff;
-            --pay-border: #a5f3fc;
-            --pay-mand-color: #0e7490;
+            --pay-primary: #10846D;
+            --pay-primary-dark: #065f46;
+            --pay-accent: #34d399;
+            --pay-bg-light: #ecfdf5;
+            --pay-border: #a7f3d0;
+            --pay-mand-color: #10846D;
         }
 
         #sm-upi-cancel > h2 {
@@ -6157,7 +6048,7 @@
         #sm-upi-cancel .sm-table tbody tr:hover { background: var(--pay-bg-light); }
 
         #sm-upi-cancel .sm-code-header {
-            background: linear-gradient(135deg, #164e63, #0e3a4a);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #sm-upi-cancel .sm-code-header button:hover { background: var(--pay-accent); }
 
@@ -6184,46 +6075,7 @@
             padding: 1.5rem;
             margin-top: 2rem;
         }
-        #sm-upi-cancel .sm-req-panel,
-        #sm-upi-cancel .sm-res-panel {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-upi-cancel .sm-req-panel .sm-panel-header {
-            background: linear-gradient(135deg, #164e63, #155e75);
-            color: #ecfeff;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-upi-cancel .sm-res-panel .sm-panel-header {
-            background: linear-gradient(135deg, #0e3a4a, #134e4a);
-            color: #ccfbf1;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-upi-cancel .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-upi-cancel .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-upi-cancel .sm-req-panel pre,
-        #sm-upi-cancel .sm-res-panel pre {
-            background: #0c1a25;
-            color: #a5f3fc;
-            border-radius: 0 0 12px 12px;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- #sm-upi-cancel panels use base defaults --- */
 
         #sm-upi-cancel .sm-status-badge {
             padding: 0.5rem 1rem;
@@ -6281,37 +6133,10 @@
         }
         #sm-upi-cancel .sm-response-field code {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            box-shadow: 0 1px 4px rgba(14, 116, 144, 0.2);
+            box-shadow: 0 1px 4px rgba(16, 132, 109, 0.2);
         }
 
-        #sm-upi-cancel .sm-curl-section {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-upi-cancel .sm-curl-section .sm-panel-header {
-            background: linear-gradient(135deg, #1e3a5f, #164e63);
-            color: #a5f3fc;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-        }
-        #sm-upi-cancel .sm-curl-section .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-upi-cancel .sm-curl-section .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-upi-cancel .sm-curl-section pre {
-            background: #0c1a25;
-            color: #67e8f9;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- #sm-upi-cancel cURL uses base defaults --- */
 
         /* ===== Uniform "Next" buttons for all UPI One-Time Payment sections ===== */
         #sm-upiflow .sm-next-btn-wrapper,
@@ -6330,8 +6155,8 @@
         #sm-verify .sm-next-btn-wrapper .button,
         #sm-upi-cancel .sm-next-btn-wrapper .button,
         #sm-upi-check-status .sm-next-btn-wrapper .button {
-            background: linear-gradient(135deg, #0e7490, #155e75);
-            color: #ecfeff;
+            background: linear-gradient(135deg, #10846D, #065f46);
+            color: #ecfdf5;
             border-radius: 10px;
             font-weight: 600;
             font-size: 0.92rem;
@@ -6339,7 +6164,7 @@
             min-width: 260px;
             text-align: center;
             border: none;
-            box-shadow: 0 2px 10px rgba(14, 116, 144, 0.18);
+            box-shadow: 0 2px 10px rgba(16, 132, 109, 0.18);
             transition: all 0.25s ease;
             letter-spacing: 0.02em;
         }
@@ -6348,8 +6173,8 @@
         #sm-verify .sm-next-btn-wrapper .button:hover,
         #sm-upi-cancel .sm-next-btn-wrapper .button:hover,
         #sm-upi-check-status .sm-next-btn-wrapper .button:hover {
-            background: linear-gradient(135deg, #0c6880, #0e4e63);
-            box-shadow: 0 4px 16px rgba(14, 116, 144, 0.28);
+            background: linear-gradient(135deg, #065f46, #064e3b);
+            box-shadow: 0 4px 16px rgba(16, 132, 109, 0.28);
             transform: translateY(-2px);
         }
 
@@ -6369,11 +6194,11 @@
         /* ===== Check Action Status — Same Color Palette ===== */
 
         #sm-upi-check-status {
-            --pay-primary: #0e7490;
-            --pay-primary-dark: #155e75;
-            --pay-accent: #06b6d4;
-            --pay-bg-light: #ecfeff;
-            --pay-border: #a5f3fc;
+            --pay-primary: #10846D;
+            --pay-primary-dark: #065f46;
+            --pay-accent: #34d399;
+            --pay-bg-light: #ecfdf5;
+            --pay-border: #a7f3d0;
         }
 
         #sm-upi-check-status > h2 {
@@ -6426,7 +6251,7 @@
         #sm-upi-check-status .sm-table tbody tr:hover { background: var(--pay-bg-light); }
 
         #sm-upi-check-status .sm-code-header {
-            background: linear-gradient(135deg, #164e63, #0e3a4a);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #sm-upi-check-status .sm-code-header button:hover { background: var(--pay-accent); }
 
@@ -6453,46 +6278,7 @@
             padding: 1.5rem;
             margin-top: 2rem;
         }
-        #sm-upi-check-status .sm-req-panel,
-        #sm-upi-check-status .sm-res-panel {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-upi-check-status .sm-req-panel .sm-panel-header {
-            background: linear-gradient(135deg, #164e63, #155e75);
-            color: #ecfeff;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-upi-check-status .sm-res-panel .sm-panel-header {
-            background: linear-gradient(135deg, #0e3a4a, #134e4a);
-            color: #ccfbf1;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-upi-check-status .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-upi-check-status .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-upi-check-status .sm-req-panel pre,
-        #sm-upi-check-status .sm-res-panel pre {
-            background: #0c1a25;
-            color: #a5f3fc;
-            border-radius: 0 0 12px 12px;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- #sm-upi-check-status panels use base defaults --- */
 
         #sm-upi-check-status .sm-status-badge {
             padding: 0.5rem 1rem;
@@ -6550,49 +6336,22 @@
         }
         #sm-upi-check-status .sm-response-field code {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            box-shadow: 0 1px 4px rgba(14, 116, 144, 0.2);
+            box-shadow: 0 1px 4px rgba(16, 132, 109, 0.2);
         }
 
-        #sm-upi-check-status .sm-curl-section {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-upi-check-status .sm-curl-section .sm-panel-header {
-            background: linear-gradient(135deg, #1e3a5f, #164e63);
-            color: #a5f3fc;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-        }
-        #sm-upi-check-status .sm-curl-section .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-upi-check-status .sm-curl-section .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-upi-check-status .sm-curl-section pre {
-            background: #0c1a25;
-            color: #67e8f9;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- #sm-upi-check-status cURL uses base defaults --- */
 
         /* ================================================================
            UPI OTM Pre-Authorize (#sm-otm) — Blue-Teal Palette
            ================================================================ */
 
         #sm-otm {
-            --pay-primary: #0e7490;
-            --pay-primary-dark: #155e75;
-            --pay-accent: #06b6d4;
-            --pay-bg-light: #ecfeff;
-            --pay-border: #a5f3fc;
-            --pay-mand-color: #0e7490;
+            --pay-primary: #10846D;
+            --pay-primary-dark: #065f46;
+            --pay-accent: #34d399;
+            --pay-bg-light: #ecfdf5;
+            --pay-border: #a7f3d0;
+            --pay-mand-color: #10846D;
             --pay-cond-color: #d97706;
             --pay-opt-color: #64748b;
         }
@@ -6630,14 +6389,14 @@
         }
         #sm-otm .sm-flow-num {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
         }
         #sm-otm .sm-flow-arrow { color: var(--pay-accent); }
 
         /* --- Step numbers --- */
         #sm-otm .sm-step-num {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
         }
         #sm-otm .sm-step:hover {
             border-left-color: var(--pay-accent);
@@ -6676,7 +6435,7 @@
 
         /* --- Hash formula code block --- */
         #sm-otm .sm-code-header {
-            background: linear-gradient(135deg, #164e63, #0e3a4a);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #sm-otm .sm-code-header button:hover { background: var(--pay-accent); }
 
@@ -6711,7 +6470,7 @@
         }
 
         #sm-otm .sm-pay-section-mandatory {
-            background: linear-gradient(135deg, #f0fdfa, #ecfeff);
+            background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
             border: 1px solid var(--pay-border);
         }
         #sm-otm .sm-pay-section-mandatory::before { background: var(--pay-primary); }
@@ -6747,46 +6506,7 @@
             padding: 1.5rem;
             margin-top: 2rem;
         }
-        #sm-otm .sm-req-panel,
-        #sm-otm .sm-res-panel {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-otm .sm-req-panel .sm-panel-header {
-            background: linear-gradient(135deg, #164e63, #155e75);
-            color: #ecfeff;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-otm .sm-res-panel .sm-panel-header {
-            background: linear-gradient(135deg, #0e3a4a, #134e4a);
-            color: #ccfbf1;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-otm .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-otm .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-otm .sm-req-panel pre,
-        #sm-otm .sm-res-panel pre {
-            background: #0c1a25;
-            color: #a5f3fc;
-            border-radius: 0 0 12px 12px;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- #sm-otm panels use base defaults --- */
 
         #sm-otm .sm-status-badge {
             padding: 0.5rem 1rem;
@@ -6844,37 +6564,10 @@
         }
         #sm-otm .sm-response-field code {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            box-shadow: 0 1px 4px rgba(14, 116, 144, 0.2);
+            box-shadow: 0 1px 4px rgba(16, 132, 109, 0.2);
         }
 
-        #sm-otm .sm-curl-section {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-otm .sm-curl-section .sm-panel-header {
-            background: linear-gradient(135deg, #1e3a5f, #164e63);
-            color: #a5f3fc;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-        }
-        #sm-otm .sm-curl-section .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-otm .sm-curl-section .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-otm .sm-curl-section pre {
-            background: #0c1a25;
-            color: #67e8f9;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- #sm-otm cURL uses base defaults --- */
 
         /* --- Next button --- */
         #sm-otm .sm-next-btn-wrapper {
@@ -6885,8 +6578,8 @@
             justify-content: flex-end;
         }
         #sm-otm .sm-next-btn-wrapper .button {
-            background: linear-gradient(135deg, #0e7490, #155e75);
-            color: #ecfeff;
+            background: linear-gradient(135deg, #10846D, #065f46);
+            color: #ecfdf5;
             border-radius: 10px;
             font-weight: 600;
             font-size: 0.92rem;
@@ -6894,13 +6587,13 @@
             min-width: 260px;
             text-align: center;
             border: none;
-            box-shadow: 0 2px 10px rgba(14, 116, 144, 0.18);
+            box-shadow: 0 2px 10px rgba(16, 132, 109, 0.18);
             transition: all 0.25s ease;
             letter-spacing: 0.02em;
         }
         #sm-otm .sm-next-btn-wrapper .button:hover {
-            background: linear-gradient(135deg, #0c6880, #0e4e63);
-            box-shadow: 0 4px 16px rgba(14, 116, 144, 0.28);
+            background: linear-gradient(135deg, #065f46, #064e3b);
+            box-shadow: 0 4px 16px rgba(16, 132, 109, 0.28);
             transform: translateY(-2px);
         }
 
@@ -6915,12 +6608,12 @@
         #sm-otm-status,
         #sm-otm-verify-auth,
         #sm-otm-verify-cap {
-            --pay-primary: #0e7490;
-            --pay-primary-dark: #155e75;
-            --pay-accent: #06b6d4;
-            --pay-bg-light: #ecfeff;
-            --pay-border: #a5f3fc;
-            --pay-mand-color: #0e7490;
+            --pay-primary: #10846D;
+            --pay-primary-dark: #065f46;
+            --pay-accent: #34d399;
+            --pay-bg-light: #ecfdf5;
+            --pay-border: #a7f3d0;
+            --pay-mand-color: #10846D;
         }
 
         /* --- Section headings --- */
@@ -6976,7 +6669,7 @@
         #sm-cancel .sm-flow-num,
         #sm-otm-status .sm-flow-num {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
         }
         #sm-capture .sm-flow-arrow,
         #sm-cancel .sm-flow-arrow,
@@ -6987,7 +6680,7 @@
         #sm-cancel .sm-step-num,
         #sm-otm-status .sm-step-num {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
         }
         #sm-capture .sm-step:hover,
         #sm-cancel .sm-step:hover,
@@ -7052,7 +6745,7 @@
         #sm-otm-status .sm-code-header,
         #sm-otm-verify-auth .sm-code-header,
         #sm-otm-verify-cap .sm-code-header {
-            background: linear-gradient(135deg, #164e63, #0e3a4a);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #sm-capture .sm-code-header button:hover,
         #sm-cancel .sm-code-header button:hover,
@@ -7111,7 +6804,7 @@
         #sm-otm-status .sm-pay-section-mandatory,
         #sm-otm-verify-auth .sm-pay-section-mandatory,
         #sm-otm-verify-cap .sm-pay-section-mandatory {
-            background: linear-gradient(135deg, #f0fdfa, #ecfeff);
+            background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
             border: 1px solid var(--pay-border);
         }
         #sm-capture .sm-pay-section-mandatory::before,
@@ -7149,78 +6842,7 @@
             padding: 1.5rem;
             margin-top: 2rem;
         }
-        #sm-capture .sm-req-panel,
-        #sm-capture .sm-res-panel,
-        #sm-cancel .sm-req-panel,
-        #sm-cancel .sm-res-panel,
-        #sm-otm-status .sm-req-panel,
-        #sm-otm-status .sm-res-panel,
-        #sm-otm-verify-auth .sm-req-panel,
-        #sm-otm-verify-auth .sm-res-panel,
-        #sm-otm-verify-cap .sm-req-panel,
-        #sm-otm-verify-cap .sm-res-panel {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-capture .sm-req-panel .sm-panel-header,
-        #sm-cancel .sm-req-panel .sm-panel-header,
-        #sm-otm-status .sm-req-panel .sm-panel-header,
-        #sm-otm-verify-auth .sm-req-panel .sm-panel-header,
-        #sm-otm-verify-cap .sm-req-panel .sm-panel-header {
-            background: linear-gradient(135deg, #164e63, #155e75);
-            color: #ecfeff;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-capture .sm-res-panel .sm-panel-header,
-        #sm-cancel .sm-res-panel .sm-panel-header,
-        #sm-otm-status .sm-res-panel .sm-panel-header,
-        #sm-otm-verify-auth .sm-res-panel .sm-panel-header,
-        #sm-otm-verify-cap .sm-res-panel .sm-panel-header {
-            background: linear-gradient(135deg, #0e3a4a, #134e4a);
-            color: #ccfbf1;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-capture .sm-panel-header .sm-copy-btn,
-        #sm-cancel .sm-panel-header .sm-copy-btn,
-        #sm-otm-status .sm-panel-header .sm-copy-btn,
-        #sm-otm-verify-auth .sm-panel-header .sm-copy-btn,
-        #sm-otm-verify-cap .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-capture .sm-panel-header .sm-copy-btn:hover,
-        #sm-cancel .sm-panel-header .sm-copy-btn:hover,
-        #sm-otm-status .sm-panel-header .sm-copy-btn:hover,
-        #sm-otm-verify-auth .sm-panel-header .sm-copy-btn:hover,
-        #sm-otm-verify-cap .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-capture .sm-req-panel pre,
-        #sm-capture .sm-res-panel pre,
-        #sm-cancel .sm-req-panel pre,
-        #sm-cancel .sm-res-panel pre,
-        #sm-otm-status .sm-req-panel pre,
-        #sm-otm-status .sm-res-panel pre,
-        #sm-otm-verify-auth .sm-req-panel pre,
-        #sm-otm-verify-auth .sm-res-panel pre,
-        #sm-otm-verify-cap .sm-req-panel pre,
-        #sm-otm-verify-cap .sm-res-panel pre {
-            background: #0c1a25;
-            color: #a5f3fc;
-            border-radius: 0 0 12px 12px;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- #sm-capture/#sm-cancel/#sm-otm-status/#sm-otm-verify-auth/#sm-otm-verify-cap panels use base defaults --- */
 
         /* --- Status badges --- */
         #sm-capture .sm-status-badge,
@@ -7311,38 +6933,7 @@
             margin-bottom: 0.6rem;
         }
 
-        /* --- cURL section --- */
-        #sm-capture .sm-curl-section,
-        #sm-cancel .sm-curl-section,
-        #sm-otm-status .sm-curl-section,
-        #sm-otm-verify-auth .sm-curl-section,
-        #sm-otm-verify-cap .sm-curl-section {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-capture .sm-curl-section .sm-panel-header,
-        #sm-cancel .sm-curl-section .sm-panel-header,
-        #sm-otm-status .sm-curl-section .sm-panel-header,
-        #sm-otm-verify-auth .sm-curl-section .sm-panel-header,
-        #sm-otm-verify-cap .sm-curl-section .sm-panel-header {
-            background: linear-gradient(135deg, #1e3a5f, #164e63);
-            color: #a5f3fc;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-        }
-        #sm-capture .sm-curl-section pre,
-        #sm-cancel .sm-curl-section pre,
-        #sm-otm-status .sm-curl-section pre,
-        #sm-otm-verify-auth .sm-curl-section pre,
-        #sm-otm-verify-cap .sm-curl-section pre {
-            background: #0c1a25;
-            color: #67e8f9;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- cURL section (uses base defaults) --- */
 
         /* --- Next buttons --- */
         #sm-capture .sm-next-btn-wrapper,
@@ -7361,8 +6952,8 @@
         #sm-otm-status .sm-next-btn-wrapper .button,
         #sm-otm-verify-auth .sm-next-btn-wrapper .button,
         #sm-otm-verify-cap .sm-next-btn-wrapper .button {
-            background: linear-gradient(135deg, #0e7490, #155e75);
-            color: #ecfeff;
+            background: linear-gradient(135deg, #10846D, #065f46);
+            color: #ecfdf5;
             border-radius: 10px;
             font-weight: 600;
             font-size: 0.92rem;
@@ -7370,7 +6961,7 @@
             min-width: 260px;
             text-align: center;
             border: none;
-            box-shadow: 0 2px 10px rgba(14, 116, 144, 0.18);
+            box-shadow: 0 2px 10px rgba(16, 132, 109, 0.18);
             transition: all 0.25s ease;
             letter-spacing: 0.02em;
         }
@@ -7379,8 +6970,8 @@
         #sm-otm-status .sm-next-btn-wrapper .button:hover,
         #sm-otm-verify-auth .sm-next-btn-wrapper .button:hover,
         #sm-otm-verify-cap .sm-next-btn-wrapper .button:hover {
-            background: linear-gradient(135deg, #0c6880, #0e4e63);
-            box-shadow: 0 4px 16px rgba(14, 116, 144, 0.28);
+            background: linear-gradient(135deg, #065f46, #064e3b);
+            box-shadow: 0 4px 16px rgba(16, 132, 109, 0.28);
             transform: translateY(-2px);
         }
 
@@ -7409,12 +7000,12 @@
         #sm-predebit,
         #sm-si,
         #sm-si-verify {
-            --pay-primary: #0e7490;
-            --pay-primary-dark: #155e75;
-            --pay-accent: #06b6d4;
-            --pay-bg-light: #ecfeff;
-            --pay-border: #a5f3fc;
-            --pay-mand-color: #0e7490;
+            --pay-primary: #10846D;
+            --pay-primary-dark: #065f46;
+            --pay-accent: #34d399;
+            --pay-bg-light: #ecfdf5;
+            --pay-border: #a7f3d0;
+            --pay-mand-color: #10846D;
             --pay-cond-color: #d97706;
             --pay-opt-color: #64748b;
         }
@@ -7488,7 +7079,7 @@
         #sm-si .sm-flow-num,
         #sm-si-verify .sm-flow-num {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
         }
         #sm-mandate .sm-flow-arrow,
         #sm-mandate-verify .sm-flow-arrow,
@@ -7507,7 +7098,7 @@
         #sm-si .sm-step-num,
         #sm-si-verify .sm-step-num {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
         }
         #sm-mandate .sm-step:hover,
         #sm-mandate-verify .sm-step:hover,
@@ -7594,7 +7185,7 @@
         #sm-predebit .sm-code-header,
         #sm-si .sm-code-header,
         #sm-si-verify .sm-code-header {
-            background: linear-gradient(135deg, #164e63, #0e3a4a);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #sm-mandate .sm-code-header button:hover,
         #sm-mandate-verify .sm-code-header button:hover,
@@ -7667,7 +7258,7 @@
         #sm-predebit .sm-pay-section-mandatory,
         #sm-si .sm-pay-section-mandatory,
         #sm-si-verify .sm-pay-section-mandatory {
-            background: linear-gradient(135deg, #f0fdfa, #ecfeff);
+            background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
             border: 1px solid var(--pay-border);
         }
         #sm-mandate .sm-pay-section-mandatory::before,
@@ -7766,94 +7357,7 @@
             padding: 1.5rem;
             margin-top: 2rem;
         }
-        #sm-mandate .sm-req-panel,
-        #sm-mandate .sm-res-panel,
-        #sm-mandate-verify .sm-req-panel,
-        #sm-mandate-verify .sm-res-panel,
-        #sm-mandate-status .sm-req-panel,
-        #sm-mandate-status .sm-res-panel,
-        #sm-mandate-modify .sm-req-panel,
-        #sm-mandate-modify .sm-res-panel,
-        #sm-predebit .sm-req-panel,
-        #sm-predebit .sm-res-panel,
-        #sm-si .sm-req-panel,
-        #sm-si .sm-res-panel,
-        #sm-si-verify .sm-req-panel,
-        #sm-si-verify .sm-res-panel {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-mandate .sm-req-panel .sm-panel-header,
-        #sm-mandate-verify .sm-req-panel .sm-panel-header,
-        #sm-mandate-status .sm-req-panel .sm-panel-header,
-        #sm-mandate-modify .sm-req-panel .sm-panel-header,
-        #sm-predebit .sm-req-panel .sm-panel-header,
-        #sm-si .sm-req-panel .sm-panel-header,
-        #sm-si-verify .sm-req-panel .sm-panel-header {
-            background: linear-gradient(135deg, #164e63, #155e75);
-            color: #ecfeff;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-mandate .sm-res-panel .sm-panel-header,
-        #sm-mandate-verify .sm-res-panel .sm-panel-header,
-        #sm-mandate-status .sm-res-panel .sm-panel-header,
-        #sm-mandate-modify .sm-res-panel .sm-panel-header,
-        #sm-predebit .sm-res-panel .sm-panel-header,
-        #sm-si .sm-res-panel .sm-panel-header,
-        #sm-si-verify .sm-res-panel .sm-panel-header {
-            background: linear-gradient(135deg, #0e3a4a, #134e4a);
-            color: #ccfbf1;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-        #sm-mandate .sm-panel-header .sm-copy-btn,
-        #sm-mandate-verify .sm-panel-header .sm-copy-btn,
-        #sm-mandate-status .sm-panel-header .sm-copy-btn,
-        #sm-mandate-modify .sm-panel-header .sm-copy-btn,
-        #sm-predebit .sm-panel-header .sm-copy-btn,
-        #sm-si .sm-panel-header .sm-copy-btn,
-        #sm-si-verify .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-mandate .sm-panel-header .sm-copy-btn:hover,
-        #sm-mandate-verify .sm-panel-header .sm-copy-btn:hover,
-        #sm-mandate-status .sm-panel-header .sm-copy-btn:hover,
-        #sm-mandate-modify .sm-panel-header .sm-copy-btn:hover,
-        #sm-predebit .sm-panel-header .sm-copy-btn:hover,
-        #sm-si .sm-panel-header .sm-copy-btn:hover,
-        #sm-si-verify .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-mandate .sm-req-panel pre,
-        #sm-mandate .sm-res-panel pre,
-        #sm-mandate-verify .sm-req-panel pre,
-        #sm-mandate-verify .sm-res-panel pre,
-        #sm-mandate-status .sm-req-panel pre,
-        #sm-mandate-status .sm-res-panel pre,
-        #sm-mandate-modify .sm-req-panel pre,
-        #sm-mandate-modify .sm-res-panel pre,
-        #sm-predebit .sm-req-panel pre,
-        #sm-predebit .sm-res-panel pre,
-        #sm-si .sm-req-panel pre,
-        #sm-si .sm-res-panel pre,
-        #sm-si-verify .sm-req-panel pre,
-        #sm-si-verify .sm-res-panel pre {
-            background: #0c1a25;
-            color: #a5f3fc;
-            border-radius: 0 0 12px 12px;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- mandate/subscription panels use base defaults --- */
 
         /* --- Status badge --- */
         #sm-mandate .sm-status-badge,
@@ -7968,68 +7472,10 @@
         #sm-si .sm-response-field code,
         #sm-si-verify .sm-response-field code {
             background: linear-gradient(135deg, var(--pay-primary), var(--pay-primary-dark));
-            box-shadow: 0 1px 4px rgba(14, 116, 144, 0.2);
+            box-shadow: 0 1px 4px rgba(16, 132, 109, 0.2);
         }
 
-        /* --- cURL section --- */
-        #sm-mandate .sm-curl-section,
-        #sm-mandate-verify .sm-curl-section,
-        #sm-mandate-status .sm-curl-section,
-        #sm-mandate-modify .sm-curl-section,
-        #sm-predebit .sm-curl-section,
-        #sm-si .sm-curl-section,
-        #sm-si-verify .sm-curl-section {
-            border: none;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
-        }
-        #sm-mandate .sm-curl-section .sm-panel-header,
-        #sm-mandate-verify .sm-curl-section .sm-panel-header,
-        #sm-mandate-status .sm-curl-section .sm-panel-header,
-        #sm-mandate-modify .sm-curl-section .sm-panel-header,
-        #sm-predebit .sm-curl-section .sm-panel-header,
-        #sm-si .sm-curl-section .sm-panel-header,
-        #sm-si-verify .sm-curl-section .sm-panel-header {
-            background: linear-gradient(135deg, #1e3a5f, #164e63);
-            color: #a5f3fc;
-            border-bottom: none;
-            padding: 0.7rem 1rem;
-            font-size: 0.82rem;
-        }
-        #sm-mandate .sm-curl-section .sm-panel-header .sm-copy-btn,
-        #sm-mandate-verify .sm-curl-section .sm-panel-header .sm-copy-btn,
-        #sm-mandate-status .sm-curl-section .sm-panel-header .sm-copy-btn,
-        #sm-mandate-modify .sm-curl-section .sm-panel-header .sm-copy-btn,
-        #sm-predebit .sm-curl-section .sm-panel-header .sm-copy-btn,
-        #sm-si .sm-curl-section .sm-panel-header .sm-copy-btn,
-        #sm-si-verify .sm-curl-section .sm-panel-header .sm-copy-btn {
-            border-color: rgba(255,255,255,0.25);
-            color: rgba(255,255,255,0.8);
-        }
-        #sm-mandate .sm-curl-section .sm-panel-header .sm-copy-btn:hover,
-        #sm-mandate-verify .sm-curl-section .sm-panel-header .sm-copy-btn:hover,
-        #sm-mandate-status .sm-curl-section .sm-panel-header .sm-copy-btn:hover,
-        #sm-mandate-modify .sm-curl-section .sm-panel-header .sm-copy-btn:hover,
-        #sm-predebit .sm-curl-section .sm-panel-header .sm-copy-btn:hover,
-        #sm-si .sm-curl-section .sm-panel-header .sm-copy-btn:hover,
-        #sm-si-verify .sm-curl-section .sm-panel-header .sm-copy-btn:hover {
-            background: var(--pay-accent);
-            border-color: var(--pay-accent);
-            color: #fff;
-        }
-        #sm-mandate .sm-curl-section pre,
-        #sm-mandate-verify .sm-curl-section pre,
-        #sm-mandate-status .sm-curl-section pre,
-        #sm-mandate-modify .sm-curl-section pre,
-        #sm-predebit .sm-curl-section pre,
-        #sm-si .sm-curl-section pre,
-        #sm-si-verify .sm-curl-section pre {
-            background: #0c1a25;
-            color: #67e8f9;
-            font-size: 0.78rem;
-            line-height: 1.7;
-        }
+        /* --- mandate/subscription cURL uses base defaults --- */
 
         /* --- Next button --- */
         #sm-mandate .sm-next-btn-wrapper,
@@ -8052,8 +7498,8 @@
         #sm-predebit .sm-next-btn-wrapper .button,
         #sm-si .sm-next-btn-wrapper .button,
         #sm-si-verify .sm-next-btn-wrapper .button {
-            background: linear-gradient(135deg, #0e7490, #155e75);
-            color: #ecfeff;
+            background: linear-gradient(135deg, #10846D, #065f46);
+            color: #ecfdf5;
             border-radius: 10px;
             font-weight: 600;
             font-size: 0.92rem;
@@ -8061,7 +7507,7 @@
             min-width: 260px;
             text-align: center;
             border: none;
-            box-shadow: 0 2px 10px rgba(14, 116, 144, 0.18);
+            box-shadow: 0 2px 10px rgba(16, 132, 109, 0.18);
             transition: all 0.25s ease;
             letter-spacing: 0.02em;
         }
@@ -8072,8 +7518,8 @@
         #sm-predebit .sm-next-btn-wrapper .button:hover,
         #sm-si .sm-next-btn-wrapper .button:hover,
         #sm-si-verify .sm-next-btn-wrapper .button:hover {
-            background: linear-gradient(135deg, #0c6880, #0e4e63);
-            box-shadow: 0 4px 16px rgba(14, 116, 144, 0.28);
+            background: linear-gradient(135deg, #065f46, #064e3b);
+            box-shadow: 0 4px 16px rgba(16, 132, 109, 0.28);
             transform: translateY(-2px);
         }
 
@@ -8142,11 +7588,11 @@
            ================================================================ */
 
         #sm-troubleshoot {
-            --ts-primary: #0e7490;
-            --ts-primary-dark: #155e75;
-            --ts-accent: #06b6d4;
-            --ts-bg-light: #ecfeff;
-            --ts-border: #a5f3fc;
+            --ts-primary: #10846D;
+            --ts-primary-dark: #065f46;
+            --ts-accent: #34d399;
+            --ts-bg-light: #ecfdf5;
+            --ts-border: #a7f3d0;
         }
 
         #sm-troubleshoot > h2 {
@@ -8179,13 +7625,13 @@
         }
         #sm-troubleshoot .sm-flow-num {
             background: linear-gradient(135deg, var(--ts-primary), var(--ts-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
         }
         #sm-troubleshoot .sm-flow-arrow { color: var(--ts-accent); }
 
         #sm-troubleshoot .sm-step-num {
             background: linear-gradient(135deg, var(--ts-primary), var(--ts-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
         }
         #sm-troubleshoot .sm-step:hover {
             border-left-color: var(--ts-accent);
@@ -8226,7 +7672,7 @@
             transition: box-shadow 0.25s ease;
         }
         #sm-troubleshoot .sm-accordion-item:hover {
-            box-shadow: 0 4px 16px rgba(14, 116, 144, 0.12);
+            box-shadow: 0 4px 16px rgba(16, 132, 109, 0.12);
         }
         #sm-troubleshoot .sm-accordion-header {
             background: linear-gradient(135deg, #f0fdfa, var(--ts-bg-light));
@@ -8295,12 +7741,12 @@
         }
         #sm-troubleshoot .sm-accordion-body code {
             background: linear-gradient(135deg, var(--ts-primary), var(--ts-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
             padding: 0.15em 0.45em;
             border-radius: 4px;
             font-size: 0.82em;
             font-weight: 600;
-            box-shadow: 0 1px 3px rgba(14, 116, 144, 0.15);
+            box-shadow: 0 1px 3px rgba(16, 132, 109, 0.15);
         }
 
         /* --- Code block inside accordion --- */
@@ -8308,17 +7754,15 @@
             border-radius: 12px;
             overflow: hidden;
             margin: 0.75rem 0;
-            box-shadow: 0 2px 8px rgba(14, 116, 144, 0.08);
+            box-shadow: 0 2px 8px rgba(16, 132, 109, 0.08);
         }
         #sm-troubleshoot .sm-code-header {
-            background: linear-gradient(135deg, #164e63, #0e3a4a);
+            background: linear-gradient(135deg, #064e3b, #052e23);
         }
         #sm-troubleshoot .sm-code-header button:hover {
             background: var(--ts-accent);
         }
         #sm-troubleshoot .sm-code-block pre {
-            background: #0c1a25;
-            color: #a5f3fc;
             font-size: 0.78rem;
             line-height: 1.7;
         }
@@ -8332,7 +7776,7 @@
             border-spacing: 0;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(14, 116, 144, 0.08);
+            box-shadow: 0 2px 10px rgba(16, 132, 109, 0.08);
         }
         #sm-troubleshoot .sm-reference-table th,
         #sm-troubleshoot .sm-table th {
@@ -8362,12 +7806,12 @@
         #sm-troubleshoot .sm-reference-table td code,
         #sm-troubleshoot .sm-table td code {
             background: linear-gradient(135deg, var(--ts-primary), var(--ts-primary-dark));
-            color: #ecfeff;
+            color: #ecfdf5;
             padding: 0.15em 0.45em;
             border-radius: 4px;
             font-size: 0.8em;
             font-weight: 600;
-            box-shadow: 0 1px 3px rgba(14, 116, 144, 0.15);
+            box-shadow: 0 1px 3px rgba(16, 132, 109, 0.15);
         }
 
         /* ========================================= */
@@ -8758,51 +8202,52 @@
         }
         .cards-global-apply-btn:hover { background: #14532d; }
 
-        /* Product Card Grid */
-        .cards-overview-subtitle {
-            font-size: 1rem;
-            color: #64748b;
-            margin-bottom: 1.75rem;
-            line-height: 1.6;
+        /* Cards Overview — reuses NB/UPI unified green product card styling */
+        #cards-overview .sm-ov-header { text-align: center; margin-bottom: 2.5rem; }
+        #cards-overview h2 { font-size: 1.75rem; font-weight: 800; color: #064e3b; margin-bottom: 0.5rem; position: relative; display: inline-block; }
+        #cards-overview h2::after { content: ''; display: block; width: 60%; height: 4px; border-radius: 4px; background: linear-gradient(90deg, #10846D, #34d399); margin: 0.6rem auto 0; }
+        #cards-overview .sm-overview-subtitle { font-size: 1rem; color: #64748b; line-height: 1.65; max-width: 650px; margin: 0.75rem auto 0; }
+        #cards-overview .sm-product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
+        @media (max-width: 768px) { #cards-overview .sm-product-grid { grid-template-columns: 1fr; } }
+        #cards-overview .sm-product-card {
+            position: relative; padding: 1.75rem 1.5rem 1.5rem; border: 1px solid #d1fae5; border-radius: 16px;
+            background: #ffffff; cursor: pointer; transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            display: flex; flex-direction: column; overflow: hidden;
         }
-        .cards-product-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
+        #cards-overview .sm-product-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+            border-radius: 16px 16px 0 0; background: linear-gradient(90deg, #10846D, #34d399); opacity: 0; transition: opacity 0.3s ease;
         }
-        @media (max-width: 1200px) { .cards-product-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 768px) { .cards-product-grid { grid-template-columns: 1fr; } }
-        .cards-product-card {
-            padding: 1.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 15px;
-            background: var(--bg-secondary);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
+        #cards-overview .sm-product-card:hover {
+            border-color: #6ee7b7; box-shadow: 0 8px 32px rgba(16, 132, 109, 0.12), 0 2px 8px rgba(16, 132, 109, 0.06); transform: translateY(-6px);
         }
-        .cards-product-card:hover {
-            border-color: var(--accent-primary);
-            box-shadow: 0 6px 24px rgba(16, 132, 109, 0.12);
-            transform: translateY(-5px);
+        #cards-overview .sm-product-card:hover::before { opacity: 1; }
+        #cards-overview .sm-product-card-badge {
+            position: absolute; top: 12px; right: 12px; font-size: 0.68rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.06em; color: #fff;
+            background: linear-gradient(135deg, #10846D, #059669); padding: 0.25rem 0.65rem; border-radius: 20px;
         }
-        .cards-product-card-icon { font-size: 2rem; margin-bottom: 0.6rem; line-height: 1; }
-        .cards-product-card h3 { font-size: 1.05rem; font-weight: 700; color: var(--accent-primary); margin: 0 0 0.4rem; }
-        .cards-product-card p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 0.75rem; flex: 1; }
-        .cards-product-card-flow {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-tertiary);
-            letter-spacing: 0.02em;
-            padding: 0.5rem 0.75rem;
-            background: #f0f9f7;
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
+        #cards-overview .sm-product-card-icon-wrap {
+            width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1rem; font-size: 1.5rem; transition: transform 0.3s ease;
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5); color: #10846D;
         }
-        .cards-product-card-btn { font-size: 0.85rem; font-weight: 700; color: var(--accent-primary); }
-        .cards-product-card:hover .cards-product-card-btn { text-decoration: underline; }
+        #cards-overview .sm-product-card:hover .sm-product-card-icon-wrap { transform: scale(1.08); }
+        #cards-overview .sm-product-card-icon { font-size: 1.5rem; line-height: 1; }
+        #cards-overview .sm-product-card h3 { font-size: 1.08rem; font-weight: 700; margin: 0 0 0.4rem; color: #10846D; }
+        #cards-overview .sm-product-card p { font-size: 0.86rem; color: #64748b; line-height: 1.6; margin: 0 0 0.85rem; flex: 1; }
+        #cards-overview .sm-product-card-flow {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem;
+            font-size: 0.72rem; font-weight: 600; padding: 0.55rem 0.85rem; border-radius: 10px;
+            margin-bottom: 1rem; letter-spacing: 0.01em; background: #ecfdf5; color: #10846D;
+        }
+        #cards-overview .sm-product-card-flow .sm-flow-sep { color: #a7f3d0; margin: 0 0.1rem; }
+        #cards-overview .sm-product-card-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            font-size: 0.85rem; font-weight: 700; color: #10846D; transition: gap 0.25s ease;
+        }
+        #cards-overview .sm-product-card-btn .sm-btn-arrow { transition: transform 0.25s ease; display: inline-block; }
+        #cards-overview .sm-product-card:hover .sm-product-card-btn .sm-btn-arrow { transform: translateX(4px); }
 
         /* Responsive: Cards Sidebar */
         @media (max-width: 1024px) {
@@ -9050,4 +8495,86 @@
         }
         .sm-switch input:checked + .sm-switch-slider::before {
             transform: translateX(18px);
+        }
+
+        /* ========================================== */
+        /* Cards section: Mandatory/Conditional/Optional color-coded groups */
+        /* ========================================== */
+        .sm-timeline-content .sm-pay-section {
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1.25rem;
+            position: relative;
+        }
+        .sm-timeline-content .sm-pay-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .sm-timeline-content .sm-pay-section-mandatory {
+            background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+            border: 1px solid #a7f3d0;
+        }
+        .sm-timeline-content .sm-pay-section-mandatory::before { background: #10846D; }
+        .sm-timeline-content .sm-pay-section-mandatory h4 {
+            color: #10846D;
+            margin: 0 0 1rem;
+            font-size: 0.92rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sm-timeline-content .sm-pay-section-mandatory h4::before {
+            content: '';
+            width: 4px;
+            height: 1.1em;
+            border-radius: 2px;
+            background: #10846D;
+        }
+
+        .sm-timeline-content .sm-pay-section-conditional {
+            background: linear-gradient(135deg, #fffbeb, #fef9ee);
+            border: 1px solid #fde68a;
+        }
+        .sm-timeline-content .sm-pay-section-conditional::before { background: #d97706; }
+        .sm-timeline-content .sm-pay-section-conditional h4 {
+            color: #d97706;
+            margin: 0 0 1rem;
+            font-size: 0.92rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sm-timeline-content .sm-pay-section-conditional h4::before {
+            content: '';
+            width: 4px;
+            height: 1.1em;
+            border-radius: 2px;
+            background: #d97706;
+        }
+
+        .sm-timeline-content .sm-pay-section-optional {
+            background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+            border: 1px solid #c7d2fe;
+        }
+        .sm-timeline-content .sm-pay-section-optional::before { background: #6366f1; }
+        .sm-timeline-content .sm-pay-section-optional h4 {
+            color: #6366f1;
+            margin: 0 0 1rem;
+            font-size: 0.92rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sm-timeline-content .sm-pay-section-optional h4::before {
+            content: '';
+            width: 4px;
+            height: 1.1em;
+            border-radius: 2px;
+            background: #6366f1;
         }
