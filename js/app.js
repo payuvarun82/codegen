@@ -4,8 +4,118 @@
         const DEFAULT_KEY = 'PRiQvJ';
         const DEFAULT_SALT = 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ';
 
+        /**
+         * Integration Steps Progress Tracking
+         */
+        const stepsProgress = {
+            'crossborder': { currentStep: 1, completedSteps: [] },
+            'nonseamless': { currentStep: 1, completedSteps: [] },
+            'subscription': { currentStep: 1, completedSteps: [] },
+            'tpv': { currentStep: 1, completedSteps: [] },
+            'upiotm': { currentStep: 1, completedSteps: [] },
+            'preauth': { currentStep: 1, completedSteps: [] },
+            'checkoutplus': { currentStep: 1, completedSteps: [] },
+            'split': { currentStep: 1, completedSteps: [] },
+            'bankoffer': { currentStep: 1, completedSteps: [] }
+        };
+
+        function getStepPrefix(flow) {
+            var prefixMap = {
+                'crossborder': 'cb',
+                'nonseamless': 'ns',
+                'subscription': 'sub',
+                'tpv': 'tpv',
+                'upiotm': 'upi',
+                'preauth': 'preauth',
+                'checkoutplus': 'cp',
+                'split': 'split',
+                'bankoffer': 'bo'
+            };
+            return prefixMap[flow] || flow;
+        }
+
+        function updateStepProgress(flow, stepNumber, action) {
+            if (!stepsProgress[flow]) return;
+
+            var prefix = getStepPrefix(flow);
+            var stepsContainer = document.getElementById(prefix + '-steps-container');
+            if (!stepsContainer) return;
+
+            var progress = stepsProgress[flow];
+
+            if (action === 'complete') {
+                if (progress.completedSteps.indexOf(stepNumber) === -1) {
+                    progress.completedSteps.push(stepNumber);
+                }
+
+                var stepElement = document.getElementById(prefix + '-step-' + stepNumber);
+                if (stepElement) {
+                    stepElement.classList.remove('active');
+                    stepElement.classList.add('completed');
+                }
+
+                var nextStep = stepNumber + 1;
+                if (nextStep <= 3) {
+                    var nextStepElement = document.getElementById(prefix + '-step-' + nextStep);
+                    if (nextStepElement && progress.completedSteps.indexOf(nextStep) === -1) {
+                        nextStepElement.classList.add('active');
+                        progress.currentStep = nextStep;
+                    }
+                }
+
+                trackEvent('step_completed', flow, 'Step ' + stepNumber);
+            }
+        }
+
+        function resetStepsProgress(flow) {
+            if (!stepsProgress[flow]) return;
+
+            var prefix = getStepPrefix(flow);
+            var stepsContainer = document.getElementById(prefix + '-steps-container');
+            if (!stepsContainer) return;
+
+            stepsProgress[flow] = { currentStep: 1, completedSteps: [] };
+
+            var steps = stepsContainer.querySelectorAll('.step-item');
+            steps.forEach(function(step, index) {
+                step.classList.remove('active', 'completed');
+                if (index === 0) {
+                    step.classList.add('active');
+                }
+            });
+        }
+
+        function toggleLrsParams(flow) {
+            if (flow !== 'crossborder') return;
+
+            var checkbox = document.getElementById('cb_enable_lrs_params');
+            var fieldsContainer = document.getElementById('cb-lrs-params-fields');
+
+            if (!checkbox || !fieldsContainer) return;
+
+            if (checkbox.checked) {
+                fieldsContainer.style.display = 'block';
+            } else {
+                fieldsContainer.style.display = 'none';
+                var lrsServiceType = document.getElementById('cb_lrs_service_type');
+                var tcsAmount = document.getElementById('cb_tcs_amount');
+                if (lrsServiceType) lrsServiceType.value = '';
+                if (tcsAmount) tcsAmount.value = '';
+            }
+            if (currentFlow === 'crossborder') {
+                updateButtonStates('crossborder');
+            }
+        }
+        window._toggleLrsParams = toggleLrsParams;
+
+        function getBasePath() {
+            return window.SERVER_BASE_PATH || '';
+        }
+        window.getBasePath = getBasePath;
+
         function getProxyUrl() {
-            return window.location.origin + '/proxy.php';
+            var base = getBasePath();
+            return window.location.origin + (base ? base + '/proxy.php' : '/proxy.php');
         }
         window.getProxyUrl = getProxyUrl;
 
@@ -122,8 +232,8 @@
             if (hostname === 'localhost' || hostname === '127.0.0.1') {
                 return 'https://payu.in/integrationlab/callback.php';
             }
-            var path = window.location.pathname.replace(/\/[^/]*$/, '');
-            return window.location.origin + path + '/callback.php';
+            var base = getBasePath();
+            return window.location.origin + (base ? base + '/callback.php' : '/callback.php');
         };
         const DEFAULT_SURL = getCallbackUrl();
         const DEFAULT_FURL = getCallbackUrl();
@@ -167,7 +277,10 @@
                 showFlow(event.state.flow, true);
             } else {
                 const pathname = window.location.pathname;
-                const pathSegments = pathname.split('/').filter(segment => segment !== '');
+                var _bp = getBasePath();
+                var _relPath = pathname;
+                if (_bp && _relPath.indexOf(_bp) === 0) _relPath = _relPath.substring(_bp.length);
+                const pathSegments = _relPath.split('/').filter(segment => segment !== '');
                 const firstSeg = pathSegments.length > 0 ? pathSegments[0].toLowerCase() : null;
                 const secondSeg = pathSegments.length > 1 ? pathSegments[1].toLowerCase() : null;
                 
@@ -189,6 +302,75 @@
             }
         });
         
+        function applySeamlessFieldMaxLengths() {
+            var suffixLimits = {
+                '_txnid': 25,
+                '_productinfo': 100,
+                '_firstname': 60,
+                '_lastname': 20,
+                '_email': 50,
+                '_phone': 10,
+                '_address1': 100,
+                '_address2': 100,
+                '_city': 50,
+                '_state': 50,
+                '_country': 50,
+                '_zipcode': 20,
+                '_surl': 255,
+                '_furl': 255,
+                '_udf1': 255,
+                '_udf2': 255,
+                '_udf3': 255,
+                '_udf4': 255,
+                '_udf5': 255,
+                '_ccnum': 19,
+                '_ccname': 50,
+                '_ccexpmon': 2,
+                '_ccexpyr': 4,
+                '_ccvv': 4,
+                '_user_cred': 50,
+                '_vpa': 50,
+                '_tcs_amount': 20
+            };
+
+            var prefixes = [
+                'sc_pay_', 'sc_pa_pay_', 'sc_m2ft_', 'sc_tok_pay_',
+                'sc_m3ft_', 'sc_m3rpt_', 'sc_m3nt_',
+                'sm_pay_', 'sm_mand_',
+                'sm_nb_pay_', 'sm_nb_tpv_', 'sm_nb_pacb_',
+                'sc_m3nt_iss_'
+            ];
+
+            var applied = 0;
+            prefixes.forEach(function(prefix) {
+                Object.keys(suffixLimits).forEach(function(suffix) {
+                    var el = document.getElementById(prefix + suffix.substring(1));
+                    if (el && !el.hasAttribute('maxlength')) {
+                        el.setAttribute('maxlength', suffixLimits[suffix]);
+                        applied++;
+                    }
+                });
+            });
+
+            var extraFields = {
+                'sm_nb_pacb_udf7': 255,
+                'sm_nb_pacb_udf8': 255,
+                'sc_m3nt_last4': 4,
+                'sc_m3nt_iss_last4': 4,
+                'sm_nb_tpv_account': 80,
+                'sm_nb_tpv_ifsc': 50
+            };
+            Object.keys(extraFields).forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && !el.hasAttribute('maxlength')) {
+                    el.setAttribute('maxlength', extraFields[id]);
+                    applied++;
+                }
+            });
+
+            console.log('✓ Applied maxlength limits to ' + applied + ' seamless fields');
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔄 Page Loaded - Generating fresh transaction IDs for all flows');
@@ -347,9 +529,12 @@
             // Add validation listeners
             addValidationListeners();
             
-            // Path-Based Routing: Read flow from URL pathname
+            // Path-Based Routing: Read flow from URL pathname (strip base path for subpath deployments)
             const pathname = window.location.pathname;
-            const pathSegments = pathname.split('/').filter(segment => segment !== '');
+            var _initBase = getBasePath();
+            var _initRelPath = pathname;
+            if (_initBase && _initRelPath.indexOf(_initBase) === 0) _initRelPath = _initRelPath.substring(_initBase.length);
+            const pathSegments = _initRelPath.split('/').filter(segment => segment !== '');
             const firstSegment = pathSegments.length > 0 ? pathSegments[0].toLowerCase() : null;
             const secondSegment = pathSegments.length > 1 ? pathSegments[1].toLowerCase() : null;
             const routeFromURL = validRoutes.includes(firstSegment) ? firstSegment : null;
@@ -385,9 +570,13 @@
             } else {
                 console.log('📍 No flow in URL - showing home page');
                 goHome(true);
-                window.history.replaceState({ flow: null }, '', '/');
+                var _homeUrl = _initBase ? _initBase + '/' : '/';
+                window.history.replaceState({ flow: null }, '', _homeUrl);
             }
             
+            // Apply maxlength limits to all merchant hosted seamless flow fields
+            applySeamlessFieldMaxLengths();
+
             // Initialize character counters for all fields with maxlength
             initializeCharCounters();
             
@@ -465,46 +654,64 @@
             const currentLength = inputElement.value.length;
             const remaining = maxLength - currentLength;
             
-            // Find the associated counter element
             const counterId = inputElement.id + '_counter';
             let counter = document.getElementById(counterId);
             
             if (counter) {
-                counter.textContent = `${currentLength}/${maxLength}`;
+                counter.textContent = currentLength + '/' + maxLength;
                 
-                // Update styling based on usage
                 counter.classList.remove('warning', 'error');
                 if (remaining === 0) {
                     counter.classList.add('error');
-                } else if (remaining <= maxLength * 0.1) {  // Warning at 90% usage
+                } else if (remaining <= maxLength * 0.1) {
                     counter.classList.add('warning');
                 }
             }
         }
         
+        function refreshAllCharCounters() {
+            var inputs = document.querySelectorAll('input[maxlength]:not([type="hidden"])');
+            inputs.forEach(function(input) {
+                if (input.id) updateCharCounter(input);
+            });
+        }
+
         function initializeCharCounters() {
-            // Get all inputs with maxlength attribute
-            const inputsWithMaxLength = document.querySelectorAll('input[maxlength]:not([type="hidden"])');
+            var inputsWithMaxLength = document.querySelectorAll('input[maxlength]:not([type="hidden"])');
             
-            inputsWithMaxLength.forEach(input => {
-                // Add input event listener
+            inputsWithMaxLength.forEach(function(input) {
+                if (!input.id) return;
+                var counterId = input.id + '_counter';
+                var existingCounter = document.getElementById(counterId);
+                var existingManualCounter = document.getElementById(input.id + '_count');
+
+                if (!existingCounter && !existingManualCounter) {
+                    var counterDiv = document.createElement('div');
+                    counterDiv.id = counterId;
+                    counterDiv.className = 'char-counter';
+                    var maxLen = input.getAttribute('maxlength');
+                    var curLen = input.value ? input.value.length : 0;
+                    counterDiv.textContent = curLen + '/' + maxLen;
+                    input.parentNode.insertBefore(counterDiv, input.nextSibling);
+                }
+
                 input.addEventListener('input', function() {
                     updateCharCounter(this);
                 });
                 
-                // Initial update (handles pre-filled values)
                 updateCharCounter(input);
             });
             
-            // Re-initialize counters when form values change programmatically
-            // This ensures counters update when default values are set
-            setTimeout(() => {
-                inputsWithMaxLength.forEach(input => {
-                    if (input.value) {
-                        updateCharCounter(input);
-                    }
-                });
+            setTimeout(function() {
+                refreshAllCharCounters();
             }, 100);
+
+            document.addEventListener('click', function(e) {
+                var btn = e.target.closest('.sm-btn-fill-sample, .template-button, [onclick*="FillSample"], [onclick*="fillSample"], [onclick*="smNewTxnId"], [onclick*="smGenerateNewTxnId"], [onclick*="generateTemplate"], [onclick*="Generate"]');
+                if (btn) {
+                    setTimeout(refreshAllCharCounters, 50);
+                }
+            });
         }
         
         // Transaction ID Field Listeners (for custom credentials mode)
@@ -1721,7 +1928,8 @@
             currentFlow = '';
             
             if (!skipPushState) {
-                window.history.pushState({ flow: null }, '', '/');
+                var homeUrl = getBasePath() ? getBasePath() + '/' : '/';
+                window.history.pushState({ flow: null }, '', homeUrl);
             }
             
             // Hide debug sections
@@ -1903,7 +2111,8 @@
             
             if (!skipPushState) {
                 const route = flowToRouteMap[selectedFlow] || selectedFlow;
-                const newUrl = '/' + route;
+                var base = getBasePath();
+                const newUrl = base ? base + '/' + route : '/' + route;
                 window.history.pushState({ flow: selectedFlow }, '', newUrl);
             }
             
@@ -1921,7 +2130,10 @@
             }
             
             if (selectedFlow === 'seamless') {
-                var segs = window.location.pathname.split('/').filter(function(s) { return s !== ''; });
+                var _smBase = getBasePath();
+                var _smRelPath = window.location.pathname;
+                if (_smBase && _smRelPath.indexOf(_smBase) === 0) _smRelPath = _smRelPath.substring(_smBase.length);
+                var segs = _smRelPath.split('/').filter(function(s) { return s !== ''; });
                 var subSection = segs.length > 1 ? segs[1].toLowerCase() : null;
                 if (subSection && seamlessSectionIds.includes(subSection) && document.getElementById(subSection)) {
                     _smNavSilent = true;
@@ -2214,6 +2426,7 @@
                 event_label: 'Fill Sample Data - ' + (flowDisplayNames[flow] || flow)
             });
             
+            updateStepProgress(flow, 1, 'complete');
             console.log('✓ Template data filled for ' + flow + ' flow');
         }
         
@@ -2627,6 +2840,9 @@
                 }
             }
         }
+        window._toggleUdfParams = toggleUdfParams;
+        window.toggleLrsParams = toggleLrsParams;
+        window.toggleUdfParams = toggleUdfParams;
         
         // TPV Payment Type Selection
         // Reset Form Fields - Refresh page for new transaction ID
@@ -2895,6 +3111,16 @@
                 } else {
                     // Cross border one-time - UDF5 is mandatory
                     requiredFields.push('udf5_input');
+
+                    var lrsValCb = document.getElementById('cb_enable_lrs_params');
+                    if (lrsValCb && lrsValCb.checked) {
+                        var lrsValField = document.getElementById('cb_lrs_service_type');
+                        if (!lrsValField || !(lrsValField.value || '').trim()) {
+                            alert('When "Enable LRS Params" is checked, lrs_service_type is required. Please select a value.');
+                            if (lrsValField) lrsValField.focus();
+                            return false;
+                        }
+                    }
                 }
             } else if (flow === 'subscription') {
                 // Non-Seamless Subscription - subscription fields are mandatory
@@ -3221,28 +3447,33 @@
                 
                 // Check if buyer_type_business has a value (0 or 1)
                 const buyerTypeBusiness = document.getElementById('cb_buyer_type').value;
-                
-                // Build hash based on what parameters are present
-                if (udfParamsJson && buyerTypeBusiness !== '') {
-                    // Hash with both udf_params and buyer_type_business
+
+                // Only include tcs_amount in hash when it has a value
+                var lrsCheckbox = document.getElementById('cb_enable_lrs_params');
+                var enableLrsParams = lrsCheckbox ? lrsCheckbox.checked : false;
+                var tcsEl = document.getElementById('cb_tcs_amount');
+                var tcsAmountRaw = tcsEl ? (tcsEl.value || '').trim() : '';
+                if (enableLrsParams && tcsAmountRaw && udfParamsJson) {
+                    hashString = credentials.key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + credentials.salt + '|' + udfParamsJson + '|' + (buyerTypeBusiness !== '' ? buyerTypeBusiness : '') + '|' + tcsAmountRaw;
+                    hashFormula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT|udf_params|buyer_type_business|tcs_amount)';
+                } else if (enableLrsParams && tcsAmountRaw) {
+                    hashString = credentials.key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + credentials.salt + '|' + (buyerTypeBusiness !== '' ? buyerTypeBusiness : '') + '|' + tcsAmountRaw;
+                    hashFormula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT|buyer_type_business|tcs_amount)';
+                } else if (udfParamsJson && buyerTypeBusiness !== '') {
                     hashString = credentials.key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + credentials.salt + '|' + udfParamsJson + '|' + buyerTypeBusiness;
                     hashFormula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT|udf_params|buyer_type_business)';
                 } else if (udfParamsJson) {
-                    // Hash with only udf_params
                     hashString = credentials.key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + credentials.salt + '|' + udfParamsJson;
                     hashFormula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT|udf_params)';
                 } else if (buyerTypeBusiness !== '') {
-                    // Hash with only buyer_type_business (backward compatible)
                     hashString = credentials.key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + credentials.salt + '|' + buyerTypeBusiness;
                     hashFormula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT|buyer_type_business)';
                 } else {
-                    // Hash without udf_params and buyer_type_business (backward compatible)
                     hashString = credentials.key + '|' + txnid + '|' + amount + '|' + productinfo + '|' + firstname + '|' + email + '|' + udf1 + '|' + udf2 + '|' + udf3 + '|' + udf4 + '|' + udf5 + '||||||' + credentials.salt;
                     hashFormula = 'SHA512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)';
                 }
                 
-                // Store udf_params for later use in form submission
-                siDetailsJson = udfParamsJson; // Reuse siDetailsJson variable to store udf_params
+                siDetailsJson = udfParamsJson;
             } else if (flow === 'tpv') {
                 // TPV One Time
                 udf1 = document.getElementById('tpv_udf1').value || '';
@@ -3510,6 +3741,23 @@
                 console.log('Cross Border: udf_params added:', hashData.udfParams);
             }
             
+            // Add LRS params for cross border one-time when enabled
+            if (flow === 'crossborder' && currentPaymentType === 'onetime') {
+                var lrsCb = document.getElementById('cb_enable_lrs_params');
+                if (lrsCb && lrsCb.checked) {
+                    var lrsEl = document.getElementById('cb_lrs_service_type');
+                    var tcsEl = document.getElementById('cb_tcs_amount');
+                    var lrsVal = lrsEl ? (lrsEl.value || '').trim() : '';
+                    var tcsVal = tcsEl ? (tcsEl.value || '').trim() : '';
+                    if (lrsVal) {
+                        fields.push({ name: 'lrs_service_type', value: lrsVal });
+                    }
+                    if (tcsVal) {
+                        fields.push({ name: 'tcs_amount', value: tcsVal });
+                    }
+                }
+            }
+
             // Add subscription fields for non-seamless subscription
             if (flow === 'subscription') {
                 fields.push({ name: 'si', value: '1' });
@@ -3623,7 +3871,10 @@
                 form.appendChild(input);
             });
             
-            // Submit form
+            updateStepProgress(flow, 1, 'complete');
+            updateStepProgress(flow, 2, 'complete');
+            updateStepProgress(flow, 3, 'complete');
+
             document.body.appendChild(form);
             form.submit();
         }
@@ -3790,6 +4041,18 @@
             if (flow === 'crossborder' && hashData.udfParams) {
                 debugHtml += '<tr><td>udf_params' + addFieldLabel('udf_params') + '</td><td>' + hashData.udfParams + '</td></tr>';
             }
+
+            if (flow === 'crossborder' && currentPaymentType === 'onetime') {
+                var lrsCb2 = document.getElementById('cb_enable_lrs_params');
+                if (lrsCb2 && lrsCb2.checked) {
+                    var lrsStEl = document.getElementById('cb_lrs_service_type');
+                    var tcsDbEl = document.getElementById('cb_tcs_amount');
+                    var lrsStVal = lrsStEl ? (lrsStEl.value || '').trim() : '';
+                    var tcsDbVal = tcsDbEl ? (tcsDbEl.value || '').trim() : '';
+                    debugHtml += '<tr><td>lrs_service_type' + addFieldLabel('lrs_service_type') + '</td><td>' + (lrsStVal || '(not set)') + '</td></tr>';
+                    if (tcsDbVal) debugHtml += '<tr><td>tcs_amount' + addFieldLabel('tcs_amount') + '</td><td>' + tcsDbVal + '</td></tr>';
+                }
+            }
             
             if (flow === 'subscription') {
                 debugHtml += '<tr><td>si' + addFieldLabel('si') + '</td><td>1</td></tr>';
@@ -3888,6 +4151,9 @@
             document.getElementById(prefix + '-debugContent').innerHTML = debugHtml;
             document.getElementById(prefix + '-debugSection').style.display = 'block';
             document.getElementById(prefix + '-debugSection').scrollIntoView({ behavior: 'smooth' });
+
+            updateStepProgress(flow, 1, 'complete');
+            updateStepProgress(flow, 2, 'complete');
         }
         
         // Show CURL Command
@@ -3970,6 +4236,18 @@
             // Add udf_params for cross border (both one-time and subscription)
             if (flow === 'crossborder' && hashData.udfParams) {
                 curlCommand += '  --data-urlencode \'udf_params=' + hashData.udfParams + '\' \\\n';
+            }
+
+            if (flow === 'crossborder' && currentPaymentType === 'onetime') {
+                var lrsCb3 = document.getElementById('cb_enable_lrs_params');
+                if (lrsCb3 && lrsCb3.checked) {
+                    var lrsStCurl = document.getElementById('cb_lrs_service_type');
+                    var tcsCurl = document.getElementById('cb_tcs_amount');
+                    var lrsStCurlVal = lrsStCurl ? (lrsStCurl.value || '').trim() : '';
+                    var tcsCurlVal = tcsCurl ? (tcsCurl.value || '').trim() : '';
+                    if (lrsStCurlVal) curlCommand += '  -d "lrs_service_type=' + lrsStCurlVal + '" \\\n';
+                    if (tcsCurlVal) curlCommand += '  -d "tcs_amount=' + tcsCurlVal + '" \\\n';
+                }
             }
             
             if (flow === 'subscription') {
@@ -4166,7 +4444,10 @@
                 }
             };
             
-            // Launch payment
+            updateStepProgress('checkoutplus', 1, 'complete');
+            updateStepProgress('checkoutplus', 2, 'complete');
+            updateStepProgress('checkoutplus', 3, 'complete');
+
             try {
                 bolt.launch(paymentData, handlers);
             } catch (error) {
@@ -4553,6 +4834,16 @@
                 if (buyerType !== '') {
                     flowSpecific.buyerTypeBusiness = buyerType;
                 }
+                if (currentPaymentType === 'onetime') {
+                    var lrsCodeCb = document.getElementById('cb_enable_lrs_params');
+                    if (lrsCodeCb && lrsCodeCb.checked) {
+                        var lrsCodeEl = document.getElementById('cb_lrs_service_type');
+                        var tcsCodeEl = document.getElementById('cb_tcs_amount');
+                        flowSpecific.lrsServiceType = lrsCodeEl ? (lrsCodeEl.value || '').trim() : '';
+                        var tcsCodeVal = tcsCodeEl ? (tcsCodeEl.value || '').trim() : '';
+                        if (tcsCodeVal) flowSpecific.tcsAmount = tcsCodeVal;
+                    }
+                }
             }
             
             // COLLECT ALL OPTIONAL PARAMETERS (for dynamic code generation)
@@ -4611,6 +4902,13 @@
             // Add buyer_type_business to params for cross border (if present)
             if (flow === 'crossborder' && flowSpecific.buyerTypeBusiness !== undefined) {
                 params.buyer_type_business = flowSpecific.buyerTypeBusiness;
+            }
+
+            if (currentPaymentType === 'onetime' && flow === 'crossborder' && flowSpecific.lrsServiceType !== undefined) {
+                params.lrs_service_type = flowSpecific.lrsServiceType;
+            }
+            if (currentPaymentType === 'onetime' && flow === 'crossborder' && flowSpecific.tcsAmount) {
+                params.tcs_amount = flowSpecific.tcsAmount;
             }
             
             // Add udf_params for cross border (if enabled)
@@ -4809,46 +5107,39 @@
                 }
             }
             
-            // Cross Border with buyer_type_business and/or udf_params
-            // This overrides the 'subscription' hashType set above to 'crossborder_subscription'
-            // ONLY when buyer_type_business or udf_params parameter is present (cross border flow)
-            if (flowSpec.buyerTypeBusiness !== undefined || params.udf_params) {
+            // Cross Border with buyer_type_business and/or udf_params and/or tcs_amount (LRS)
+            if (flowSpec.buyerTypeBusiness !== undefined || params.udf_params || (params.tcs_amount !== undefined && params.tcs_amount !== '')) {
                 const hasUdfParams = !!params.udf_params;
                 const hasBuyerType = flowSpec.buyerTypeBusiness !== undefined;
+                const hasTcsAmount = params.tcs_amount !== undefined && params.tcs_amount !== '';
                 
-                // Determine hash type based on what parameters are present
                 if (flowSpec.hasSubscription) {
                     metadata.hashType = 'crossborder_subscription';
                     if (hasUdfParams && hasBuyerType) {
-                        // Cross Border Subscription: Hash includes both udf_params and buyer_type_business
-                        // Hash: key|txnid|amount|productinfo|firstname|email|udf1-5||||||si_details|SALT|udf_params|buyer_type_business
                         metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'si_details', 'salt', 'udf_params', 'buyer_type_business'];
                         metadata.additionalComponents.udf_params = params.udf_params;
                     } else if (hasUdfParams) {
-                        // Cross Border Subscription: Hash includes only udf_params
-                        // Hash: key|txnid|amount|productinfo|firstname|email|udf1-5||||||si_details|SALT|udf_params
                         metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'si_details', 'salt', 'udf_params'];
                         metadata.additionalComponents.udf_params = params.udf_params;
                     } else {
-                        // Cross Border Subscription: Hash includes only buyer_type_business (backward compatible)
-                    // Hash: key|txnid|amount|productinfo|firstname|email|udf1-5||||||si_details|SALT|buyer_type_business
                     metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'si_details', 'salt', 'buyer_type_business'];
                     }
                 } else {
                     metadata.hashType = 'crossborder';
-                    if (hasUdfParams && hasBuyerType) {
-                        // Cross Border One-Time: Hash includes both udf_params and buyer_type_business
-                        // Hash: key|txnid|amount|productinfo|firstname|email|udf1-5||||||SALT|udf_params|buyer_type_business
+                    if (hasTcsAmount && hasUdfParams) {
+                        metadata.hashType = 'crossborder_tcs_udf';
+                        metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'salt', 'udf_params', 'buyer_type_business', 'tcs_amount'];
+                        metadata.additionalComponents.udf_params = params.udf_params;
+                    } else if (hasTcsAmount) {
+                        metadata.hashType = 'crossborder_tcs';
+                        metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'salt', 'buyer_type_business', 'tcs_amount'];
+                    } else if (hasUdfParams && hasBuyerType) {
                         metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'salt', 'udf_params', 'buyer_type_business'];
                         metadata.additionalComponents.udf_params = params.udf_params;
                     } else if (hasUdfParams) {
-                        // Cross Border One-Time: Hash includes only udf_params
-                        // Hash: key|txnid|amount|productinfo|firstname|email|udf1-5||||||SALT|udf_params
                         metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'salt', 'udf_params'];
                         metadata.additionalComponents.udf_params = params.udf_params;
                     } else {
-                        // Cross Border One-Time: Hash includes only buyer_type_business (backward compatible)
-                    // Hash: key|txnid|amount|productinfo|firstname|email|udf1-5||||||SALT|buyer_type_business
                     metadata.hashComponents = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5', '', '', '', '', '', '', 'salt', 'buyer_type_business'];
                     }
                 }
@@ -7215,7 +7506,7 @@ nodeCartDetailsUsage +
             if (content) content.scrollTo(0, 0);
 
             if (!_smNavSilent && sectionId) {
-                history.pushState({ flow: 'seamless', section: sectionId }, '', '/seamless/' + sectionId);
+                history.pushState({ flow: 'seamless', section: sectionId }, '', getBasePath() + '/seamless/' + sectionId);
             }
         }
 
@@ -7269,24 +7560,24 @@ nodeCartDetailsUsage +
                 _smNavSilent = true;
                 openSeamlessFlow('sm-overview');
                 _smNavSilent = false;
-                history.pushState({ flow: 'seamless', section: 'sm-overview' }, '', '/seamless/sm-overview');
+                history.pushState({ flow: 'seamless', section: 'sm-overview' }, '', getBasePath() + '/seamless/sm-overview');
             } else if (mode === 'cards') {
                 _smShowCardsMode();
                 cardsNavTo(document.querySelector('#cardsNav .cards-nav-item.active') || document.querySelector('#cardsNav .cards-nav-item'), 'cards-overview');
-                history.pushState({ flow: 'seamless', smMode: 'cards' }, '', '/seamless/cards');
+                history.pushState({ flow: 'seamless', smMode: 'cards' }, '', getBasePath() + '/seamless/cards');
             } else if (mode === 'netbanking') {
                 _smShowNbMode();
                 _smNavSilent = true;
                 smNbNavTo(null, 'sm-nb-overview');
                 _smNavSilent = false;
-                history.pushState({ flow: 'seamless', smMode: 'netbanking', section: 'sm-nb-overview' }, '', '/seamless/sm-nb-overview');
+                history.pushState({ flow: 'seamless', smMode: 'netbanking', section: 'sm-nb-overview' }, '', getBasePath() + '/seamless/sm-nb-overview');
             }
         }
         window.smOpenMode = smOpenMode;
 
         function smBackToModeLanding() {
             _smShowModeLanding();
-            history.pushState({ flow: 'seamless', smMode: 'landing' }, '', '/seamless');
+            history.pushState({ flow: 'seamless', smMode: 'landing' }, '', getBasePath() + '/seamless');
         }
         window.smBackToModeLanding = smBackToModeLanding;
 
@@ -7941,7 +8232,7 @@ nodeCartDetailsUsage +
             }
 
             if (!_smNavSilent) {
-                history.pushState({ flow: 'seamless', smMode: 'netbanking', section: sectionId }, '', '/seamless/' + sectionId);
+                history.pushState({ flow: 'seamless', smMode: 'netbanking', section: sectionId }, '', getBasePath() + '/seamless/' + sectionId);
             }
         }
         window.smNbNavTo = smNbNavTo;
@@ -11365,17 +11656,20 @@ nodeCartDetailsUsage +
         // popstate for seamless is handled by the main popstate listener at the top
 
         function smInitPathRoute() {
-            var segs = window.location.pathname.split('/').filter(function(s) { return s !== ''; });
+            var basePath = getBasePath();
+            var relPath = window.location.pathname;
+            if (basePath && relPath.indexOf(basePath) === 0) relPath = relPath.substring(basePath.length);
+            var segs = relPath.split('/').filter(function(s) { return s !== ''; });
             if (segs.length > 1 && segs[0].toLowerCase() === 'seamless') {
                 var section = segs[1].toLowerCase();
                 if (seamlessSectionIds.includes(section) && document.getElementById(section)) {
                     _smNavSilent = true;
                     if (section.startsWith('sm-nb-')) {
                         openNbSeamlessFlow(section);
-                        history.replaceState({ flow: 'seamless', smMode: 'netbanking', section: section }, '', '/seamless/' + section);
+                        history.replaceState({ flow: 'seamless', smMode: 'netbanking', section: section }, '', basePath + '/seamless/' + section);
                     } else {
                         openSeamlessFlow(section);
-                        history.replaceState({ flow: 'seamless', section: section }, '', '/seamless/' + section);
+                        history.replaceState({ flow: 'seamless', section: section }, '', basePath + '/seamless/' + section);
                     }
                     _smNavSilent = false;
                 }
@@ -11851,7 +12145,7 @@ nodeCartDetailsUsage +
 
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-            fetchWithRetry('/proxy.php', {
+            fetchWithRetry(getProxyUrl(), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -12102,7 +12396,7 @@ nodeCartDetailsUsage +
 
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-            fetchWithRetry('/proxy.php', {
+            fetchWithRetry(getProxyUrl(), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -12470,7 +12764,7 @@ nodeCartDetailsUsage +
             document.getElementById('smOtmResponseView').textContent = 'Waiting for response...';
             document.getElementById('smOtmCurlView').textContent = smBuildCurl(data.params, 'payment');
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetch('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'payment', params: data.params }) })
+            fetch(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'payment', params: data.params }) })
                 .then(function(r) { return r.json(); })
                 .then(function(result) { smDisplayOtmResponse(result, data); })
                 .catch(function(err) {
@@ -12770,7 +13064,7 @@ nodeCartDetailsUsage +
             var curl = 'curl --location \\\n  "https://apitest.payu.in/v1/transaction/upi_otm_status_check?payuId=' + data.hmacInfo.payuid + '" \\\n  --header "date: ' + data.hmacInfo.date + '" \\\n  --header "digest: ' + data.hmacInfo.digest + '" \\\n  --header \'Authorization: ' + data.hmacInfo.auth + '\'';
             document.getElementById('smHmacCurlView').textContent = curl;
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', {
+            fetchWithRetry(getProxyUrl(), {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ endpoint: 'otm_status', method: 'GET', params: data.params, headers: data.headers })
             }).then(function(result) {
@@ -13244,7 +13538,7 @@ nodeCartDetailsUsage +
                 })(),
                 otm: (function() {
                     var today = new Date();
-                    var end = new Date(today); end.setDate(end.getDate() + 60);
+                    var end = new Date(today); end.setDate(end.getDate() + 14);
                     var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
                     return {
                         sm_otm_key: 'PRiQvJ', sm_otm_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
@@ -13507,7 +13801,7 @@ nodeCartDetailsUsage +
             document.getElementById('sm' + prefix + 'ResponseView').textContent = 'Waiting for response...';
             document.getElementById('sm' + prefix + 'CurlView').textContent = smBuildCurl(data.params, endpoint);
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', {
+            fetchWithRetry(getProxyUrl(), {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ endpoint: endpoint, params: data.params })
             }).then(function(result) {
@@ -13911,23 +14205,18 @@ nodeCartDetailsUsage +
                 }
                 if (txStatus) html += '<p>Transaction status: <strong>' + txStatus + '</strong></p>';
                 html += '<div class="sm-next-step-actions">';
-                if (txStatus === 'auth' || txStatus === 'userCancelled' || txStatus === 'pending') {
-                    html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-capture]\'),\'sm-capture\')">Step 3: Capture Transaction &#8594;</button>';
-                }
                 html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavToCancelUpi()">Cancel / Refund &#8594;</button>';
-                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-udf-update]\'),\'sm-udf-update\')">UDF Update &#8594;</button>';
                 html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-troubleshoot]\'),\'sm-troubleshoot\')">Troubleshooting &#8594;</button>';
                 html += '</div>';
             } else if (prefix === 'Cap' && isSuccess) {
                 html += '<div class="sm-next-step-title">Capture Successful</div>';
                 html += '<div class="sm-next-step-actions">';
-                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-verify]\'),\'sm-verify\')">Verify Captured Payment &#8594;</button>';
-                html += '<button class="button sm-btn-secondary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-check-status]\'),\'sm-check-status\')">Check Action Status &#8594;</button>';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-otm-verify-cap]\'),\'sm-otm-verify-cap\')">Verify Payment Capture &#8594;</button>';
                 html += '</div>';
             } else if (prefix === 'Cnl' && isSuccess) {
                 html += '<div class="sm-next-step-title">Cancel/Refund Initiated</div>';
                 html += '<div class="sm-next-step-actions">';
-                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-check-status]\'),\'sm-check-status\')">Check Action Status &#8594;</button>';
+                html += '<button class="button sm-btn-primary sm-next-step-btn" onclick="smNavTo(document.querySelector(\'[data-section=sm-otm-status]\'),\'sm-otm-status\')">OTM Status Check &#8594;</button>';
                 html += '</div>';
             } else if (prefix === 'UpiCnl' && isSuccess) {
                 html += '<div class="sm-next-step-title">Cancel/Refund Initiated</div>';
@@ -14073,7 +14362,7 @@ nodeCartDetailsUsage +
             badge.innerHTML='<span class="sm-loading-spinner"></span> Sending to PayU Test...';
             document.getElementById('smSimResponseView').textContent='Waiting...';
             panel.scrollIntoView({behavior:'smooth',block:'start'});
-            fetchWithRetry('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+            fetchWithRetry(getProxyUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
             .then(function(result){smGenericDisplay('Sim',result);})
             .catch(function(err){badge.className='sm-status-badge error';badge.textContent='Failed';document.getElementById('smSimResponseView').textContent='Error: '+err.message;});
         }
@@ -14814,7 +15103,7 @@ nodeCartDetailsUsage +
             if (respView) respView.textContent = 'Waiting...';
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
             var displayPrefix = panelId.replace('ReqRes','');
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) { smCardGenericDisplay(displayPrefix, result); smRenderBinSummary(panelId, result); })
                 .catch(function(err) { if (badge) { badge.className = 'sm-status-badge error'; badge.textContent = 'Failed'; } if (respView) respView.textContent = 'Error: ' + err.message; });
@@ -14869,7 +15158,7 @@ nodeCartDetailsUsage +
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
             document.getElementById('scDomesticResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) { smCardGenericDisplay('scDomestic', result); })
                 .catch(function(err) { document.getElementById('scDomesticStatusBadge').className = 'sm-status-badge error'; document.getElementById('scDomesticStatusBadge').textContent = 'Failed'; document.getElementById('scDomesticResponseView').textContent = 'Error: ' + err.message; });
@@ -15101,7 +15390,7 @@ nodeCartDetailsUsage +
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending to PayU...';
             document.getElementById(elPrefix + 'ResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'payment', params: data.params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'payment', params: data.params }) })
     
                 .then(function(result) {
                     smCardGenericDisplay(elPrefix, result);
@@ -15583,7 +15872,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending';
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Submitting OTP...';
             document.getElementById(elPrefix + 'ResponseView').textContent = 'Waiting...';
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'response_handler', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'response_handler', params: params }) })
     
                 .then(function(result) { smCardGenericDisplay(elPrefix, result); })
                 .catch(function(err) { document.getElementById(elPrefix + 'StatusBadge').className = 'sm-status-badge error'; document.getElementById(elPrefix + 'StatusBadge').textContent = 'Failed'; document.getElementById(elPrefix + 'ResponseView').textContent = 'Error: ' + err.message; });
@@ -15594,7 +15883,7 @@ nodeCartDetailsUsage +
             var refId = document.getElementById(refField).value.trim();
             if (!refId) { alert('Fill Reference ID'); return; }
             var params = { referenceId: refId, resendOtp: '1', data: '{"payuPureS2S":"1"}' };
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'response_handler', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'response_handler', params: params }) })
     
                 .then(function(result) { alert('Resend OTP Response: ' + JSON.stringify(result.response || result)); })
                 .catch(function(err) { alert('Error: ' + err.message); });
@@ -15624,7 +15913,7 @@ nodeCartDetailsUsage +
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Verifying...';
             document.getElementById(elPrefix + 'ResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) {
                     smCardGenericDisplay(elPrefix, result);
@@ -15692,7 +15981,7 @@ nodeCartDetailsUsage +
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Capturing...';
             document.getElementById('scCapResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) { smCardGenericDisplay('scCap', result); })
                 .catch(function(err) { document.getElementById('scCapStatusBadge').className = 'sm-status-badge error'; document.getElementById('scCapStatusBadge').textContent = 'Failed'; document.getElementById('scCapResponseView').textContent = 'Error: ' + err.message; });
@@ -15765,7 +16054,7 @@ nodeCartDetailsUsage +
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Cancelling...';
             document.getElementById('scPaCancelResponseView').textContent = 'Waiting...';
 
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) { smCardGenericDisplay('scPaCancel', result); })
                 .catch(function(err) { document.getElementById('scPaCancelStatusBadge').className = 'sm-status-badge error'; document.getElementById('scPaCancelStatusBadge').textContent = 'Failed'; document.getElementById('scPaCancelResponseView').textContent = 'Error: ' + err.message; });
@@ -15846,7 +16135,7 @@ nodeCartDetailsUsage +
             var maxAttempts = 8;
             var intervalMs = 10000;
 
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
                 .then(function(result) {
                     var resp = result.response || result;
                     var txnDetails = resp && resp.transaction_details ? resp.transaction_details : null;
@@ -15955,7 +16244,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending';
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
             document.getElementById('scTokUcResponseView').textContent = 'Waiting...';
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) {
                     smCardGenericDisplay('scTokUc', result);
@@ -15989,7 +16278,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending';
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
             document.getElementById('scTokGpiResponseView').textContent = 'Waiting...';
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) {
                     smCardGenericDisplay('scTokGpi', result);
@@ -16031,7 +16320,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending';
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Deleting...';
             document.getElementById('scTokDelResponseView').textContent = 'Waiting...';
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) { smCardGenericDisplay('scTokDel', result); })
                 .catch(function(err) { document.getElementById('scTokDelStatusBadge').className = 'sm-status-badge error'; document.getElementById('scTokDelStatusBadge').textContent = 'Failed'; document.getElementById('scTokDelResponseView').textContent = 'Error: ' + err.message; });
@@ -16057,7 +16346,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending';
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Deleting...';
             document.getElementById('scM2DelResponseView').textContent = 'Waiting...';
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) { smCardGenericDisplay('scM2Del', result); })
                 .catch(function(err) { document.getElementById('scM2DelStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM2DelStatusBadge').textContent = 'Failed'; document.getElementById('scM2DelResponseView').textContent = 'Error: ' + err.message; });
@@ -16143,7 +16432,7 @@ nodeCartDetailsUsage +
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
             document.getElementById('scM3UcResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) {
                     smCardGenericDisplay('scM3Uc', result);
@@ -16182,7 +16471,7 @@ nodeCartDetailsUsage +
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
             document.getElementById('scM3PucResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) {
                     smCardGenericDisplay('scM3Puc', result);
@@ -16231,7 +16520,7 @@ nodeCartDetailsUsage +
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Saving...';
             document.getElementById('scM3SpiResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) { smCardGenericDisplay('scM3Spi', result); })
                 .catch(function(err) { document.getElementById('scM3SpiStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM3SpiStatusBadge').textContent = 'Failed'; document.getElementById('scM3SpiResponseView').textContent = 'Error: ' + err.message; });
@@ -16252,7 +16541,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending';
             badge.innerHTML = '<span class="sm-loading-spinner"></span> Verifying...';
             document.getElementById('scM3VerifyResponseView').textContent = 'Waiting...';
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
     
                 .then(function(result) { smCardGenericDisplay('scM3Verify', result); smRenderVerifyStatus('scM3Verify', result); })
                 .catch(function(err) { document.getElementById('scM3VerifyStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM3VerifyStatusBadge').textContent = 'Failed'; document.getElementById('scM3VerifyResponseView').textContent = 'Error: ' + err.message; });
@@ -16328,7 +16617,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
             document.getElementById('scM2FtResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({behavior:'smooth',block:'start'});
-            fetchWithRetry('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+            fetchWithRetry(getProxyUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
                 .then(function(result){
                     smCardGenericDisplay('scM2Ft',result);
                     if (result.response && result.response.metaData) {
@@ -16431,7 +16720,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
             document.getElementById('scM3FtResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({behavior:'smooth',block:'start'});
-            fetchWithRetry('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+            fetchWithRetry(getProxyUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
                 .then(function(result){
                     smCardGenericDisplay('scM3Ft',result);
                     if (result.response && result.response.metaData) {
@@ -16493,7 +16782,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
             document.getElementById('scM3RptResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({behavior:'smooth',block:'start'});
-            fetchWithRetry('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+            fetchWithRetry(getProxyUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
                 .then(function(result){
                     smCardGenericDisplay('scM3Rpt',result);
                     if (result.response) {
@@ -16641,7 +16930,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Sending...';
             document.getElementById('scM3NtResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({behavior:'smooth',block:'start'});
-            fetchWithRetry('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
+            fetchWithRetry(getProxyUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'payment',params:params})})
                 .then(function(result){
                     smCardGenericDisplay('scM3Nt',result);
                     if (result.response) {
@@ -16676,7 +16965,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Fetching...';
             document.getElementById('scM3CryResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({behavior:'smooth',block:'start'});
-            fetchWithRetry('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'postservice',params:params})})
+            fetchWithRetry(getProxyUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'postservice',params:params})})
                 .then(function(result){
                     smCardGenericDisplay('scM3Cry',result);
                     if (result.response) {
@@ -16755,7 +17044,7 @@ nodeCartDetailsUsage +
             var badge = document.getElementById('scM3OtpStatusBadge');
             badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Submitting...';
             document.getElementById('scM3OtpResponseView').textContent = 'Waiting...';
-            fetchWithRetry('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'response_handler',params:params})})
+            fetchWithRetry(getProxyUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'response_handler',params:params})})
                 .then(function(result){
                     smCardGenericDisplay('scM3Otp',result);
                     if (result.response) {
@@ -16783,7 +17072,7 @@ nodeCartDetailsUsage +
             var badge = document.getElementById('scM3OtpStatusBadge');
             badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Resending...';
             document.getElementById('scM3OtpResponseView').textContent = 'Waiting...';
-            fetchWithRetry('/proxy.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'response_handler',params:params})})
+            fetchWithRetry(getProxyUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'response_handler',params:params})})
                 .then(function(result){smCardGenericDisplay('scM3Otp',result);})
                 .catch(function(err){document.getElementById('scM3OtpStatusBadge').className='sm-status-badge error';document.getElementById('scM3OtpStatusBadge').textContent='Failed';document.getElementById('scM3OtpResponseView').textContent='Error: '+err.message;});
         }
@@ -16811,7 +17100,7 @@ nodeCartDetailsUsage +
             badge.className = 'sm-status-badge pending'; badge.innerHTML = '<span class="sm-loading-spinner"></span> Updating...';
             document.getElementById('scM3EditResponseView').textContent = 'Waiting...';
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            fetchWithRetry('/proxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
+            fetchWithRetry(getProxyUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'postservice', params: params }) })
                 .then(function(result) { smCardGenericDisplay('scM3Edit', result); })
                 .catch(function(err) { document.getElementById('scM3EditStatusBadge').className = 'sm-status-badge error'; document.getElementById('scM3EditStatusBadge').textContent = 'Failed'; document.getElementById('scM3EditResponseView').textContent = 'Error: ' + err.message; });
         }

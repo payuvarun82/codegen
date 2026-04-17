@@ -11,6 +11,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header("Location: callback.php?" . $queryString);
     exit;
 }
+
+// Auto-detect base path for CSS/JS so the app works on any deployment URL.
+// Priority: APP_BASE_PATH env var > SCRIPT_NAME dirname > empty (root).
+$envBase = getenv('APP_BASE_PATH');
+if ($envBase !== false && $envBase !== '') {
+    $assetBase = rtrim($envBase, '/');
+} else {
+    $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+    if ($scriptDir === '/' || $scriptDir === '\\') $scriptDir = '';
+    $assetBase = $scriptDir;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -26,11 +37,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         gtag('js', new Date());
         gtag('config', 'G-7CG3P7JYWT');
     </script>
+    <script>window.SERVER_BASE_PATH = <?php echo json_encode($assetBase); ?>;</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($assetBase); ?>/css/styles.css?v=2.1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- LRS/UDF toggles: work before app.js; delegated listener so LRS/UDF always respond to checkbox -->
+    <script>
+        (function() {
+            function doLrs(flow) {
+                if (flow !== 'crossborder') return;
+                var cb = document.getElementById('cb_enable_lrs_params');
+                var el = document.getElementById('cb-lrs-params-fields');
+                if (cb && el) { el.style.display = cb.checked ? 'block' : 'none'; if (!cb.checked) { var s = document.getElementById('cb_lrs_service_type'); var t = document.getElementById('cb_tcs_amount'); if (s) s.value = ''; if (t) t.value = ''; } }
+            }
+            function doUdf(flow, type) {
+                if (flow !== 'crossborder' || (type !== 'onetime' && type !== 'subscription')) return;
+                var checkboxId = type === 'onetime' ? 'cb_enable_udf_params' : 'cb_sub_enable_udf_params';
+                var fieldsId = type === 'onetime' ? 'cb-udf-params-fields' : 'cb-sub-udf-params-fields';
+                var cb = document.getElementById(checkboxId);
+                var el = document.getElementById(fieldsId);
+                if (!cb || !el) return;
+                el.style.display = cb.checked ? 'block' : 'none';
+                if (!cb.checked) {
+                    if (type === 'onetime') { var u7 = document.getElementById('cb_udf7_input'); var u8 = document.getElementById('cb_udf8_input'); if (u7) u7.value = ''; if (u8) u8.value = ''; }
+                    else { var u7 = document.getElementById('cb_sub_udf7_input'); var u8 = document.getElementById('cb_sub_udf8_input'); if (u7) u7.value = ''; if (u8) u8.value = ''; }
+                }
+            }
+            window.toggleLrsParams = function(flow) { if (window._toggleLrsParams) { window._toggleLrsParams(flow); return; } doLrs(flow); };
+            window.toggleUdfParams = function(flow, type) { if (window._toggleUdfParams) { window._toggleUdfParams(flow, type); return; } doUdf(flow, type); };
+            function onChange(e) {
+                var id = e.target && e.target.id;
+                if (id === 'cb_enable_lrs_params') window.toggleLrsParams('crossborder');
+                if (id === 'cb_enable_udf_params') window.toggleUdfParams('crossborder', 'onetime');
+                if (id === 'cb_sub_enable_udf_params') window.toggleUdfParams('crossborder', 'subscription');
+            }
+            function init() {
+                document.body.addEventListener('change', onChange);
+                doLrs('crossborder');
+                doUdf('crossborder', 'onetime');
+                doUdf('crossborder', 'subscription');
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -307,6 +358,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="flow-content" id="crossborderFlow">
             <div class="flow-title">
                 <h2>PayU Hosted Cross Border Payment</h2>
+            </div>
+            
+            <!-- Integration Steps Guide -->
+            <div class="integration-steps-guide" id="cb-steps-guide">
+                <div class="steps-guide-header">
+                    <i class="fas fa-route"></i>
+                    <span>Follow these steps to test your integration:</span>
+                </div>
+                <div class="steps-container" id="cb-steps-container">
+                    <div class="step-item active" data-step="1" id="cb-step-1">
+                        <div class="step-number"><span>1</span></div>
+                        <div class="step-content">
+                            <div class="step-title">Create Payload</div>
+                            <div class="step-description">Fill form data or use sample data</div>
+                        </div>
+                        <span class="step-arrow"><i class="fas fa-chevron-right"></i></span>
+                    </div>
+                    <div class="step-item" data-step="2" id="cb-step-2">
+                        <div class="step-number"><span>2</span></div>
+                        <div class="step-content">
+                            <div class="step-title">Generate Hash</div>
+                            <div class="step-description">Use Show Debug Info to verify</div>
+                        </div>
+                        <span class="step-arrow"><i class="fas fa-chevron-right"></i></span>
+                    </div>
+                    <div class="step-item" data-step="3" id="cb-step-3">
+                        <div class="step-number"><span>3</span></div>
+                        <div class="step-content">
+                            <div class="step-title">Post Request</div>
+                            <div class="step-description">Use Pay Now to test journey</div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <div class="main-content">
@@ -610,6 +694,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div id="cb_udf5_input_counter" class="char-counter">0/255</div>
                     </div>
                     
+                    <!-- LRS Params Section (lrs_service_type & tcs_amount) for Cross-Border One-Time -->
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label class="cb-enable-params-label" style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2d3748;">
+                            <input type="checkbox" id="cb_enable_lrs_params" onchange="toggleLrsParams('crossborder')" style="width: 18px; height: 18px; cursor: pointer;">
+                            Enable LRS Params (lrs_service_type & tcs_amount) for Cross-Border One-Time
+                        </label>
+                        <small style="color: var(--text-tertiary); display: block; margin-top: 0.5rem; margin-left: 26px;">
+                            Check this to include LRS (Liberalised Remittance Scheme) parameters for cross-border one-time payments. Uncheck for backward compatibility.
+                        </small>
+                    </div>
+                    
+                    <div id="cb-lrs-params-fields" class="cb-lrs-params-fields cb-params-fields" style="display: none;">
+                        <h4 class="cb-params-title" style="margin: 0 0 1rem 0; color: #10846D; font-size: 1rem;">LRS Parameters (Cross-Border One-Time Only)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="cb_lrs_service_type">lrs_service_type <span class="optional">(Conditional)</span></label>
+                                <select id="cb_lrs_service_type" name="lrs_service_type">
+                                    <option value="">-- Select LRS service type --</option>
+                                    <option value="travel">travel</option>
+                                </select>
+                                <small style="color: var(--text-tertiary); display: block; margin-top: 0.25rem;">LRS service type decides tax amount based on nature of business. Refer to PayU docs for full values table.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="cb_tcs_amount">tcs_amount <span class="optional">(Optional)</span></label>
+                                <input type="text" id="cb_tcs_amount" name="tcs_amount" placeholder="e.g., 2.00" maxlength="20">
+                                <small style="color: var(--text-tertiary); display: block; margin-top: 0.25rem;">Amount of TCS to be charged. For travel payments, 2% TCS is typically charged (e.g. 2.00).</small>
+                            </div>
+                        </div>
+                        <div class="alert alert-info" style="margin-top: 1rem; margin-bottom: 0;">
+                            <strong>buyer_type_business</strong>: Identifies B2B transaction when set to 1. Use the <strong>Buyer Type</strong> field above (Individual = 0, Business = 1).
+                        </div>
+                    </div>
+
                     <!-- UDF Params Section (UDF7 & UDF8) for Cross-Border Compliance -->
                     <div class="form-group" style="margin-top: 1.5rem;">
                         <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2d3748;">
@@ -788,6 +905,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="flow-content" id="nonseamlessFlow">
             <div class="flow-title">
                 <h2>PayU Hosted Checkout</h2>
+            </div>
+            
+            <div class="integration-steps-guide" id="ns-steps-guide">
+                <div class="steps-guide-header"><i class="fas fa-route"></i><span>Follow these steps to test your integration:</span></div>
+                <div class="steps-container" id="ns-steps-container">
+                    <div class="step-item active" data-step="1" id="ns-step-1"><div class="step-number"><span>1</span></div><div class="step-content"><div class="step-title">Create Payload</div><div class="step-description">Fill form data or use sample data</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                    <div class="step-item" data-step="2" id="ns-step-2"><div class="step-number"><span>2</span></div><div class="step-content"><div class="step-title">Generate Hash</div><div class="step-description">Use Show Debug Info to verify</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                    <div class="step-item" data-step="3" id="ns-step-3"><div class="step-number"><span>3</span></div><div class="step-content"><div class="step-title">Post Request</div><div class="step-description">Use Pay Now to test journey</div></div></div>
+                </div>
             </div>
             
             <div class="main-content">
@@ -1063,6 +1189,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="flow-content" id="subscriptionFlow">
             <div class="flow-title">
                 <h2>PayU Hosted Checkout Subscription</h2>
+            </div>
+            
+            <div class="integration-steps-guide" id="sub-steps-guide">
+                <div class="steps-guide-header"><i class="fas fa-route"></i><span>Follow these steps to test your integration:</span></div>
+                <div class="steps-container" id="sub-steps-container">
+                    <div class="step-item active" data-step="1" id="sub-step-1"><div class="step-number"><span>1</span></div><div class="step-content"><div class="step-title">Create Payload</div><div class="step-description">Fill form data or use sample data</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                    <div class="step-item" data-step="2" id="sub-step-2"><div class="step-number"><span>2</span></div><div class="step-content"><div class="step-title">Generate Hash</div><div class="step-description">Use Show Debug Info to verify</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                    <div class="step-item" data-step="3" id="sub-step-3"><div class="step-number"><span>3</span></div><div class="step-content"><div class="step-title">Post Request</div><div class="step-description">Use Pay Now to test journey</div></div></div>
+                </div>
             </div>
             
             <div class="main-content">
@@ -1462,6 +1597,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h2>PayU Hosted Checkout TPV</h2>
         </div>
         
+        <div class="integration-steps-guide" id="tpv-steps-guide">
+            <div class="steps-guide-header"><i class="fas fa-route"></i><span>Follow these steps to test your integration:</span></div>
+            <div class="steps-container" id="tpv-steps-container">
+                <div class="step-item active" data-step="1" id="tpv-step-1"><div class="step-number"><span>1</span></div><div class="step-content"><div class="step-title">Create Payload</div><div class="step-description">Fill form data or use sample data</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="2" id="tpv-step-2"><div class="step-number"><span>2</span></div><div class="step-content"><div class="step-title">Generate Hash</div><div class="step-description">Use Show Debug Info to verify</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="3" id="tpv-step-3"><div class="step-number"><span>3</span></div><div class="step-content"><div class="step-title">Post Request</div><div class="step-description">Use Pay Now to test journey</div></div></div>
+            </div>
+        </div>
+        
         <div class="main-content">
             <!-- Configuration Settings -->
             <div class="section">
@@ -1752,6 +1896,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="flow-content" id="upiotmFlow">
         <div class="flow-title">
             <h2>PayU Hosted Checkout UPI OTM</h2>
+        </div>
+        
+        <div class="integration-steps-guide" id="upi-steps-guide">
+            <div class="steps-guide-header"><i class="fas fa-route"></i><span>Follow these steps to test your integration:</span></div>
+            <div class="steps-container" id="upi-steps-container">
+                <div class="step-item active" data-step="1" id="upi-step-1"><div class="step-number"><span>1</span></div><div class="step-content"><div class="step-title">Create Payload</div><div class="step-description">Fill form data or use sample data</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="2" id="upi-step-2"><div class="step-number"><span>2</span></div><div class="step-content"><div class="step-title">Generate Hash</div><div class="step-description">Use Show Debug Info to verify</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="3" id="upi-step-3"><div class="step-number"><span>3</span></div><div class="step-content"><div class="step-title">Post Request</div><div class="step-description">Use Pay Now to test journey</div></div></div>
+            </div>
         </div>
         
         <div class="main-content">
@@ -2057,6 +2210,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h2>PayU Hosted Checkout PreAuth</h2>
         </div>
         
+        <div class="integration-steps-guide" id="preauth-steps-guide">
+            <div class="steps-guide-header"><i class="fas fa-route"></i><span>Follow these steps to test your integration:</span></div>
+            <div class="steps-container" id="preauth-steps-container">
+                <div class="step-item active" data-step="1" id="preauth-step-1"><div class="step-number"><span>1</span></div><div class="step-content"><div class="step-title">Create Payload</div><div class="step-description">Fill form data or use sample data</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="2" id="preauth-step-2"><div class="step-number"><span>2</span></div><div class="step-content"><div class="step-title">Generate Hash</div><div class="step-description">Use Show Debug Info to verify</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="3" id="preauth-step-3"><div class="step-number"><span>3</span></div><div class="step-content"><div class="step-title">Post Request</div><div class="step-description">Use Pay Now to test journey</div></div></div>
+            </div>
+        </div>
+        
         <div class="main-content">
             <!-- Configuration Settings -->
             <div class="section">
@@ -2335,6 +2497,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h2>Checkout Plus</h2>
         </div>
         
+        <div class="integration-steps-guide" id="cp-steps-guide">
+            <div class="steps-guide-header"><i class="fas fa-route"></i><span>Follow these steps to test your integration:</span></div>
+            <div class="steps-container" id="cp-steps-container">
+                <div class="step-item active" data-step="1" id="cp-step-1"><div class="step-number"><span>1</span></div><div class="step-content"><div class="step-title">Create Payload</div><div class="step-description">Fill form data or use sample data</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="2" id="cp-step-2"><div class="step-number"><span>2</span></div><div class="step-content"><div class="step-title">Generate Hash</div><div class="step-description">Use Show Debug Info to verify</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="3" id="cp-step-3"><div class="step-number"><span>3</span></div><div class="step-content"><div class="step-title">Post Request</div><div class="step-description">Use Pay Now to test journey</div></div></div>
+            </div>
+        </div>
+        
         <div class="main-content">
             <!-- Configuration Settings -->
             <div class="section">
@@ -2592,6 +2763,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="flow-content" id="splitFlow">
         <div class="flow-title">
             <h2>PayU Hosted Checkout Split Payment</h2>
+        </div>
+        
+        <div class="integration-steps-guide" id="split-steps-guide">
+            <div class="steps-guide-header"><i class="fas fa-route"></i><span>Follow these steps to test your integration:</span></div>
+            <div class="steps-container" id="split-steps-container">
+                <div class="step-item active" data-step="1" id="split-step-1"><div class="step-number"><span>1</span></div><div class="step-content"><div class="step-title">Create Payload</div><div class="step-description">Fill form data or use sample data</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="2" id="split-step-2"><div class="step-number"><span>2</span></div><div class="step-content"><div class="step-title">Generate Hash</div><div class="step-description">Use Show Debug Info to verify</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="3" id="split-step-3"><div class="step-number"><span>3</span></div><div class="step-content"><div class="step-title">Post Request</div><div class="step-description">Use Pay Now to test journey</div></div></div>
+            </div>
         </div>
         
         <div class="main-content">
@@ -2909,6 +3089,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="flow-content" id="bankofferFlow">
         <div class="flow-title">
             <h2>PayU Hosted Checkout Bank Offers</h2>
+        </div>
+        
+        <div class="integration-steps-guide" id="bo-steps-guide">
+            <div class="steps-guide-header"><i class="fas fa-route"></i><span>Follow these steps to test your integration:</span></div>
+            <div class="steps-container" id="bo-steps-container">
+                <div class="step-item active" data-step="1" id="bo-step-1"><div class="step-number"><span>1</span></div><div class="step-content"><div class="step-title">Create Payload</div><div class="step-description">Fill form data or use sample data</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="2" id="bo-step-2"><div class="step-number"><span>2</span></div><div class="step-content"><div class="step-title">Generate Hash</div><div class="step-description">Use Show Debug Info to verify</div></div><span class="step-arrow"><i class="fas fa-chevron-right"></i></span></div>
+                <div class="step-item" data-step="3" id="bo-step-3"><div class="step-number"><span>3</span></div><div class="step-content"><div class="step-title">Post Request</div><div class="step-description">Use Pay Now to test journey</div></div></div>
+            </div>
         </div>
         
         <div class="main-content">
@@ -3691,11 +3880,11 @@ Callback Test URL:  https://test.payu.in/admin/test_response</code></pre>
                             </div>
 
                             <!-- Documentation Link -->
-                            <a href="https://docs.payu.in/docs/upi-smart-intent-non-sdk-flow" target="_blank" rel="noopener" class="sm-docs-banner">
+                            <a href="https://docs.payu.in/docs/upi-intent-server-to-server" target="_blank" rel="noopener" class="sm-docs-banner">
                                 <div class="sm-docs-banner-icon">&#128214;</div>
                                 <div class="sm-docs-banner-body">
                                     <div class="sm-docs-banner-title">PayU Official Documentation <span class="sm-docs-badge">Docs</span></div>
-                                    <div class="sm-docs-banner-desc">UPI Smart Intent (Non-SDK Flow) &mdash; Complete integration guide with <code>_payment</code> API, bankcode options, deeplink handling &amp; response parameters.</div>
+                                    <div class="sm-docs-banner-desc">UPI Intent with S2S Integration &mdash; Complete integration guide with <code>_payment</code> API, bankcode options, deeplink handling &amp; response parameters.</div>
                                 </div>
                                 <span class="sm-docs-banner-arrow">&rarr;</span>
                             </a>
@@ -3714,7 +3903,7 @@ Callback Test URL:  https://test.payu.in/admin/test_response</code></pre>
                                     </div>
                                     <div class="sm-prereq-item">
                                         <span class="sm-prereq-icon">&#10003;</span>
-                                        <div><strong>QR Library (Web)</strong><br>A QR code generation library for rendering deeplinks (e.g., <code>qrcode.js</code>)</div>
+                                        <div><strong>QR Library (Web)</strong><br>A QR code generation library for rendering deeplinks</div>
                                     </div>
                                     <div class="sm-prereq-item">
                                         <span class="sm-prereq-icon">&#10003;</span>
@@ -4199,8 +4388,8 @@ activity.startActivityForResult(intent, 101)</code></pre></div>
                                 <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory (S2S)</span></td><td>String &mdash; Defines the payment category. Post <code>UPI</code></td><td>UPI</td></tr>
                                 <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory (S2S)</span></td><td>String &mdash; Unique bank code for UPI payment option: INTENT (generic/QR), TEZ (Google Pay), PHONEPE, PAYTM, BHIM, AMAZONPAY, CRED</td><td>INTENT</td></tr>
                                 <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Integer &mdash; Parameter to enable S2S flow. Must be <code>4</code> for Legacy Decoupled flow (UPI Intent)</td><td>4</td></tr>
-                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; Source IP of the customer. Required for UPI Intent flow</td><td>10.200.12.12</td></tr>
-                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; Customer agent's device information. Required for UPI Intent flow</td><td>Mozilla/5.0 (Windows NT 10.0; Win64; x64)</td></tr>
+                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Source IP of the customer. Required for UPI Intent flow</td><td>10.200.12.12</td></tr>
+                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer agent's device information. Required for UPI Intent flow</td><td>Mozilla/5.0 (Windows NT 10.0; Win64; x64)</td></tr>
                                 <tr><td><code>vpa</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>String &mdash; Customer's VPA handle. Mandatory for UPI Collect flow</td><td>customer@upi</td></tr>
                                 <tr><td><code>udf1</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>String &mdash; Mandatory if AD bank requests this detail. Must contain Buyer's PAN and DOB: <code>PAN||DOB</code></td><td>AAAPZ1234C||22/08/1972</td></tr>
                                 <tr><td><code>udf2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 2</td><td></td></tr>
@@ -4332,15 +4521,15 @@ Example: sha512(PRiQvJ|TXN_123|10.00|iPhone|Ashish|test@gmail.com|ABCDE1234F||19
 
                             <!-- Optional Parameters -->
                             <div class="sm-pay-section sm-pay-section-optional">
-                                <h4>Optional Parameters <small style="font-weight:normal;color:#818cf8;font-size:0.8rem;">(included in request only if filled)</small></h4>
+                                <h4>Mandatory Parameters</h4>
                                 <div class="sm-form-row">
                                 <div class="sm-form-group">
-                                        <label>Client IP (s2s_client_ip)</label>
-                                        <input type="text" id="sm_pay_client_ip" value="" placeholder="e.g. 10.200.12.12">
+                                        <label>Client IP (s2s_client_ip) <span class="required">*</span></label>
+                                        <input type="text" id="sm_pay_client_ip" value="" placeholder="e.g. 10.200.12.12" required>
                                 </div>
                                     <div class="sm-form-group">
-                                        <label>Device Info (s2s_device_info)</label>
-                                        <input type="text" id="sm_pay_device_info" value="" placeholder="e.g. Mozilla/5.0 (Windows NT 10.0; Win64; x64)">
+                                        <label>Device Info (s2s_device_info) <span class="required">*</span></label>
+                                        <input type="text" id="sm_pay_device_info" value="" placeholder="e.g. Mozilla/5.0 (Windows NT 10.0; Win64; x64)" required>
                             </div>
                                 </div>
                             <div class="sm-form-row">
@@ -4599,33 +4788,33 @@ Example: sha512(PRiQvJ|TXN_123|10.00|iPhone|Ashish|test@gmail.com|ABCDE1234F||19
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key &mdash; unique identifier for your PayU account</td><td>BmTY3G</td></tr>
-                                <tr><td><code>txnid</code></td><td><strong>Mandatory</strong></td><td>Unique transaction ID generated by the merchant. PayU rejects duplicates.</td><td>my_order_29327</td></tr>
-                                <tr><td><code>amount</code></td><td><strong>Mandatory</strong></td><td>Payment amount. Auto-debit limit: &#8377;15,000. With PIN: &#8377;1,00,000.</td><td>1000.00</td></tr>
-                                <tr><td><code>productinfo</code></td><td><strong>Mandatory</strong></td><td>Brief product description (max 100 chars)</td><td>MonthlySubscription</td></tr>
-                                <tr><td><code>firstname</code></td><td><strong>Mandatory</strong></td><td>Customer first name (max 60 chars)</td><td>Payu-Admin</td></tr>
-                                <tr><td><code>email</code></td><td><strong>Mandatory</strong></td><td>Customer email (max 50 chars)</td><td>test@example.com</td></tr>
-                                <tr><td><code>phone</code></td><td><strong>Mandatory</strong></td><td>Customer phone number</td><td>1234567890</td></tr>
-                                <tr><td><code>lastname</code></td><td><strong>Mandatory</strong></td><td>Customer last name (max 60 chars)</td><td>Verma</td></tr>
-                                <tr><td><code>surl</code></td><td><strong>Mandatory</strong></td><td>Success URL &mdash; redirect after successful transaction</td><td>https://test.payu.in/admin/test_response/</td></tr>
-                                <tr><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL &mdash; redirect after failed transaction</td><td>https://test.payu.in/admin/test_response</td></tr>
-                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash for tamper prevention (api_version=7 formula)</td><td><em>(auto-computed)</em></td></tr>
-                                <tr><td><code>pg</code></td><td><strong>Mandatory</strong></td><td>Payment gateway type &mdash; must be <code>UPI</code></td><td><strong>UPI</strong></td></tr>
-                                <tr><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td><code>UPI</code> for UPI Collect, <code>INTENT</code> for UPI Intent</td><td><strong>INTENT</strong></td></tr>
-                                <tr><td><code>si</code></td><td><strong>Mandatory</strong></td><td>Must be <code>1</code> to enable Standing Instruction / Autopay</td><td><strong>1</strong></td></tr>
-                                <tr><td><code>si_details</code></td><td><strong>Mandatory</strong></td><td>JSON with billing cycle details (see si_details breakdown below)</td><td><em>(see below)</em></td></tr>
-                                <tr><td><code>vpa</code></td><td><strong>Mandatory</strong> <small>(UPI Collect)</small></td><td>Customer VPA handle. Required when <code>bankcode=UPI</code>.</td><td>customer@upi</td></tr>
-                                <tr><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong> <small>(UPI Intent)</small></td><td>Must be <code>4</code> for UPI Intent flow</td><td><strong>4</strong></td></tr>
-                                <tr><td><code>api_version</code></td><td>Optional</td><td>API version. Pass <code>7</code> so <code>si_details</code> is included in hash.</td><td>7</td></tr>
-                                <tr><td><code>address1</code></td><td>Optional</td><td>Billing address line 1 (max 100 chars)</td><td>H.No-17, Block C</td></tr>
-                                <tr><td><code>address2</code></td><td>Optional</td><td>Billing address line 2 (max 100 chars)</td><td>34 Saikripa-Estate</td></tr>
-                                <tr><td><code>city</code></td><td>Optional</td><td>Customer city</td><td>Mumbai</td></tr>
-                                <tr><td><code>state</code></td><td>Optional</td><td>Customer state</td><td>Maharashtra</td></tr>
-                                <tr><td><code>country</code></td><td>Optional</td><td>Customer country (max 50 chars)</td><td>India</td></tr>
-                                <tr><td><code>zipcode</code></td><td>Optional</td><td>Billing zipcode (max 20 chars)</td><td>400004</td></tr>
-                                <tr><td><code>free_trial</code></td><td>Optional</td><td>Enable free trial. When set to <code>1</code>, PayU adjusts the amount to &#8377;2.00 for UPI regardless of the amount passed.</td><td>1</td></tr>
-                                <tr><td><code>udf1</code></td><td>Yes</td><td>PAN||Date of Birth</td><td>ABCDE1234F||1990-01-01</td></tr>
-                                <tr><td><code>udf3</code></td><td>Yes</td><td>Invoice ID||Merchant Name</td><td>INV123456||MerchantName</td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key &mdash; unique identifier for your PayU account</td><td>BmTY3G</td></tr>
+                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID generated by the merchant. PayU rejects duplicates.</td><td>my_order_29327</td></tr>
+                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment amount. Auto-debit limit: &#8377;15,000. With PIN: &#8377;1,00,000.</td><td>1000.00</td></tr>
+                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Brief product description (max 100 chars)</td><td>MonthlySubscription</td></tr>
+                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer first name (max 60 chars)</td><td>Payu-Admin</td></tr>
+                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer email (max 50 chars)</td><td>test@example.com</td></tr>
+                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer phone number</td><td>1234567890</td></tr>
+                                <tr><td><code>lastname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer last name (max 60 chars)</td><td>Verma</td></tr>
+                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success URL &mdash; redirect after successful transaction</td><td>https://test.payu.in/admin/test_response/</td></tr>
+                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure URL &mdash; redirect after failed transaction</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash for tamper prevention (api_version=7 formula)</td><td><em>(auto-computed)</em></td></tr>
+                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment gateway type &mdash; must be <code>UPI</code></td><td>UPI</td></tr>
+                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>UPI</code> for UPI Collect, <code>INTENT</code> for UPI Intent</td><td>INTENT</td></tr>
+                                <tr><td><code>si</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Must be <code>1</code> to enable Standing Instruction / Autopay</td><td>1</td></tr>
+                                <tr><td><code>si_details</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>JSON with billing cycle details (see si_details breakdown below)</td><td><em>(see below)</em></td></tr>
+                                <tr><td><code>vpa</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Customer VPA handle. Required when <code>bankcode=UPI</code> (UPI Collect).</td><td>customer@upi</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Must be <code>4</code> for UPI Intent flow</td><td>4</td></tr>
+                                <tr><td><code>api_version</code></td><td><span class="sm-badge-optional">Optional</span></td><td>API version. Pass <code>7</code> so <code>si_details</code> is included in hash.</td><td>7</td></tr>
+                                <tr><td><code>address1</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address line 1 (max 100 chars)</td><td>H.No-17, Block C</td></tr>
+                                <tr><td><code>address2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address line 2 (max 100 chars)</td><td>34 Saikripa-Estate</td></tr>
+                                <tr><td><code>city</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer city</td><td>Mumbai</td></tr>
+                                <tr><td><code>state</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer state</td><td>Maharashtra</td></tr>
+                                <tr><td><code>country</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer country (max 50 chars)</td><td>India</td></tr>
+                                <tr><td><code>zipcode</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing zipcode (max 20 chars)</td><td>400004</td></tr>
+                                <tr><td><code>free_trial</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Enable free trial. When set to <code>1</code>, PayU adjusts the amount to &#8377;2.00 for UPI regardless of the amount passed.</td><td>1</td></tr>
+                                <tr><td><code>udf1</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>PAN||Date of Birth &mdash; Mandatory if AD bank requests this detail</td><td>ABCDE1234F||1990-01-01</td></tr>
+                                <tr><td><code>udf3</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Invoice ID||Merchant Name &mdash; Mandatory if AD bank requests this detail</td><td>INV123456||MerchantName</td></tr>
                             </tbody>
                         </table>
 
@@ -4633,16 +4822,16 @@ Example: sha512(PRiQvJ|TXN_123|10.00|iPhone|Ashish|test@gmail.com|ABCDE1234F||19
                         <table class="sm-table">
                             <thead><tr><th>Field</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>billingAmount</code></td><td>Yes</td><td>Maximum amount for recurring debit. For UPI, must not exceed INR 15,000.</td><td>1000.00</td></tr>
-                                <tr><td><code>billingCurrency</code></td><td>Yes</td><td>Currency &mdash; must be <code>INR</code></td><td>INR</td></tr>
-                                <tr><td><code>billingCycle</code></td><td>Yes</td><td>Defines the billing frequency: <code>DAILY</code>, <code>WEEKLY</code>, <code>MONTHLY</code>, <code>YEARLY</code>, <code>ONCE</code>, or <code>ADHOC</code></td><td>MONTHLY</td></tr>
-                                <tr><td><code>billingInterval</code></td><td>Yes</td><td>Coupled with billingCycle. e.g. billingCycle=MONTHLY &amp; billingInterval=3 means charge every 3 months (quarterly).</td><td>1</td></tr>
-                                <tr><td><code>paymentStartDate</code></td><td>Yes</td><td>Start date in <code>YYYY-MM-DD</code>. For UPI, send the current date (other values are ignored).</td><td>2026-04-10</td></tr>
-                                <tr><td><code>paymentEndDate</code></td><td>Yes</td><td>End date in <code>YYYY-MM-DD</code>. Number of payment iterations is calculated from start &amp; end dates.</td><td>2027-04-10</td></tr>
-                                <tr><td><code>remarks</code></td><td>No <small>(UPI only)</small></td><td>Remarks shown on PSP app during mandate registration. Max 50 characters.</td><td>Subscription for a year</td></tr>
-                                <tr><td><code>billingLimit</code></td><td>No <small>(UPI only)</small></td><td>Period relative to mandate date for debit: <code>ON</code> (specific date), <code>BEFORE</code> (before &amp; on), <code>AFTER</code> (after &amp; on, default).</td><td>ON=2026-04-20</td></tr>
-                                <tr><td><code>billingRule</code></td><td>No <small>(UPI only)</small></td><td>Limitation on recurring debit amount: <code>MAX</code> (debit up to amount, default) or <code>EXACT</code> (exact amount only).</td><td>MAX=1000</td></tr>
-                                <tr><td><code>billingDate</code></td><td>No <small>(UPI only)</small></td><td>Day on which recurring debit should happen. For WEEKLY: 1=Mon&hellip;7=Sun. For MONTHLY: 1&ndash;31.</td><td>1</td></tr>
+                                <tr><td><code>billingAmount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Maximum amount for recurring debit. For UPI, must not exceed INR 15,000.</td><td>1000.00</td></tr>
+                                <tr><td><code>billingCurrency</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Currency &mdash; must be <code>INR</code></td><td>INR</td></tr>
+                                <tr><td><code>billingCycle</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Defines the billing frequency: <code>DAILY</code>, <code>WEEKLY</code>, <code>MONTHLY</code>, <code>YEARLY</code>, <code>ONCE</code>, or <code>ADHOC</code></td><td>MONTHLY</td></tr>
+                                <tr><td><code>billingInterval</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Coupled with billingCycle. e.g. billingCycle=MONTHLY &amp; billingInterval=3 means charge every 3 months (quarterly).</td><td>1</td></tr>
+                                <tr><td><code>paymentStartDate</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Start date in <code>YYYY-MM-DD</code>. For UPI, send the current date (other values are ignored).</td><td>2026-04-10</td></tr>
+                                <tr><td><code>paymentEndDate</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>End date in <code>YYYY-MM-DD</code>. Number of payment iterations is calculated from start &amp; end dates.</td><td>2027-04-10</td></tr>
+                                <tr><td><code>remarks</code></td><td><span class="sm-badge-optional">Optional (UPI only)</span></td><td>Remarks shown on PSP app during mandate registration. Max 50 characters.</td><td>Subscription for a year</td></tr>
+                                <tr><td><code>billingLimit</code></td><td><span class="sm-badge-optional">Optional (UPI only)</span></td><td>Period relative to mandate date for debit: <code>ON</code> (specific date), <code>BEFORE</code> (before &amp; on), <code>AFTER</code> (after &amp; on, default).</td><td>ON=2026-04-20</td></tr>
+                                <tr><td><code>billingRule</code></td><td><span class="sm-badge-optional">Optional (UPI only)</span></td><td>Limitation on recurring debit amount: <code>MAX</code> (debit up to amount, default) or <code>EXACT</code> (exact amount only).</td><td>MAX=1000</td></tr>
+                                <tr><td><code>billingDate</code></td><td><span class="sm-badge-optional">Optional (UPI only)</span></td><td>Day on which recurring debit should happen. For WEEKLY: 1=Mon&hellip;7=Sun. For MONTHLY: 1&ndash;31.</td><td>1</td></tr>
                             </tbody>
                         </table>
 
@@ -4945,7 +5134,7 @@ Example: sha512(a4vGC2|MAND_123|2.00|MonthlySubscription|sudhanshu|test@test.com
                                 </div>
                                 <div class="sm-form-row">
                                     <div class="sm-form-group">
-                                        <label>Free Trial (free_trial) <small style="color:#888;">(UPI amount adjusted to &#8377;2)</small></label>
+                                        <label><span style="background:#fefce8; padding:2px 6px; border-radius:3px; font-weight:700; color:#854d0e;">Free</span> <span style="background:#ecfdf5; padding:2px 6px; border-radius:3px; font-weight:700; color:#065f46;">Trial</span> (<code style="font-size:0.85em; background:#f1f5f9; padding:1px 4px; border-radius:3px;">free_trial</code>) <small style="color:#888;">(UPI amount adjusted to &#8377;2)</small></label>
                                         <select id="sm_mand_free_trial">
                                             <option value="">-- Not Set --</option>
                                             <option value="1">1 (Enable Free Trial)</option>
@@ -5699,8 +5888,8 @@ sha512(merchantKey|upi_mandate_modify|{"authPayuId":"...","requestId":"...","amo
                                 <tr><td><code>api_version</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API version &mdash; fixed <code>7</code> (includes si_details in hash)</td><td>7</td></tr>
                                 <tr><td><code>si_details</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>JSON with <code>paymentStartDate</code>, <code>paymentEndDate</code>, and optionally <code>multiCapture: "Y"</code></td><td>{"paymentStartDate":"2026-03-28","paymentEndDate":"2026-05-27"}</td></tr>
                                 <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (auto-computed)</td><td><em>(computed)</em></td></tr>
-                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Source IP of the customer &mdash; required for UPI Intent flow</td><td>10.200.12.12</td></tr>
-                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Customer's device user agent &mdash; required for UPI Intent flow</td><td>Mozilla/5.0</td></tr>
+                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Source IP of the customer &mdash; required for UPI Intent flow</td><td>10.200.12.12</td></tr>
+                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer's device user agent &mdash; required for UPI Intent flow</td><td>Mozilla/5.0</td></tr>
                                 <tr><td><code>lastname</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer's last name</td><td>Kumar</td></tr>
                                 <tr><td><code>udf1</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 1 (included in hash)</td><td>udf1</td></tr>
                                 <tr><td><code>udf2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 2 (included in hash)</td><td>udf2</td></tr>
@@ -5932,16 +6121,16 @@ sha512(PRiQvJ|OTM_123|18000|iPhone|Payu-Admin|test@example.com|udf1|udf2|udf3|ud
                                 </div>
                             </div>
 
-                            <div class="sm-pay-section sm-pay-section-conditional">
-                                <h4>Conditional Parameters</h4>
+                            <div class="sm-pay-section sm-pay-section-mandatory">
+                                <h4>Mandatory Parameters</h4>
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
-                                        <label>Client IP (s2s_client_ip)</label>
-                                    <input type="text" id="sm_otm_client_ip" value="" placeholder="e.g. 10.200.12.12">
+                                        <label>Client IP (s2s_client_ip) <span class="required">*</span></label>
+                                    <input type="text" id="sm_otm_client_ip" value="" placeholder="e.g. 10.200.12.12" required>
                                 </div>
                                 <div class="sm-form-group">
-                                        <label>Device Info (s2s_device_info)</label>
-                                    <input type="text" id="sm_otm_device_info" value="" placeholder="e.g. Mozilla/5.0">
+                                        <label>Device Info (s2s_device_info) <span class="required">*</span></label>
+                                    <input type="text" id="sm_otm_device_info" value="" placeholder="e.g. Mozilla/5.0" required>
                                     </div>
                                 </div>
                             </div>
@@ -6773,7 +6962,7 @@ sha512(merchantKey|cancel_transaction|mihpayid|merchantSalt)</code></pre>
                                 </div>
                             </div>
                             <div class="sm-form-actions">
-                                <button class="button sm-btn-fill-sample" onclick="smFillSampleData('cnl')">&#9889; Fill Sample Data</button>
+                                <button class="button sm-btn-fill-sample" onclick="smFillSampleData('cnl')">&#9889; Fill Data</button>
                                 <button class="button sm-btn-secondary" onclick="smPreviewCancelRequest()">Preview Request</button>
                                 <button class="button sm-btn-primary" onclick="smSendCancelRequest()">Send to PayU &rarr;</button>
                             </div>
@@ -8315,6 +8504,17 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                 </div>
                                 <span class="sm-product-card-btn">Start Flow <span class="sm-btn-arrow">&rarr;</span></span>
                             </div>
+                            <div class="sm-product-card sm-card-troubleshoot" onclick="cardsNavTo(document.querySelector('[data-section=sm-cards-acs-tool]'),'sm-cards-acs-tool')">
+                                <div class="sm-product-card-icon-wrap"><span class="sm-product-card-icon">&#128295;</span></div>
+                                <h3>Tools &amp; Utilities</h3>
+                                <p>ACS template decoder and debugging tools for Cards S2S integration.</p>
+                                <div class="sm-product-card-flow">
+                                    <span>ACS Decoder</span><span class="sm-flow-sep">&bull;</span>
+                                    <span>3DS Debug</span><span class="sm-flow-sep">&bull;</span>
+                                    <span>Response Inspector</span>
+                                </div>
+                                <span class="sm-product-card-btn">Open Tools <span class="sm-btn-arrow">&rarr;</span></span>
+                            </div>
                             <!-- Cross-Border (PACB) and Subscriptions hidden — coming in next release -->
                             <!--
                             <div class="cards-product-card" onclick="cardsNavTo(document.querySelector('[data-section=sm-cards-pacb]'),'sm-cards-pacb')">
@@ -8351,6 +8551,15 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                     <!-- ============================================ -->
                     <div class="seamless-section" id="sm-cards-normal">
                         <h2>Normal S2S Card Payment</h2>
+
+                        <!-- Documentation Links -->
+                        <div class="sm-doc-links" style="margin-bottom:1.5rem; padding:1rem; background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border:1px solid #34d399; border-radius:8px;">
+                            <strong style="color:#065f46;">&#128213; Documentation</strong>
+                            <div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.75rem;">
+                                <a href="https://docs.payu.in/reference/_payment_s2s_classic_integration" target="_blank" style="color:#047857; text-decoration:none; font-size:0.9rem;">&#128279; S2S Classic Integration Guide</a>
+                            </div>
+                        </div>
+
                         <div class="sm-info-box">
                             <strong>Complete Card Payment Lifecycle</strong>
                             <p>This flow walks you through every API call needed for a standard server-to-server credit/debit card payment &mdash; from BIN validation to final verification.</p>
@@ -8428,16 +8637,16 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/merchant/postservice.php?form=2</code> &nbsp;|&nbsp; Command: <code>getBinInfo</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|command|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td>Yes</td><td><code>getBinInfo</code></td></tr>
-                                                <tr><td><code>var1</code></td><td>Yes</td><td>Request type: <code>1</code> = single BIN lookup, <code>2</code> = feature-based BIN list, <code>3</code> = all BIN information</td></tr>
-                                                <tr><td><code>var2</code></td><td>Conditional</td><td>If var1=1: BIN number (e.g. 512345). If var1=2: <code>1</code> (ATM PIN support) or <code>2</code> (OTP-on-the-fly). If var1=3: leave empty.</td></tr>
-                                                <tr><td><code>var3</code></td><td>No</td><td>Start index for pagination (default: <code>0</code>). Used when var1=2 or var1=3.</td></tr>
-                                                <tr><td><code>var4</code></td><td>No</td><td>Records per page / offset (default: <code>100</code>, range: 1&ndash;1000). Used when var1=2 or var1=3.</td></tr>
-                                                <tr><td><code>var5</code></td><td>No</td><td>Set to <code>1</code> to get enhanced features: <code>is_zero_redirect_supported</code>, <code>is_si_supported</code>.</td></tr>
-                                                <tr><td><code>hash</code></td><td>Yes</td><td><code>sha512(key|getBinInfo|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>getBinInfo</code></td><td><code>getBinInfo</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Request type: <code>1</code> = single BIN lookup, <code>2</code> = feature-based BIN list, <code>3</code> = all BIN information</td><td><code>1</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>If var1=1: BIN number (e.g. 512345). If var1=2: <code>1</code> (ATM PIN support) or <code>2</code> (OTP-on-the-fly). If var1=3: leave empty.</td><td><code>512345</code></td></tr>
+                                                <tr><td><code>var3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Start index for pagination (default: <code>0</code>). Used when var1=2 or var1=3.</td><td><code>0</code></td></tr>
+                                                <tr><td><code>var4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Records per page / offset (default: <code>100</code>, range: 1&ndash;1000). Used when var1=2 or var1=3.</td><td><code>100</code></td></tr>
+                                                <tr><td><code>var5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Set to <code>1</code> to get enhanced features: <code>is_zero_redirect_supported</code>, <code>is_si_supported</code>.</td><td><code>1</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|getBinInfo|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:1rem;">
@@ -8472,12 +8681,8 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>var1 &ndash; Request Type <span class="required">*</span></label>
-                                                    <select id="sc_bin_var1" onchange="smBinVar1Changed('sc_bin_')">
-                                                        <option value="1" selected>1 &ndash; Single BIN lookup</option>
-                                                        <option value="2">2 &ndash; Feature-based BIN list</option>
-                                                        <option value="3">3 &ndash; All BINs (paginated)</option>
-                                                    </select>
-                                                    <small class="sm-field-hint">Determines the type of query</small>
+                                                    <input type="text" id="sc_bin_var1" value="1">
+                                                    <small class="sm-field-hint">1 = Single BIN lookup</small>
                                                 </div>
                                                 <div class="sm-form-group" id="sc_bin_var2_group">
                                                     <label>var2 &ndash; BIN / Feature Code</label>
@@ -8568,12 +8773,12 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/merchant/postservice.php?form=2</code> &nbsp;|&nbsp; Command: <code>check_isDomestic</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|command|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key provided by PayU for authentication</td></tr>
-                                                <tr><td><code>command</code></td><td>Yes</td><td><code>check_isDomestic</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td>Yes</td><td>First <strong>6 digits</strong> of the card number (BIN). Must be exactly 6 digits.</td></tr>
-                                                <tr><td><code>hash</code></td><td>Yes</td><td><code>sha512(key|check_isDomestic|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU for authentication</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>check_isDomestic</code> &mdash; fixed value for this API</td><td><code>check_isDomestic</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>First <strong>6 digits</strong> of the card number (BIN). Must be exactly 6 digits.</td><td><code>512345</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|check_isDomestic|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:0.75rem;">
@@ -8635,7 +8840,7 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
 
                             </div>
                             <div class="sm-next-btn-wrapper">
-                                <button class="button sm-btn-secondary" onclick="smSwitchCardPhase(document.querySelector('#sm-cards-normal .sm-phase-tab:nth-child(2)'),'cards-normal','pay')">Next: Payment Phase &rarr;</button>
+                                <button class="button sm-btn-secondary" onclick="smSwitchCardPhase(document.querySelector('#sm-cards-normal .sm-phase-tab:nth-child(2)'),'cards-normal','pay')">Next: Initiate Payment &rarr;</button>
                             </div>
                         </div>
 
@@ -8718,42 +8923,42 @@ console.log('Pipe count:', (hashString.match(/\|/g)||[]).length); // Should be 1
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/_payment</code></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU during onboarding</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>txnid</code></td><td><strong>Mandatory</strong></td><td>Unique transaction ID generated by the merchant. PayU rejects duplicate txnids.</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>amount</code></td><td><strong>Mandatory</strong></td><td>Payment amount for the transaction</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>productinfo</code></td><td><strong>Mandatory</strong></td><td>Brief description of the product</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>firstname</code></td><td><strong>Mandatory</strong></td><td>Customer first name</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>email</code></td><td><strong>Mandatory</strong></td><td>Customer email address</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>phone</code></td><td><strong>Mandatory</strong></td><td>Customer phone number</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>pg</code></td><td><strong>Mandatory</strong></td><td>Payment gateway type. <code>CC</code> for Credit Card, <code>DC</code> for Debit Card</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td>Bank code for the card type (e.g. <code>CC</code>, <code>DC</code>, <code>AMEX</code>)</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccnum</code></td><td><strong>Mandatory</strong></td><td>13&ndash;19 digit card number (15 for AMEX, 13&ndash;19 for Maestro). Validated with LUHN algorithm.</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccname</code></td><td><strong>Mandatory</strong></td><td>Name on card as entered by the customer</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccvv</code></td><td><strong>Mandatory</strong></td><td>3-digit CVV (4-digit CID for AMEX)</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccexpmon</code></td><td><strong>Mandatory</strong></td><td>Card expiry month in MM format (e.g. <code>01</code>, <code>12</code>)</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>ccexpyr</code></td><td><strong>Mandatory</strong></td><td>Card expiry year in YYYY format (e.g. <code>2030</code>)</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>surl</code></td><td><strong>Mandatory</strong></td><td>Success URL &mdash; PayU redirects here on successful transaction</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL &mdash; PayU redirects here on failed transaction</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash: <code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)</code></td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong></td><td>Must be <code>4</code> for Cards Decoupled (S2S) flow</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong></td><td>The source IP of the customer</td></tr>
-                                                <tr style="background:rgba(16,132,109,0.04);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong></td><td>The customer agent&rsquo;s device information (User-Agent string)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>zipcode</code></td><td>Optional</td><td>Customer&rsquo;s PIN code (6 digits)</td></tr>
-                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>address1</code></td><td>Optional <span style="font-size:0.7rem;color:#e65100;">(recommended)</span></td><td>Billing address line 1 (up to 100 characters). Recommended for higher approval rate.</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>address2</code></td><td>Optional</td><td>Billing address line 2 (up to 100 characters)</td></tr>
-                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>city</code></td><td>Optional <span style="font-size:0.7rem;color:#e65100;">(recommended)</span></td><td>Customer city (max 50 characters). Recommended for higher approval rate.</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>state</code></td><td>Optional</td><td>Customer state (max 50 characters)</td></tr>
-                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>country</code></td><td>Optional <span style="font-size:0.7rem;color:#e65100;">(recommended)</span></td><td>Customer country (max 50 characters). Recommended for higher approval rate.</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>lastname</code></td><td>Optional</td><td>Customer last name (alphabets only)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf1</code></td><td>Optional</td><td>User-defined field 1 (up to 255 characters)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf2</code></td><td>Optional</td><td>User-defined field 2 (up to 255 characters)</td></tr>
-                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>udf3</code></td><td>Optional <span style="font-size:0.7rem;color:#e65100;">(recommended)</span></td><td>Date of Birth (DOB) of buyer in DD-MM-YYYY. Recommended for higher approval rate.</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf4</code></td><td>Optional</td><td>User-defined field 4 (up to 255 characters)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf5</code></td><td>Optional</td><td>User-defined field 5 (up to 255 characters)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>store_card</code></td><td>Optional</td><td>Set to <code>1</code> to tokenize the card for future use</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>user_credentials</code></td><td>Conditional</td><td>Required if <code>store_card=1</code>. Format: <code>merchantKey:uniqueCustomerId</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID generated by the merchant. PayU rejects duplicate txnids.</td><td><code>ypl938459435</code></td></tr>
+                                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment amount for the transaction</td><td><code>10.00</code></td></tr>
+                                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Brief description of the product</td><td><code>iPhone</code></td></tr>
+                                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer first name</td><td><code>Ashish</code></td></tr>
+                                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer email address</td><td><code>test@gmail.com</code></td></tr>
+                                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer phone number</td><td><code>9876543210</code></td></tr>
+                                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment gateway type. <code>CC</code> for Credit Card, <code>DC</code> for Debit Card</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Bank code for the card type (e.g. <code>CC</code>, <code>DC</code>, <code>AMEX</code>)</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>ccnum</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>13&ndash;19 digit card number (15 for AMEX, 13&ndash;19 for Maestro). Validated with LUHN algorithm.</td><td><code>5123456789012346</code></td></tr>
+                                                <tr><td><code>ccname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Name on card as entered by the customer</td><td><code>Test User</code></td></tr>
+                                                <tr><td><code>ccvv</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>3-digit CVV (4-digit CID for AMEX)</td><td><code>123</code></td></tr>
+                                                <tr><td><code>ccexpmon</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card expiry month in MM format (e.g. <code>01</code>, <code>12</code>)</td><td><code>05</code></td></tr>
+                                                <tr><td><code>ccexpyr</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card expiry year in YYYY format (e.g. <code>2030</code>)</td><td><code>2030</code></td></tr>
+                                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success URL &mdash; PayU redirects here on successful transaction</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure URL &mdash; PayU redirects here on failed transaction</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash: <code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)</code></td><td><em>(computed)</em></td></tr>
+                                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Must be <code>4</code> for Cards Decoupled (S2S) flow</td><td><code>4</code></td></tr>
+                                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>The source IP of the customer</td><td><code>10.200.12.12</code></td></tr>
+                                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>The customer agent&rsquo;s device information (User-Agent string)</td><td>Mozilla/5.0 (Windows NT 10.0; Win64; x64)</td></tr>
+                                                <tr><td><code>zipcode</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer&rsquo;s PIN code (6 digits)</td><td><code>400004</code></td></tr>
+                                                <tr><td><code>address1</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address line 1 (up to 100 characters). Recommended for higher approval rate.</td><td>123 Main Street</td></tr>
+                                                <tr><td><code>address2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address line 2 (up to 100 characters)</td><td>Suite 100</td></tr>
+                                                <tr><td><code>city</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer city (max 50 characters). Recommended for higher approval rate.</td><td>Mumbai</td></tr>
+                                                <tr><td><code>state</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer state (max 50 characters)</td><td>Maharashtra</td></tr>
+                                                <tr><td><code>country</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer country (max 50 characters). Recommended for higher approval rate.</td><td>India</td></tr>
+                                                <tr><td><code>lastname</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer last name (alphabets only)</td><td>Kumar</td></tr>
+                                                <tr><td><code>udf1</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 1 (up to 255 characters)</td><td>&mdash;</td></tr>
+                                                <tr><td><code>udf2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 2 (up to 255 characters)</td><td>&mdash;</td></tr>
+                                                <tr><td><code>udf3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Date of Birth (DOB) of buyer in DD-MM-YYYY. Recommended for higher approval rate.</td><td>22-08-1990</td></tr>
+                                                <tr><td><code>udf4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 4 (up to 255 characters)</td><td>&mdash;</td></tr>
+                                                <tr><td><code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined field 5 (up to 255 characters)</td><td>&mdash;</td></tr>
+                                                <tr><td><code>store_card</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Set to <code>1</code> to tokenize the card for future use</td><td><code>1</code></td></tr>
+                                                <tr><td><code>user_credentials</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Required if <code>store_card=1</code>. Format: <code>merchantKey:uniqueCustomerId</code></td><td><code>JPg****f:customer1</code></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -9071,7 +9276,7 @@ bankWindow.document.close();</code></pre>
                                 </div>
                             </div>
                             <div class="sm-next-btn-wrapper">
-                                <button class="button sm-btn-secondary" onclick="smSwitchCardPhase(document.querySelector('#sm-cards-normal .sm-phase-tab:nth-child(3)'),'cards-normal','post')">Next: Post-Payment Phase &rarr;</button>
+                                <button class="button sm-btn-secondary" onclick="smSwitchCardPhase(document.querySelector('#sm-cards-normal .sm-phase-tab:nth-child(3)'),'cards-normal','post')">Next: Verify Payment &rarr;</button>
                             </div>
                         </div>
 
@@ -9107,12 +9312,12 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|command|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Yes</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Yes</strong></td><td><code>verify_payment</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Yes</strong></td><td>Transaction ID(s) to verify. Multiple txnids can be separated by pipe (<code>|</code>), e.g. <code>TXN_001|TXN_002</code></td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Yes</strong></td><td><code>sha512(key|verify_payment|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>verify_payment</code> &mdash; fixed value for this API</td><td><code>verify_payment</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction ID(s) to verify. Multiple txnids can be separated by pipe (<code>|</code>), e.g. <code>TXN_001|TXN_002</code></td><td><code>TXN_001</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|verify_payment|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -9176,6 +9381,15 @@ bankWindow.document.close();</code></pre>
                     <!-- ============================================ -->
                     <div class="seamless-section" id="sm-cards-preauth">
                         <h2>Pre-Auth Card Payment</h2>
+
+                        <!-- Documentation Links -->
+                        <div class="sm-doc-links" style="margin-bottom:1.5rem; padding:1rem; background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border:1px solid #34d399; border-radius:8px;">
+                            <strong style="color:#065f46;">&#128213; Documentation</strong>
+                            <div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.75rem;">
+                                <a href="https://docs.payu.in/docs/pre-authorize-card-transactions" target="_blank" style="color:#047857; text-decoration:none; font-size:0.9rem;">&#128279; Pre-Authorize Card Transactions Guide</a>
+                            </div>
+                        </div>
+
                         <div class="sm-info-box">
                             <strong>Hold Funds &amp; Capture Later</strong>
                             <p>Pre-authorization holds funds on the customer's card without immediately capturing them. Ideal for hotels, car rentals, and e-commerce where the final amount may change. You capture the actual amount later.</p>
@@ -9291,16 +9505,16 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/merchant/postservice.php?form=2</code> &nbsp;|&nbsp; Command: <code>getBinInfo</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|command|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td>Yes</td><td><code>getBinInfo</code></td></tr>
-                                                <tr><td><code>var1</code></td><td>Yes</td><td>Request type: <code>1</code> = single BIN, <code>2</code> = feature-based list, <code>3</code> = all BINs</td></tr>
-                                                <tr><td><code>var2</code></td><td>Conditional</td><td>If var1=1: BIN number. If var1=2: <code>1</code> (ATM PIN) or <code>2</code> (OTP). If var1=3: leave empty.</td></tr>
-                                                <tr><td><code>var3</code></td><td>No</td><td>Start index for pagination (default: <code>0</code>)</td></tr>
-                                                <tr><td><code>var4</code></td><td>No</td><td>Records per page (default: <code>100</code>, range: 1&ndash;1000)</td></tr>
-                                                <tr><td><code>var5</code></td><td>No</td><td>Set to <code>1</code> for enhanced features (zero redirect, SI support)</td></tr>
-                                                <tr><td><code>hash</code></td><td>Yes</td><td><code>sha512(key|getBinInfo|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>getBinInfo</code></td><td><code>getBinInfo</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Request type: <code>1</code> = single BIN, <code>2</code> = feature-based list, <code>3</code> = all BINs</td><td><code>1</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>If var1=1: BIN number. If var1=2: <code>1</code> (ATM PIN) or <code>2</code> (OTP). If var1=3: leave empty.</td><td><code>512345</code></td></tr>
+                                                <tr><td><code>var3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Start index for pagination (default: <code>0</code>)</td><td><code>0</code></td></tr>
+                                                <tr><td><code>var4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Records per page (default: <code>100</code>, range: 1&ndash;1000)</td><td><code>100</code></td></tr>
+                                                <tr><td><code>var5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Set to <code>1</code> for enhanced features (zero redirect, SI support)</td><td><code>1</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|getBinInfo|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:1rem;">
@@ -9335,12 +9549,8 @@ bankWindow.document.close();</code></pre>
                                                 <div class="sm-form-row">
                                                     <div class="sm-form-group">
                                                         <label>var1 &ndash; Request Type <span class="required">*</span></label>
-                                                        <select id="sc_pa_bin_var1" onchange="smBinVar1Changed('sc_pa_bin_')">
-                                                            <option value="1" selected>1 &ndash; Single BIN lookup</option>
-                                                            <option value="2">2 &ndash; Feature-based BIN list</option>
-                                                            <option value="3">3 &ndash; All BINs (paginated)</option>
-                                                        </select>
-                                                        <small class="sm-field-hint">Determines the type of query</small>
+                                                        <input type="text" id="sc_pa_bin_var1" value="1">
+                                                        <small class="sm-field-hint">1 = Single BIN lookup</small>
                                                     </div>
                                                     <div class="sm-form-group" id="sc_pa_bin_var2_group">
                                                         <label>var2 &ndash; BIN / Feature Code</label>
@@ -9416,7 +9626,7 @@ bankWindow.document.close();</code></pre>
 
                             </div>
                             <div class="sm-next-btn-wrapper">
-                                <button class="button sm-btn-secondary" onclick="smSwitchCardPhase(document.querySelector('#sm-cards-preauth .sm-phase-tab:nth-child(2)'),'cards-preauth','pay')">Next: Payment Phase &rarr;</button>
+                                <button class="button sm-btn-secondary" onclick="smSwitchCardPhase(document.querySelector('#sm-cards-preauth .sm-phase-tab:nth-child(2)'),'cards-preauth','pay')">Next: Initiate Pre-Auth Payment &rarr;</button>
                             </div>
                         </div>
 
@@ -9491,36 +9701,36 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/_payment</code></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU during onboarding</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>txnid</code></td><td><strong>Mandatory</strong></td><td>Unique transaction ID generated by the merchant. PayU rejects duplicate txnids.</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>amount</code></td><td><strong>Mandatory</strong></td><td>Payment amount to hold on the card</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>productinfo</code></td><td><strong>Mandatory</strong></td><td>Brief description of the product</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>firstname</code></td><td><strong>Mandatory</strong></td><td>Customer first name</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>email</code></td><td><strong>Mandatory</strong></td><td>Customer email address</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>phone</code></td><td><strong>Mandatory</strong></td><td>Customer phone number</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>pg</code></td><td><strong>Mandatory</strong></td><td><code>CC</code> for Credit Card</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td>Bank code for the card (e.g. <code>CC</code>, <code>AMEX</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccnum</code></td><td><strong>Mandatory</strong></td><td>13&ndash;19 digit card number (15 for AMEX). Validated with LUHN algorithm.</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccname</code></td><td><strong>Mandatory</strong></td><td>Name on card as entered by the customer</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccvv</code></td><td><strong>Mandatory</strong></td><td>3-digit CVV (4-digit CID for AMEX)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccexpmon</code></td><td><strong>Mandatory</strong></td><td>Card expiry month in MM format (e.g. <code>01</code>, <code>12</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccexpyr</code></td><td><strong>Mandatory</strong></td><td>Card expiry year in YYYY format (e.g. <code>2030</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>surl</code></td><td><strong>Mandatory</strong></td><td>Success URL &mdash; PayU redirects here on successful authorization</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL &mdash; PayU redirects here on failed authorization</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>pre_authorize</code></td><td><strong>Mandatory</strong></td><td>Must be <code>1</code> for pre-authorization. This holds funds without debiting.</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash (see Generate Payment Hash step above). <code>pre_authorize</code> is NOT included in hash.</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong></td><td>Must be <code>4</code> for Cards Decoupled (S2S) flow</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong></td><td>The source IP of the customer</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong></td><td>The customer agent&rsquo;s device information (User-Agent string)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>address1</code></td><td>Optional</td><td>Billing address line 1 (recommended for fraud detection)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>address2</code></td><td>Optional</td><td>Billing address line 2</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>city</code></td><td>Optional</td><td>Customer city</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>state</code></td><td>Optional</td><td>Customer state</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>country</code></td><td>Optional</td><td>Customer country</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>zipcode</code></td><td>Optional</td><td>Billing zip code</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf1</code>&ndash;<code>udf5</code></td><td>Optional</td><td>User-defined fields to store additional info per transaction</td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID generated by the merchant. PayU rejects duplicate txnids.</td><td><code>ypl938459435</code></td></tr>
+                                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment amount to hold on the card</td><td><code>18000</code></td></tr>
+                                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Brief description of the product</td><td><code>iPhone</code></td></tr>
+                                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer first name</td><td><code>Ashish</code></td></tr>
+                                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer email address</td><td><code>test@gmail.com</code></td></tr>
+                                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer phone number</td><td><code>9876543210</code></td></tr>
+                                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>CC</code> for Credit Card</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Bank code for the card (e.g. <code>CC</code>, <code>AMEX</code>)</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>ccnum</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>13&ndash;19 digit card number (15 for AMEX). Validated with LUHN algorithm.</td><td><code>5123456789012346</code></td></tr>
+                                                <tr><td><code>ccname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Name on card as entered by the customer</td><td><code>Test User</code></td></tr>
+                                                <tr><td><code>ccvv</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>3-digit CVV (4-digit CID for AMEX)</td><td><code>123</code></td></tr>
+                                                <tr><td><code>ccexpmon</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card expiry month in MM format (e.g. <code>01</code>, <code>12</code>)</td><td><code>05</code></td></tr>
+                                                <tr><td><code>ccexpyr</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card expiry year in YYYY format (e.g. <code>2030</code>)</td><td><code>2030</code></td></tr>
+                                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success URL &mdash; PayU redirects here on successful authorization</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure URL &mdash; PayU redirects here on failed authorization</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>pre_authorize</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Must be <code>1</code> for pre-authorization. This holds funds without debiting.</td><td><code>1</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (see Generate Payment Hash step above). <code>pre_authorize</code> is NOT included in hash.</td><td><em>(computed)</em></td></tr>
+                                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Must be <code>4</code> for Cards Decoupled (S2S) flow</td><td><code>4</code></td></tr>
+                                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>The source IP of the customer</td><td><code>10.200.12.12</code></td></tr>
+                                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>The customer agent&rsquo;s device information (User-Agent string)</td><td>Mozilla/5.0 (Windows NT 10.0; Win64; x64)</td></tr>
+                                                <tr><td><code>address1</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address line 1 (recommended for fraud detection)</td><td>123 Main Street</td></tr>
+                                                <tr><td><code>address2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address line 2</td><td>Suite 100</td></tr>
+                                                <tr><td><code>city</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer city</td><td>Mumbai</td></tr>
+                                                <tr><td><code>state</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer state</td><td>Maharashtra</td></tr>
+                                                <tr><td><code>country</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Customer country</td><td>India</td></tr>
+                                                <tr><td><code>zipcode</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing zip code</td><td><code>400004</code></td></tr>
+                                                <tr><td><code>udf1</code>&ndash;<code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined fields to store additional info per transaction</td><td>&mdash;</td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -9814,7 +10024,7 @@ bankWindow.document.close();</code></pre>
                                 </div>
                             </div>
                             <div class="sm-next-btn-wrapper">
-                                <button class="button sm-btn-secondary" onclick="smSwitchCardPhase(document.querySelector('#sm-cards-preauth .sm-phase-tab:nth-child(3)'),'cards-preauth','post')">Next: Post-Payment Phase &rarr;</button>
+                                <button class="button sm-btn-secondary" onclick="smSwitchCardPhase(document.querySelector('#sm-cards-preauth .sm-phase-tab:nth-child(3)'),'cards-preauth','post')">Next: Verify Payment &rarr;</button>
                             </div>
                         </div>
 
@@ -9850,12 +10060,12 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|verify_payment|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>verify_payment</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>Transaction ID(s) to verify. Multiple txnids can be separated by pipe (<code>|</code>)</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|verify_payment|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>verify_payment</code> &mdash; fixed value for this API</td><td><code>verify_payment</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction ID(s) to verify. Multiple txnids can be separated by pipe (<code>|</code>)</td><td><code>TXN_001</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|verify_payment|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:0.75rem;border-left:4px solid #e65100;">
@@ -9888,13 +10098,13 @@ bankWindow.document.close();</code></pre>
                                             <div class="sm-api-badge">POST <code>https://test.payu.in/merchant/postservice.php?form=2</code></div>
                                             <div class="sm-api-badge">Hash: <code>sha512(key|cancel_transaction|var1|salt)</code></div>
                                             <table class="sm-table" style="margin-top:0.75rem;">
-                                                <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                                <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                                 <tbody>
-                                                    <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                    <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>cancel_transaction</code> &mdash; fixed value</td></tr>
-                                                    <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>PayU ID (<code>mihpayid</code>) from the pre-auth or verify_payment response</td></tr>
-                                                    <tr><td><code>var2</code></td><td><strong>Mandatory</strong></td><td>Merchant unique reference number (token) for this cancel request</td></tr>
-                                                    <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|cancel_transaction|var1|salt)</code></td></tr>
+                                                    <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                    <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>cancel_transaction</code> &mdash; fixed value</td><td><code>cancel_transaction</code></td></tr>
+                                                    <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>PayU ID (<code>mihpayid</code>) from the pre-auth or verify_payment response</td><td><code>403993715537230966</code></td></tr>
+                                                    <tr><td><code>var2</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant unique reference number (token) for this cancel request</td><td><code>CANCEL_REF_001</code></td></tr>
+                                                    <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|cancel_transaction|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -9960,14 +10170,14 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|capture_transaction|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>capture_transaction</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>PayU ID (<code>mihpayid</code>) generated by PayU as part of the pre-authorize operation</td></tr>
-                                                <tr><td><code>var2</code></td><td><strong>Mandatory</strong></td><td>Merchant unique reference number (token) for this capture request</td></tr>
-                                                <tr><td><code>var3</code></td><td><strong>Mandatory</strong></td><td>Amount to capture &mdash; must be &le; authorized amount. Partial capture is supported.</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|capture_transaction|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>capture_transaction</code> &mdash; fixed value for this API</td><td><code>capture_transaction</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>PayU ID (<code>mihpayid</code>) generated by PayU as part of the pre-authorize operation</td><td><code>403993715537230966</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant unique reference number (token) for this capture request</td><td><code>CAPTURE_REF_001</code></td></tr>
+                                                <tr><td><code>var3</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Amount to capture &mdash; must be &le; authorized amount. Partial capture is supported.</td><td><code>18000</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|capture_transaction|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:0.75rem;border-left:4px solid #1976d2;">
@@ -10029,12 +10239,12 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|verify_payment|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>verify_payment</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>Transaction ID(s) to verify. Multiple txnids can be separated by pipe (<code>|</code>)</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|verify_payment|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>verify_payment</code> &mdash; fixed value for this API</td><td><code>verify_payment</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction ID(s) to verify. Multiple txnids can be separated by pipe (<code>|</code>)</td><td><code>TXN_001</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|verify_payment|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:0.75rem;border-left:4px solid #1976d2;">
@@ -10135,6 +10345,15 @@ bankWindow.document.close();</code></pre>
                                 <span id="tokM2BackLabel">Back to Model Selection</span>
                             </button>
                             <h3>Model 2 &ndash; Zero Code Change</h3>
+
+                            <!-- Documentation Links -->
+                            <div class="sm-doc-links" style="margin-bottom:1.5rem; padding:1rem; background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border:1px solid #34d399; border-radius:8px;">
+                                <strong style="color:#065f46;">&#128213; Documentation</strong>
+                                <div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.75rem;">
+                                    <a href="https://docs.payu.in/docs/zero-code-change-for-vault-integration-model-2" target="_blank" style="color:#047857; text-decoration:none; font-size:0.9rem;">&#128279; Zero Code Change for Vault Integration (Model 2)</a>
+                                </div>
+                            </div>
+
                             <div class="sm-info-box">
                                 <strong>How it works</strong>
                                 <p>PayU is onboarded as token requestor. You pass consent (<code>store_card=1</code>) and a user ID (<code>user_credentials</code>) during payment. PayU processes the transaction, creates network/issuer tokens, and stores them on your behalf. For repeat payments, retrieve saved cards with <code>get_user_cards</code> and pay using the token + CVV.</p>
@@ -10185,16 +10404,16 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|getBinInfo|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU for authentication</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>getBinInfo</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>Request type: <code>1</code> = single BIN lookup, <code>2</code> = feature-based BIN list, <code>3</code> = all BINs</td></tr>
-                                                <tr><td><code>var2</code></td><td>Conditional</td><td>If var1=1: BIN number (e.g. <code>512345</code>). If var1=2: <code>1</code> (ATM PIN) or <code>2</code> (OTP). If var1=3: leave empty.</td></tr>
-                                                <tr><td><code>var3</code></td><td>Optional</td><td>Start index for pagination (default: <code>0</code>)</td></tr>
-                                                <tr><td><code>var4</code></td><td>Optional</td><td>Records per page (default: <code>100</code>, range: 1&ndash;1000)</td></tr>
-                                                <tr><td><code>var5</code></td><td>Optional</td><td>Set to <code>1</code> to fetch enhanced features (<code>is_zero_redirect_supported</code>, <code>is_si_supported</code>)</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|getBinInfo|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU for authentication</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>getBinInfo</code> &mdash; fixed value for this API</td><td><code>getBinInfo</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Request type: <code>1</code> = single BIN lookup, <code>2</code> = feature-based BIN list, <code>3</code> = all BINs</td><td><code>1</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>If var1=1: BIN number (e.g. <code>512345</code>). If var1=2: <code>1</code> (ATM PIN) or <code>2</code> (OTP). If var1=3: leave empty.</td><td><code>512345</code></td></tr>
+                                                <tr><td><code>var3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Start index for pagination (default: <code>0</code>)</td><td><code>0</code></td></tr>
+                                                <tr><td><code>var4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Records per page (default: <code>100</code>, range: 1&ndash;1000)</td><td><code>100</code></td></tr>
+                                                <tr><td><code>var5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Set to <code>1</code> to fetch enhanced features (<code>is_zero_redirect_supported</code>, <code>is_si_supported</code>)</td><td><code>1</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|getBinInfo|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:1rem;">
@@ -10220,11 +10439,8 @@ bankWindow.document.close();</code></pre>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>var1 &ndash; Request Type <span class="required">*</span></label>
-                                                    <select id="sc_m2_bin_var1" onchange="smBinVar1Changed('sc_m2_bin_')">
-                                                        <option value="1" selected>1 &ndash; Single BIN lookup</option>
-                                                        <option value="2">2 &ndash; Feature-based BIN list</option>
-                                                        <option value="3">3 &ndash; All BINs (paginated)</option>
-                                                    </select>
+                                                    <input type="text" id="sc_m2_bin_var1" value="1">
+                                                    <small class="sm-field-hint">1 = Single BIN lookup</small>
                                             </div>
                                                 <div class="sm-form-group" id="sc_m2_bin_var2_group">
                                                     <label>var2 &ndash; BIN / Feature Code</label>
@@ -10332,7 +10548,7 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-info-box" style="margin-top:1rem;"><strong>Note:</strong> If no cards have been saved for this user, the API returns <code>{"status":0, "msg":"Card not found."}</code>. This is expected for first-time users. Cards are saved only after a successful payment with <code>store_card=1</code>.</div>
                                     </div></div>
                                 </div>
-                                <div class="sm-next-btn-wrapper"><button class="button" onclick="smSwitchCardPhase(document.querySelector('#sm-tok-m2 .sm-phase-tab:nth-child(2)'),'tok-m2','pay')">Next: Payment Phase &rarr;</button></div>
+                                <div class="sm-next-btn-wrapper"><button class="button" onclick="smSwitchCardPhase(document.querySelector('#sm-tok-m2 .sm-phase-tab:nth-child(2)'),'tok-m2','pay')">Next: Initiate Payment &rarr;</button></div>
                             </div>
 
                             <!-- M2 PAYMENT -->
@@ -10385,33 +10601,33 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/_payment</code></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU during onboarding</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>txnid</code></td><td><strong>Mandatory</strong></td><td>Unique transaction ID generated by the merchant</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>amount</code></td><td><strong>Mandatory</strong></td><td>Payment amount (e.g. <code>10.00</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>productinfo</code></td><td><strong>Mandatory</strong></td><td>Brief description of the product</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>firstname</code></td><td><strong>Mandatory</strong></td><td>Customer first name</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>email</code></td><td><strong>Mandatory</strong></td><td>Customer email address</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>phone</code></td><td><strong>Mandatory</strong></td><td>Customer phone number</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>pg</code></td><td><strong>Mandatory</strong></td><td><code>CC</code> for Credit Card</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td>Card bank code (e.g. <code>CC</code>, <code>AMEX</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccnum</code></td><td><strong>Mandatory</strong></td><td>Full card number (13&ndash;19 digits, validated with LUHN)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccname</code></td><td><strong>Mandatory</strong></td><td>Name on card as entered by the customer</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccvv</code></td><td><strong>Mandatory</strong></td><td>3-digit CVV (4-digit CID for AMEX)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccexpmon</code></td><td><strong>Mandatory</strong></td><td>Card expiry month in MM format (e.g. <code>05</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccexpyr</code></td><td><strong>Mandatory</strong></td><td>Card expiry year in YYYY format (e.g. <code>2030</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>surl</code></td><td><strong>Mandatory</strong></td><td>Success URL &mdash; PayU redirects here on successful payment</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL &mdash; PayU redirects here on failed payment</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash (see Generate Payment Hash step above)</td></tr>
-                                                <tr style="background:rgba(123,31,162,0.06);"><td><code>store_card</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#7b1fa2;">(tokenization)</span></td><td><code>1</code> = customer consent to save card. <code>0</code> = no consent.</td></tr>
-                                                <tr style="background:rgba(123,31,162,0.06);"><td><code>user_credentials</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#7b1fa2;">(tokenization)</span></td><td><code>merchantKey:uniqueUserId</code> &mdash; identifies the customer</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td><code>4</code> &mdash; enables S2S JSON response format</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s IP address (e.g. <code>10.200.12.12</code>)</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s User-Agent string</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>address1</code>, <code>address2</code></td><td>Optional</td><td>Billing address (recommended for fraud detection)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td>Optional</td><td>Billing address details</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf1</code>&ndash;<code>udf5</code></td><td>Optional</td><td>User-defined fields for additional transaction info</td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID generated by the merchant</td><td><code>ypl938459435</code></td></tr>
+                                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment amount (e.g. <code>10.00</code>)</td><td><code>10.00</code></td></tr>
+                                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Brief description of the product</td><td><code>iPhone</code></td></tr>
+                                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer first name</td><td><code>Ashish</code></td></tr>
+                                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer email address</td><td><code>test@gmail.com</code></td></tr>
+                                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer phone number</td><td><code>9876543210</code></td></tr>
+                                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>CC</code> for Credit Card</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card bank code (e.g. <code>CC</code>, <code>AMEX</code>)</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>ccnum</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Full card number (13&ndash;19 digits, validated with LUHN)</td><td><code>5123456789012346</code></td></tr>
+                                                <tr><td><code>ccname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Name on card as entered by the customer</td><td><code>Test User</code></td></tr>
+                                                <tr><td><code>ccvv</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>3-digit CVV (4-digit CID for AMEX)</td><td><code>123</code></td></tr>
+                                                <tr><td><code>ccexpmon</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card expiry month in MM format (e.g. <code>05</code>)</td><td><code>05</code></td></tr>
+                                                <tr><td><code>ccexpyr</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card expiry year in YYYY format (e.g. <code>2030</code>)</td><td><code>2030</code></td></tr>
+                                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success URL &mdash; PayU redirects here on successful payment</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure URL &mdash; PayU redirects here on failed payment</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (see Generate Payment Hash step above)</td><td><em>(computed)</em></td></tr>
+                                                <tr><td><code>store_card</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>1</code> = customer consent to save card. <code>0</code> = no consent.</td><td><code>1</code></td></tr>
+                                                <tr><td><code>user_credentials</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>merchantKey:uniqueUserId</code> &mdash; identifies the customer</td><td><code>JPg****f:customer1</code></td></tr>
+                                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>4</code> &mdash; enables S2S JSON response format</td><td><code>4</code></td></tr>
+                                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s IP address (e.g. <code>10.200.12.12</code>)</td><td><code>10.200.12.12</code></td></tr>
+                                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s User-Agent string</td><td>Mozilla/5.0 (Windows NT 10.0; Win64; x64)</td></tr>
+                                                <tr><td><code>address1</code>, <code>address2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address (recommended for fraud detection)</td><td>123 Main Street</td></tr>
+                                                <tr><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address details</td><td>Mumbai, MH, India, 400004</td></tr>
+                                                <tr><td><code>udf1</code>&ndash;<code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined fields for additional transaction info</td><td>&mdash;</td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -10520,30 +10736,30 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/_payment</code></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>txnid</code></td><td><strong>Mandatory</strong></td><td>Unique transaction ID generated by the merchant</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>amount</code></td><td><strong>Mandatory</strong></td><td>Payment amount</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>productinfo</code></td><td><strong>Mandatory</strong></td><td>Brief description of the product</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>firstname</code></td><td><strong>Mandatory</strong></td><td>Customer first name</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>email</code></td><td><strong>Mandatory</strong></td><td>Customer email address</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>phone</code></td><td><strong>Mandatory</strong></td><td>Customer phone number</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>pg</code></td><td><strong>Mandatory</strong></td><td><code>CC</code> for Credit Card</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td>Card bank code (e.g. <code>CC</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>surl</code></td><td><strong>Mandatory</strong></td><td>Success URL</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash (same formula as first-time payment)</td></tr>
-                                                <tr style="background:rgba(123,31,162,0.06);"><td><code>user_credentials</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#7b1fa2;">(tokenization)</span></td><td><code>merchantKey:uniqueUserId</code> &mdash; must match value used during card save</td></tr>
-                                                <tr style="background:rgba(123,31,162,0.06);"><td><code>store_card_token</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#7b1fa2;">(repeat)</span></td><td>Card token from <code>get_user_cards</code> response (<code>card_token</code> field)</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td><code>4</code> &mdash; enables S2S JSON response format</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s IP address</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s User-Agent string</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>ccvv</code></td><td>Optional</td><td>CVV &mdash; not required for saved card transactions</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>storecard_token_type</code></td><td>Optional</td><td><code>0</code> for PayU token hub (default if omitted)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>address1</code>, <code>address2</code></td><td>Optional</td><td>Billing address (recommended for fraud detection)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td>Optional</td><td>Billing address details</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf1</code>&ndash;<code>udf5</code></td><td>Optional</td><td>User-defined fields for additional transaction info</td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID generated by the merchant</td><td><code>ypl938459435</code></td></tr>
+                                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment amount</td><td><code>10.00</code></td></tr>
+                                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Brief description of the product</td><td><code>iPhone</code></td></tr>
+                                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer first name</td><td><code>Ashish</code></td></tr>
+                                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer email address</td><td><code>test@gmail.com</code></td></tr>
+                                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer phone number</td><td><code>9876543210</code></td></tr>
+                                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>CC</code> for Credit Card</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card bank code (e.g. <code>CC</code>)</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success URL</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure URL</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (same formula as first-time payment)</td><td><em>(computed)</em></td></tr>
+                                                <tr><td><code>user_credentials</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>merchantKey:uniqueUserId</code> &mdash; must match value used during card save</td><td><code>JPg****f:customer1</code></td></tr>
+                                                <tr><td><code>store_card_token</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card token from <code>get_user_cards</code> response (<code>card_token</code> field)</td><td><code>abc123tokenxyz</code></td></tr>
+                                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>4</code> &mdash; enables S2S JSON response format</td><td><code>4</code></td></tr>
+                                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s IP address</td><td><code>10.200.12.12</code></td></tr>
+                                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s User-Agent string</td><td>Mozilla/5.0 (Windows NT 10.0; Win64; x64)</td></tr>
+                                                <tr><td><code>ccvv</code></td><td><span class="sm-badge-optional">Optional</span></td><td>CVV &mdash; not required for saved card transactions</td><td><code>123</code></td></tr>
+                                                <tr><td><code>storecard_token_type</code></td><td><span class="sm-badge-optional">Optional</span></td><td><code>0</code> for PayU token hub (default if omitted)</td><td><code>0</code></td></tr>
+                                                <tr><td><code>address1</code>, <code>address2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address (recommended for fraud detection)</td><td>123 Main Street</td></tr>
+                                                <tr><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address details</td><td>Mumbai, MH, India, 400004</td></tr>
+                                                <tr><td><code>udf1</code>&ndash;<code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined fields for additional transaction info</td><td>&mdash;</td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:0.75rem;border-left:4px solid #7b1fa2;">
@@ -10770,7 +10986,7 @@ bankWindow.document.close();</code></pre>
                                         </div>
                                     </div></div>
                                 </div>
-                                <div class="sm-next-btn-wrapper"><button class="button" onclick="smSwitchCardPhase(document.querySelector('#sm-tok-m2 .sm-phase-tab:nth-child(3)'),'tok-m2','post')">Next: Post-Payment Phase &rarr;</button></div>
+                                <div class="sm-next-btn-wrapper"><button class="button" onclick="smSwitchCardPhase(document.querySelector('#sm-tok-m2 .sm-phase-tab:nth-child(3)'),'tok-m2','post')">Next: Verify Payment &rarr;</button></div>
                             </div>
 
                             <!-- M2 POST-PAYMENT -->
@@ -10784,12 +11000,12 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|verify_payment|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>verify_payment</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>Transaction ID(s) to verify. Multiple txnids separated by pipe (<code>|</code>)</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|verify_payment|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>verify_payment</code> &mdash; fixed value for this API</td><td><code>verify_payment</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction ID(s) to verify. Multiple txnids separated by pipe (<code>|</code>)</td><td><code>TXN_001</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|verify_payment|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -10832,15 +11048,15 @@ unmappedstatus=captured</code></pre></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|delete_payment_instrument|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>delete_payment_instrument</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>User credentials: <code>merchantKey:userId</code></td></tr>
-                                                <tr><td><code>var2</code></td><td><strong>Mandatory</strong></td><td>Card token (<code>cardToken</code>) to delete</td></tr>
-                                                <tr><td><code>var3</code></td><td>Optional</td><td>Network token value (if deleting specific network token)</td></tr>
-                                                <tr><td><code>var4</code></td><td>Optional</td><td>Issuer token value (if deleting specific issuer token)</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|delete_payment_instrument|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>delete_payment_instrument</code> &mdash; fixed value for this API</td><td><code>delete_payment_instrument</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>User credentials: <code>merchantKey:userId</code></td><td><code>JPg****f:customer1</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card token (<code>cardToken</code>) to delete</td><td><code>abc123tokenxyz</code></td></tr>
+                                                <tr><td><code>var3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Network token value (if deleting specific network token)</td><td>&mdash;</td></tr>
+                                                <tr><td><code>var4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Issuer token value (if deleting specific issuer token)</td><td>&mdash;</td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|delete_payment_instrument|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -10886,6 +11102,15 @@ unmappedstatus=captured</code></pre></div>
                                 <span id="tokM3BackLabel">Back to Model Selection</span>
                             </button>
                             <h3>Model 3 &ndash; Simple REST API Integration</h3>
+
+                            <!-- Documentation Links -->
+                            <div class="sm-doc-links" style="margin-bottom:1.5rem; padding:1rem; background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border:1px solid #34d399; border-radius:8px;">
+                                <strong style="color:#065f46;">&#128213; Documentation</strong>
+                                <div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.75rem;">
+                                    <a href="https://docs.payu.in/docs/simple-rest-apis-for-vault-integration-model-3" target="_blank" style="color:#047857; text-decoration:none; font-size:0.9rem;">&#128279; Simple REST APIs for Vault Integration (Model 3)</a>
+                                </div>
+                            </div>
+
                             <div class="sm-info-box">
                                 <strong>How it works</strong>
                                 <p>You have full control over the token lifecycle using dedicated REST APIs. For first-time transactions, process the payment first, then call <code>save_payment_instrument</code> to create the token. For repeat transactions, retrieve saved cards via <code>get_user_cards</code> or token details via <code>get_payment_instrument</code>, and optionally get the cryptogram for network tokens. You can also process tokens outside PayU.</p>
@@ -10933,16 +11158,16 @@ unmappedstatus=captured</code></pre></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|getBinInfo|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU for authentication</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>getBinInfo</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>Request type: <code>1</code> = single BIN lookup, <code>2</code> = feature-based BIN list, <code>3</code> = all BINs</td></tr>
-                                                <tr><td><code>var2</code></td><td>Conditional</td><td>If var1=1: BIN number (e.g. <code>512345</code>). If var1=2: <code>1</code> (ATM PIN) or <code>2</code> (OTP). If var1=3: leave empty.</td></tr>
-                                                <tr><td><code>var3</code></td><td>Optional</td><td>Start index for pagination (default: <code>0</code>)</td></tr>
-                                                <tr><td><code>var4</code></td><td>Optional</td><td>Records per page (default: <code>100</code>, range: 1&ndash;1000)</td></tr>
-                                                <tr><td><code>var5</code></td><td>Optional</td><td>Set to <code>1</code> to fetch enhanced features (<code>is_zero_redirect_supported</code>, <code>is_si_supported</code>)</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|getBinInfo|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU for authentication</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>getBinInfo</code> &mdash; fixed value for this API</td><td><code>getBinInfo</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Request type: <code>1</code> = single BIN lookup, <code>2</code> = feature-based BIN list, <code>3</code> = all BINs</td><td><code>1</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>If var1=1: BIN number (e.g. <code>512345</code>). If var1=2: <code>1</code> (ATM PIN) or <code>2</code> (OTP). If var1=3: leave empty.</td><td><code>512345</code></td></tr>
+                                                <tr><td><code>var3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Start index for pagination (default: <code>0</code>)</td><td><code>0</code></td></tr>
+                                                <tr><td><code>var4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Records per page (default: <code>100</code>, range: 1&ndash;1000)</td><td><code>100</code></td></tr>
+                                                <tr><td><code>var5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Set to <code>1</code> to fetch enhanced features (<code>is_zero_redirect_supported</code>, <code>is_si_supported</code>)</td><td><code>1</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|getBinInfo|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-info-box" style="margin-top:1rem;">
@@ -10968,11 +11193,8 @@ unmappedstatus=captured</code></pre></div>
                                             <div class="sm-form-row">
                                                 <div class="sm-form-group">
                                                     <label>var1 &ndash; Request Type <span class="required">*</span></label>
-                                                    <select id="sc_m3_bin_var1" onchange="smBinVar1Changed('sc_m3_bin_')">
-                                                        <option value="1" selected>1 &ndash; Single BIN lookup</option>
-                                                        <option value="2">2 &ndash; Feature-based BIN list</option>
-                                                        <option value="3">3 &ndash; All BINs (paginated)</option>
-                                                    </select>
+                                                    <input type="text" id="sc_m3_bin_var1" value="1">
+                                                    <small class="sm-field-hint">1 = Single BIN lookup</small>
                                             </div>
                                                 <div class="sm-form-group" id="sc_m3_bin_var2_group">
                                                     <label>var2 &ndash; BIN / Feature Code</label>
@@ -11050,10 +11272,10 @@ unmappedstatus=captured</code></pre></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
                                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td><td><code>JPM7Fg</code></td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td>Fixed value <code>get_user_cards</code></td><td><code>get_user_cards</code></td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>User credentials: <code>merchantKey:userId</code>. Must match what was used during card save.</td><td><code>JPM7Fg:abc</code></td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|get_user_cards|var1|salt)</code></td><td>Computed hash</td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPM7Fg</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Fixed value <code>get_user_cards</code></td><td><code>get_user_cards</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>User credentials: <code>merchantKey:userId</code>. Must match what was used during card save.</td><td><code>JPM7Fg:abc</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|get_user_cards|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -11092,12 +11314,12 @@ unmappedstatus=captured</code></pre></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|get_payment_instrument|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>get_payment_instrument</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td><code>merchantKey:userId</code> &mdash; must match what was used during <code>save_payment_instrument</code></td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|get_payment_instrument|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>get_payment_instrument</code> &mdash; fixed value for this API</td><td><code>get_payment_instrument</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>merchantKey:userId</code> &mdash; must match what was used during <code>save_payment_instrument</code></td><td><code>JPg****f:customer1</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|get_payment_instrument|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -11125,16 +11347,16 @@ unmappedstatus=captured</code></pre></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|get_payment_details|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>get_payment_details</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>User credentials: <code>merchantKey:userId</code></td></tr>
-                                                <tr><td><code>var2</code></td><td><strong>Mandatory</strong></td><td>Card token (<code>cardToken</code>) from Get Payment Instrument / Get User Cards response</td></tr>
-                                                <tr><td><code>var3</code></td><td><strong>Mandatory</strong></td><td>Transaction amount (e.g. <code>10</code>)</td></tr>
-                                                <tr><td><code>var4</code></td><td><strong>Mandatory</strong></td><td>Currency code (default: <code>INR</code>). Left blank defaults to INR.</td></tr>
-                                                <tr><td><code>var5</code></td><td><strong>Mandatory</strong></td><td>Token type: <code>NETWORK</code> or <code>PAYU</code>. Left blank defaults to PAYU.</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|get_payment_details|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>get_payment_details</code> &mdash; fixed value for this API</td><td><code>get_payment_details</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>User credentials: <code>merchantKey:userId</code></td><td><code>JPg****f:customer1</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card token (<code>cardToken</code>) from Get Payment Instrument / Get User Cards response</td><td><code>abc123tokenxyz</code></td></tr>
+                                                <tr><td><code>var3</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction amount (e.g. <code>10</code>)</td><td><code>10</code></td></tr>
+                                                <tr><td><code>var4</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Currency code (default: <code>INR</code>). Left blank defaults to INR.</td><td><code>INR</code></td></tr>
+                                                <tr><td><code>var5</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Token type: <code>NETWORK</code> or <code>PAYU</code>. Left blank defaults to PAYU.</td><td><code>NETWORK</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|get_payment_details|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -11191,10 +11413,10 @@ unmappedstatus=captured</code></pre></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
                                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td><td><code>a4vGC2</code></td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td>Fixed value <code>get_user_cards</code></td><td><code>get_user_cards</code></td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>User credentials: <code>merchantKey:userId</code>. Must match what was used during card save.</td><td><code>a4vGC2:test_customer1</code></td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|get_user_cards|var1|salt)</code></td><td>Computed hash</td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>a4vGC2</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Fixed value <code>get_user_cards</code></td><td><code>get_user_cards</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>User credentials: <code>merchantKey:userId</code>. Must match what was used during card save.</td><td><code>a4vGC2:test_customer1</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|get_user_cards|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -11224,7 +11446,7 @@ unmappedstatus=captured</code></pre></div>
                                         </div>
                                     </div></div>
                                 </div>
-                                <div class="sm-next-btn-wrapper"><button class="button" onclick="smSwitchCardPhase(document.querySelector('#sm-tok-m3 .sm-phase-tab:nth-child(2)'),'tok-m3','pay')">Next: Payment Phase &rarr;</button></div>
+                                <div class="sm-next-btn-wrapper"><button class="button" onclick="smSwitchCardPhase(document.querySelector('#sm-tok-m3 .sm-phase-tab:nth-child(2)'),'tok-m3','pay')">Next: Initiate Payment &rarr;</button></div>
                             </div>
 
                             <!-- M3 PAYMENT -->
@@ -11277,34 +11499,32 @@ unmappedstatus=captured</code></pre></div>
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/_payment</code></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>txnid</code></td><td><strong>Mandatory</strong></td><td>Unique transaction ID generated by the merchant</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>amount</code></td><td><strong>Mandatory</strong></td><td>Payment amount (e.g. <code>10.00</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>productinfo</code></td><td><strong>Mandatory</strong></td><td>Brief description of the product</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>firstname</code></td><td><strong>Mandatory</strong></td><td>Customer first name</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>email</code></td><td><strong>Mandatory</strong></td><td>Customer email address</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>phone</code></td><td><strong>Mandatory</strong></td><td>Customer phone number</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>pg</code></td><td><strong>Mandatory</strong></td><td><code>CC</code> for Credit Card</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td>Card bank code (e.g. <code>CC</code>, <code>AMEX</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccnum</code></td><td><strong>Mandatory</strong></td><td>Full card number (13&ndash;19 digits, validated with LUHN)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccname</code></td><td><strong>Mandatory</strong></td><td>Name on card as entered by the customer</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccvv</code></td><td><strong>Mandatory</strong></td><td>3-digit CVV (4-digit CID for AMEX)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccexpmon</code></td><td><strong>Mandatory</strong></td><td>Card expiry month in MM format</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>ccexpyr</code></td><td><strong>Mandatory</strong></td><td>Card expiry year in YYYY format</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>pg</code></td><td><strong>Mandatory</strong></td><td><code>CC</code> for Credit Card</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td>Card bank code (e.g. <code>CC</code>, <code>AMEX</code>)</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>surl</code></td><td><strong>Mandatory</strong></td><td>Success URL &mdash; PayU redirects here on success</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL &mdash; PayU redirects here on failure</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash (see Generate Payment Hash step)</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td><code>4</code> &mdash; enables S2S JSON response format</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s IP address</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s User-Agent string</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>user_credentials</code></td><td>Optional</td><td><code>merchantKey:userId</code> &mdash; not required for Model 3 first-time (tokenization is done via <code>save_payment_instrument</code>)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>address1</code>, <code>address2</code></td><td>Optional</td><td>Billing address (recommended for fraud detection)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td>Optional</td><td>Billing address details</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf1</code>&ndash;<code>udf5</code></td><td>Optional</td><td>User-defined fields for additional transaction info</td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID generated by the merchant</td><td><code>ypl938459435</code></td></tr>
+                                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment amount (e.g. <code>10.00</code>)</td><td><code>10.00</code></td></tr>
+                                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Brief description of the product</td><td><code>iPhone</code></td></tr>
+                                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer first name</td><td><code>Ashish</code></td></tr>
+                                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer email address</td><td><code>test@gmail.com</code></td></tr>
+                                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer phone number</td><td><code>9876543210</code></td></tr>
+                                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>CC</code> for Credit Card</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card bank code (e.g. <code>CC</code>, <code>AMEX</code>)</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>ccnum</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Full card number (13&ndash;19 digits, validated with LUHN)</td><td><code>5123456789012346</code></td></tr>
+                                                <tr><td><code>ccname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Name on card as entered by the customer</td><td><code>Test User</code></td></tr>
+                                                <tr><td><code>ccvv</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>3-digit CVV (4-digit CID for AMEX)</td><td><code>123</code></td></tr>
+                                                <tr><td><code>ccexpmon</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card expiry month in MM format</td><td><code>05</code></td></tr>
+                                                <tr><td><code>ccexpyr</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card expiry year in YYYY format</td><td><code>2030</code></td></tr>
+                                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success URL &mdash; PayU redirects here on success</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure URL &mdash; PayU redirects here on failure</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash (see Generate Payment Hash step)</td><td><em>(computed)</em></td></tr>
+                                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>4</code> &mdash; enables S2S JSON response format</td><td><code>4</code></td></tr>
+                                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s IP address</td><td><code>10.200.12.12</code></td></tr>
+                                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s User-Agent string</td><td>Mozilla/5.0 (Windows NT 10.0; Win64; x64)</td></tr>
+                                                <tr><td><code>user_credentials</code></td><td><span class="sm-badge-optional">Optional</span></td><td><code>merchantKey:userId</code> &mdash; not required for Model 3 first-time (tokenization is done via <code>save_payment_instrument</code>)</td><td><code>JPg****f:customer1</code></td></tr>
+                                                <tr><td><code>address1</code>, <code>address2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address (recommended for fraud detection)</td><td>123 Main Street</td></tr>
+                                                <tr><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address details</td><td>Mumbai, MH, India, 400004</td></tr>
+                                                <tr><td><code>udf1</code>&ndash;<code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined fields for additional transaction info</td><td>&mdash;</td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -11405,26 +11625,26 @@ unmappedstatus=captured</code></pre></div>
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/_payment</code></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>txnid</code></td><td><strong>Mandatory</strong></td><td>Unique transaction ID</td></tr>
-                                                <tr><td><code>amount</code></td><td><strong>Mandatory</strong></td><td>Payment amount</td></tr>
-                                                <tr><td><code>productinfo</code></td><td><strong>Mandatory</strong></td><td>Product description</td></tr>
-                                                <tr><td><code>firstname</code></td><td><strong>Mandatory</strong></td><td>Customer first name</td></tr>
-                                                <tr><td><code>email</code></td><td><strong>Mandatory</strong></td><td>Customer email</td></tr>
-                                                <tr><td><code>phone</code></td><td><strong>Mandatory</strong></td><td>Customer phone</td></tr>
-                                                <tr><td><code>surl</code> / <code>furl</code></td><td><strong>Mandatory</strong></td><td>Success / Failure callback URLs</td></tr>
-                                                <tr><td><code>store_card_token</code></td><td><strong>Mandatory</strong></td><td>PayU token from <code>get_payment_instrument</code> or <code>get_user_cards</code></td></tr>
-                                                <tr><td><code>user_credentials</code></td><td><strong>Mandatory</strong></td><td><code>merchantKey:userId</code> &mdash; mandatory for PayU Token payments</td></tr>
-                                                <tr><td><code>storecard_token_type</code></td><td><strong>Mandatory</strong></td><td><code>0</code> (PayU Token)</td></tr>
-                                                <tr><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td><code>4</code> &mdash; S2S JSON response</td></tr>
-                                                <tr><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s IP address</td></tr>
-                                                <tr><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s User-Agent string</td></tr>
-                                                <tr><td><code>pg</code></td><td><strong>Mandatory</strong></td><td><code>CC</code></td></tr>
-                                                <tr><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td><code>CC</code></td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash</td></tr>
-                                                <tr><td><code>ccvv</code></td><td>Optional</td><td>CVV &mdash; optional for saved card transactions</td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID</td><td><code>ypl938459435</code></td></tr>
+                                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment amount</td><td><code>10.00</code></td></tr>
+                                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Product description</td><td><code>iPhone</code></td></tr>
+                                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer first name</td><td><code>Ashish</code></td></tr>
+                                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer email</td><td><code>test@gmail.com</code></td></tr>
+                                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer phone</td><td><code>9876543210</code></td></tr>
+                                                <tr><td><code>surl</code> / <code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success / Failure callback URLs</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>store_card_token</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>PayU token from <code>get_payment_instrument</code> or <code>get_user_cards</code></td><td><code>abc123tokenxyz</code></td></tr>
+                                                <tr><td><code>user_credentials</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>merchantKey:userId</code> &mdash; mandatory for PayU Token payments</td><td><code>JPg****f:customer1</code></td></tr>
+                                                <tr><td><code>storecard_token_type</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>0</code> (PayU Token)</td><td><code>0</code></td></tr>
+                                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>4</code> &mdash; S2S JSON response</td><td><code>4</code></td></tr>
+                                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s IP address</td><td><code>10.200.12.12</code></td></tr>
+                                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s User-Agent string</td><td>Mozilla/5.0 (Windows NT 10.0; Win64; x64)</td></tr>
+                                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>CC</code></td><td><code>CC</code></td></tr>
+                                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>CC</code></td><td><code>CC</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash</td><td><em>(computed)</em></td></tr>
+                                                <tr><td><code>ccvv</code></td><td><span class="sm-badge-optional">Optional</span></td><td>CVV &mdash; optional for saved card transactions</td><td><code>123</code></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -11494,32 +11714,32 @@ unmappedstatus=captured</code></pre></div>
                                         <div class="sm-api-badge">POST <code>https://test.payu.in/_payment</code></div>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>txnid</code></td><td><strong>Mandatory</strong></td><td>Unique transaction ID</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>amount</code></td><td><strong>Mandatory</strong></td><td>Payment amount</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>productinfo</code></td><td><strong>Mandatory</strong></td><td>Product description</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>firstname</code></td><td><strong>Mandatory</strong></td><td>Customer first name</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>email</code></td><td><strong>Mandatory</strong></td><td>Customer email</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>phone</code></td><td><strong>Mandatory</strong></td><td>Customer phone</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>pg</code></td><td><strong>Mandatory</strong></td><td><code>CC</code></td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>bankcode</code></td><td><strong>Mandatory</strong></td><td><code>CC</code></td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>surl</code></td><td><strong>Mandatory</strong></td><td>Success URL</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>furl</code></td><td><strong>Mandatory</strong></td><td>Failure URL</td></tr>
-                                                <tr style="background:rgba(230,81,0,0.04);"><td><code>hash</code></td><td><strong>Mandatory</strong></td><td>SHA-512 hash</td></tr>
-                                                <tr style="background:rgba(0,105,92,0.06);"><td><code>storecard_token_type</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#00695c;">(repeat)</span></td><td><code>0</code> = PayU Token &nbsp;|&nbsp; <code>1</code> = Network Token &nbsp;|&nbsp; <code>2</code> = Issuer Token</td></tr>
-                                                <tr style="background:rgba(0,105,92,0.06);"><td><code>store_card_token</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#00695c;">(repeat)</span></td><td>Token value: PayU token / Network DPAN / Issuer token value</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>txn_s2s_flow</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td><code>4</code> &mdash; S2S JSON response</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_client_ip</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s IP address</td></tr>
-                                                <tr style="background:rgba(21,101,192,0.06);"><td><code>s2s_device_info</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#1565c0;">(S2S)</span></td><td>Customer&rsquo;s User-Agent string</td></tr>
-                                                <tr style="background:rgba(46,125,50,0.06);"><td><code>user_credentials</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#2e7d32;">(PayU Token)</span></td><td><code>key:customerId</code> &mdash; mandatory when <code>storecard_token_type=0</code>. Optional for Network/Issuer.</td></tr>
-                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>additional_info</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#e65100;">(Network/Issuer)</span></td><td>JSON with TAVV, TRID, last4Digits &mdash; mandatory when <code>storecard_token_type=1</code> or <code>2</code></td></tr>
-                                                <tr style="background:rgba(255,152,0,0.06);"><td><code>ccexpmon</code> / <code>ccexpyr</code></td><td><strong>Mandatory</strong> <span style="font-size:0.7rem;color:#e65100;">(Network/Issuer)</span></td><td>Token expiry month/year &mdash; required for Network &amp; Issuer tokens</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>ccvv</code></td><td>Optional</td><td>CVV &mdash; optional for saved card / token transactions</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>address1</code>, <code>address2</code></td><td>Optional</td><td>Billing address (recommended for fraud detection)</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td>Optional</td><td>Billing address details</td></tr>
-                                                <tr style="background:#f9f9f9;"><td><code>udf1</code>&ndash;<code>udf5</code></td><td>Optional</td><td>User-defined fields for additional transaction info</td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction ID</td><td><code>ypl938459435</code></td></tr>
+                                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Payment amount</td><td><code>10.00</code></td></tr>
+                                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Product description</td><td><code>iPhone</code></td></tr>
+                                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer first name</td><td><code>Ashish</code></td></tr>
+                                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer email</td><td><code>test@gmail.com</code></td></tr>
+                                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer phone</td><td><code>9876543210</code></td></tr>
+                                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>CC</code></td><td><code>CC</code></td></tr>
+                                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>CC</code></td><td><code>CC</code></td></tr>
+                                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Success URL</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Failure URL</td><td>https://test.payu.in/admin/test_response</td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>SHA-512 hash</td><td><em>(computed)</em></td></tr>
+                                                <tr><td><code>storecard_token_type</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>0</code> = PayU Token &nbsp;|&nbsp; <code>1</code> = Network Token &nbsp;|&nbsp; <code>2</code> = Issuer Token</td><td><code>0</code></td></tr>
+                                                <tr><td><code>store_card_token</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Token value: PayU token / Network DPAN / Issuer token value</td><td><code>abc123tokenxyz</code></td></tr>
+                                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>4</code> &mdash; S2S JSON response</td><td><code>4</code></td></tr>
+                                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s IP address</td><td><code>10.200.12.12</code></td></tr>
+                                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Customer&rsquo;s User-Agent string</td><td>Mozilla/5.0 (Windows NT 10.0; Win64; x64)</td></tr>
+                                                <tr><td><code>user_credentials</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td><code>key:customerId</code> &mdash; mandatory when <code>storecard_token_type=0</code>. Optional for Network/Issuer.</td><td><code>JPg****f:customer1</code></td></tr>
+                                                <tr><td><code>additional_info</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>JSON with TAVV, TRID, last4Digits &mdash; mandatory when <code>storecard_token_type=1</code> or <code>2</code></td><td><code>{"tavv":"...","trid":"..."}</code></td></tr>
+                                                <tr><td><code>ccexpmon</code> / <code>ccexpyr</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Token expiry month/year &mdash; required for Network &amp; Issuer tokens</td><td><code>05</code> / <code>2030</code></td></tr>
+                                                <tr><td><code>ccvv</code></td><td><span class="sm-badge-optional">Optional</span></td><td>CVV &mdash; optional for saved card / token transactions</td><td><code>123</code></td></tr>
+                                                <tr><td><code>address1</code>, <code>address2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address (recommended for fraud detection)</td><td>123 Main Street</td></tr>
+                                                <tr><td><code>city</code>, <code>state</code>, <code>country</code>, <code>zipcode</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Billing address details</td><td>Mumbai, MH, India, 400004</td></tr>
+                                                <tr><td><code>udf1</code>&ndash;<code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>User-defined fields for additional transaction info</td><td>&mdash;</td></tr>
                                             </tbody>
                                         </table>
                                         <div style="margin-top:1rem;border:1px solid #1976d2;border-radius:10px;overflow:hidden;background:#fff;">
@@ -11837,7 +12057,7 @@ bankWindow.document.close();</code></pre>
                                         </div>
                                     </div></div>
                                 </div>
-                                <div class="sm-next-btn-wrapper"><button class="button" onclick="smSwitchCardPhase(document.querySelector('#sm-tok-m3 .sm-phase-tab:nth-child(3)'),'tok-m3','post')">Next: Post-Payment Phase &rarr;</button></div>
+                                <div class="sm-next-btn-wrapper"><button class="button" onclick="smSwitchCardPhase(document.querySelector('#sm-tok-m3 .sm-phase-tab:nth-child(3)'),'tok-m3','post')">Next: Verify Payment &rarr;</button></div>
                             </div>
 
                             <!-- M3 POST-PAYMENT -->
@@ -11851,12 +12071,12 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|verify_payment|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>verify_payment</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>Transaction ID(s) &mdash; multiple txnids separated by pipe (<code>|</code>)</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|verify_payment|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>verify_payment</code> &mdash; fixed value for this API</td><td><code>verify_payment</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction ID(s) &mdash; multiple txnids separated by pipe (<code>|</code>)</td><td><code>TXN_001</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|verify_payment|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -11881,20 +12101,20 @@ bankWindow.document.close();</code></pre>
                                         <table class="sm-table" style="margin-top:0.75rem;">
                                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td><td><code>a4vGC2</code></td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td>Fixed value <code>save_payment_instrument</code></td><td><code>save_payment_instrument</code></td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>User credentials: <code>merchantKey:userId</code></td><td><code>a4vGC2:test1</code></td></tr>
-                                                <tr><td><code>var2</code></td><td><strong>Mandatory</strong></td><td>Name/label for the card (card nickname)</td><td><code>My HDFC Visa</code></td></tr>
-                                                <tr><td><code>var3</code></td><td><strong>Mandatory</strong></td><td>PG value &mdash; payment gateway type</td><td><code>CC</code></td></tr>
-                                                <tr><td><code>var4</code></td><td><strong>Mandatory</strong></td><td>Bank code</td><td><code>CC</code></td></tr>
-                                                <tr><td><code>var5</code></td><td><strong>Mandatory</strong></td><td>Cardholder name</td><td><code>Test User</code></td></tr>
-                                                <tr><td><code>var6</code></td><td><strong>Mandatory</strong></td><td>Full card number (13&ndash;19 digits)</td><td><code>5123456789012346</code></td></tr>
-                                                <tr><td><code>var7</code></td><td><strong>Mandatory</strong></td><td>Expiry month (MM)</td><td><code>05</code></td></tr>
-                                                <tr><td><code>var8</code></td><td><strong>Mandatory</strong></td><td>Expiry year (YYYY)</td><td><code>2030</code></td></tr>
-                                                <tr><td><code>var9</code></td><td>Conditional</td><td>Network auth reference &mdash; mandatory for Rupay/Amex cards</td><td>&mdash;</td></tr>
-                                                <tr><td><code>var10</code></td><td>Conditional</td><td>AFA consent &mdash; mandatory for Visa/MC/Diners (<code>true</code>/<code>false</code>)</td><td><code>true</code></td></tr>
-                                                <tr><td><code>var11</code></td><td>Conditional</td><td>Card tokenization consent &mdash; mandatory for Visa/MC/Diners (<code>true</code>/<code>false</code>)</td><td><code>true</code></td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|save_payment_instrument|var1|salt)</code></td><td>Computed hash</td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>a4vGC2</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Fixed value <code>save_payment_instrument</code></td><td><code>save_payment_instrument</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>User credentials: <code>merchantKey:userId</code></td><td><code>a4vGC2:test1</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Name/label for the card (card nickname)</td><td><code>My HDFC Visa</code></td></tr>
+                                                <tr><td><code>var3</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>PG value &mdash; payment gateway type</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>var4</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Bank code</td><td><code>CC</code></td></tr>
+                                                <tr><td><code>var5</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Cardholder name</td><td><code>Test User</code></td></tr>
+                                                <tr><td><code>var6</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Full card number (13&ndash;19 digits)</td><td><code>5123456789012346</code></td></tr>
+                                                <tr><td><code>var7</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Expiry month (MM)</td><td><code>05</code></td></tr>
+                                                <tr><td><code>var8</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Expiry year (YYYY)</td><td><code>2030</code></td></tr>
+                                                <tr><td><code>var9</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Network auth reference &mdash; mandatory for Rupay/Amex cards</td><td>&mdash;</td></tr>
+                                                <tr><td><code>var10</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>AFA consent &mdash; mandatory for Visa/MC/Diners (<code>true</code>/<code>false</code>)</td><td><code>true</code></td></tr>
+                                                <tr><td><code>var11</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>Card tokenization consent &mdash; mandatory for Visa/MC/Diners (<code>true</code>/<code>false</code>)</td><td><code>true</code></td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|save_payment_instrument|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -11954,15 +12174,15 @@ bankWindow.document.close();</code></pre>
                                         <div class="sm-api-badge">Content-Type: <code>application/x-www-form-urlencoded</code></div>
                                         <div class="sm-api-badge">Hash: <code>sha512(key|delete_payment_instrument|var1|salt)</code></div>
                                         <table class="sm-table" style="margin-top:0.75rem;">
-                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+                                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                                             <tbody>
-                                                <tr><td><code>key</code></td><td><strong>Mandatory</strong></td><td>Merchant key provided by PayU</td></tr>
-                                                <tr><td><code>command</code></td><td><strong>Mandatory</strong></td><td><code>delete_payment_instrument</code> &mdash; fixed value for this API</td></tr>
-                                                <tr><td><code>var1</code></td><td><strong>Mandatory</strong></td><td>User credentials: <code>merchantKey:userId</code></td></tr>
-                                                <tr><td><code>var2</code></td><td><strong>Mandatory</strong></td><td>Card token (<code>cardToken</code>) to delete</td></tr>
-                                                <tr><td><code>var3</code></td><td>Optional</td><td>Network token value (if deleting specific network token)</td></tr>
-                                                <tr><td><code>var4</code></td><td>Optional</td><td>Issuer token value (if deleting specific issuer token)</td></tr>
-                                                <tr><td><code>hash</code></td><td><strong>Mandatory</strong></td><td><code>sha512(key|delete_payment_instrument|var1|salt)</code></td></tr>
+                                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU</td><td><code>JPg****f</code></td></tr>
+                                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>delete_payment_instrument</code> &mdash; fixed value for this API</td><td><code>delete_payment_instrument</code></td></tr>
+                                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>User credentials: <code>merchantKey:userId</code></td><td><code>JPg****f:customer1</code></td></tr>
+                                                <tr><td><code>var2</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Card token (<code>cardToken</code>) to delete</td><td><code>abc123tokenxyz</code></td></tr>
+                                                <tr><td><code>var3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Network token value (if deleting specific network token)</td><td>&mdash;</td></tr>
+                                                <tr><td><code>var4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>Issuer token value (if deleting specific issuer token)</td><td>&mdash;</td></tr>
+                                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td><code>sha512(key|delete_payment_instrument|var1|salt)</code></td><td><em>(computed)</em></td></tr>
                                             </tbody>
                                         </table>
                                         <div class="sm-interactive-form" style="margin-top:1rem;">
@@ -12102,7 +12322,7 @@ bankWindow.document.close();</code></pre>
                         <!-- Code samples -->
                         <div style="margin-top:2rem;">
                             <h3 style="margin-bottom:0.75rem;">Code Samples &mdash; Decode &amp; Render</h3>
-                            <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+                            <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
                                 <button class="sm-phase-tab active" onclick="smSwitchAcsCodeTab(this,'js')">JavaScript</button>
                                 <button class="sm-phase-tab" onclick="smSwitchAcsCodeTab(this,'php')">PHP</button>
                                 <button class="sm-phase-tab" onclick="smSwitchAcsCodeTab(this,'python')">Python</button>
@@ -12788,6 +13008,27 @@ sha512(a4vGC2|NB_123456|100.00|Test Product|John|john@example.com|||||||||||Your
                                 <strong style="color:#276749;">&#10003; Callback URL:</strong>
                                 <span style="color:#22543d;">Using Integration Lab's callback page for formatted response display with hash verification.</span>
                             </div>
+
+                            <h4 style="margin:1.25rem 0 0.75rem; color:var(--text-color); font-size:0.95rem;">S2S Parameters <span class="sm-badge-conditional" style="font-size:0.7rem; vertical-align:middle;">Conditional</span></h4>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>Client IP (s2s_client_ip)</label><input type="text" id="sm_nb_pay_client_ip" value="10.200.12.12" placeholder="Customer's source IP"></div>
+                                <div class="sm-form-group"><label>Device Info (s2s_device_info)</label><input type="text" id="sm_nb_pay_device_info" value="Mozilla/5.0" placeholder="Customer's user agent"></div>
+                            </div>
+
+                            <h4 style="margin:1.25rem 0 0.75rem; color:var(--text-color); font-size:0.95rem;">User Defined Fields <span class="sm-badge-optional" style="font-size:0.7rem; vertical-align:middle;">Optional</span></h4>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>udf1</label><input type="text" id="sm_nb_pay_udf1" placeholder="User-defined field 1"></div>
+                                <div class="sm-form-group"><label>udf2</label><input type="text" id="sm_nb_pay_udf2" placeholder="User-defined field 2"></div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>udf3</label><input type="text" id="sm_nb_pay_udf3" placeholder="User-defined field 3"></div>
+                                <div class="sm-form-group"><label>udf4</label><input type="text" id="sm_nb_pay_udf4" placeholder="User-defined field 4"></div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>udf5</label><input type="text" id="sm_nb_pay_udf5" placeholder="User-defined field 5"></div>
+                                <div class="sm-form-group">&nbsp;</div>
+                            </div>
+
                             <div class="sm-form-actions">
                                 <button class="button sm-btn-fill-sample" onclick="smNbFillSamplePayment()">&#9889; Fill Sample Data</button>
                                 <button class="button sm-btn-secondary" onclick="smNbPreviewPaymentRequest()">Preview Request</button>
@@ -12882,6 +13123,70 @@ sha512(a4vGC2|NB_123456|100.00|Test Product|John|john@example.com|||||||||||Your
 
                         <!-- Original Content (shown initially) -->
                         <div id="smNbOtpOriginalContent">
+
+                            <!-- API Reference -->
+                            <h3>API Reference</h3>
+                            <div class="sm-info-box" style="margin-bottom:1rem; background:#f0fff4; border:1px solid #9ae6b4;">
+                                <strong>Endpoint:</strong> <code>POST https://test.payu.in/_payment</code> (Test) | <code>POST https://secure.payu.in/_payment</code> (Production)
+                            </div>
+
+                            <h4 style="margin-top:1rem;">Request Parameters</h4>
+                            <table class="sm-table">
+                                <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                                <tbody>
+                                    <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                    <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
+                                    <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Unique transaction ID (max 25 chars)</td><td>NB_1234567890</td></tr>
+                                    <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Transaction amount in INR</td><td>100.00</td></tr>
+                                    <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Product/service description</td><td>Test Product</td></tr>
+                                    <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer&rsquo;s first name</td><td>John</td></tr>
+                                    <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer&rsquo;s email address</td><td>john@example.com</td></tr>
+                                    <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer&rsquo;s phone number</td><td>9876543210</td></tr>
+                                    <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Success callback URL</td><td>https://yoursite.com/success</td></tr>
+                                    <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
+                                    <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
+                                    <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
+                                    <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Bank code from getNetbankingStatus API</td><td>TESTPGNB</td></tr>
+                                    <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
+                                    <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>String &mdash; Source IP of the customer (required for S2S)</td><td>10.200.12.12</td></tr>
+                                    <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>String &mdash; Customer agent&rsquo;s device information</td><td>Mozilla/5.0</td></tr>
+                                    <tr><td><code>udf1</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 1</td><td></td></tr>
+                                    <tr><td><code>udf2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 2</td><td></td></tr>
+                                    <tr><td><code>udf3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 3</td><td></td></tr>
+                                    <tr><td><code>udf4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 4</td><td></td></tr>
+                                    <tr><td><code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 5</td><td></td></tr>
+                                </tbody>
+                            </table>
+
+                            <h4 style="margin-top:1.5rem;">Response Parameters</h4>
+                            <table class="sm-table">
+                                <thead><tr><th>Parameter</th><th>Description</th><th>Example</th></tr></thead>
+                                <tbody>
+                                    <tr><td><code>metaData.txnId</code></td><td>String &mdash; Your original transaction ID</td><td>NB_1234567890</td></tr>
+                                    <tr><td><code>metaData.txnStatus</code></td><td>String &mdash; Transaction status &mdash; <code>pending</code> means awaiting bank auth</td><td>pending</td></tr>
+                                    <tr><td><code>metaData.unmappedStatus</code></td><td>String &mdash; Raw status from payment gateway</td><td>pending</td></tr>
+                                    <tr><td><code>metaData.referenceId</code></td><td>String &mdash; PayU internal reference for this transaction</td><td>abc123...</td></tr>
+                                    <tr><td><code>result.acsTemplate</code></td><td>String &mdash; <strong>Base64-encoded HTML</strong> containing auto-submit form to redirect customer to bank</td><td>PGh0bWw+Li4u...</td></tr>
+                                    <tr><td><code>result.otpPostUrl</code></td><td>String &mdash; PayU response handler URL (used internally by bank redirect)</td><td>https://test.payu.in/ResponseHandler.php</td></tr>
+                                </tbody>
+                            </table>
+
+                            <h4 style="margin-top:1.5rem;">Callback Parameters (POST to surl/furl)</h4>
+                            <table class="sm-table">
+                                <thead><tr><th>Parameter</th><th>Description</th><th>Example</th></tr></thead>
+                                <tbody>
+                                    <tr><td><code>status</code></td><td>Transaction status &mdash; <code>success</code> or <code>failure</code></td><td>success</td></tr>
+                                    <tr><td><code>mihpayid</code></td><td>PayU&rsquo;s unique transaction reference ID</td><td>10731087875</td></tr>
+                                    <tr><td><code>mode</code></td><td>Payment mode &mdash; <code>NB</code> for Net Banking</td><td>NB</td></tr>
+                                    <tr><td><code>txnid</code></td><td>Your original transaction ID</td><td>NB_1234567890</td></tr>
+                                    <tr><td><code>amount</code></td><td>Transaction amount</td><td>100.00</td></tr>
+                                    <tr><td><code>bankcode</code></td><td>Bank code used for the payment</td><td>TESTPGNB</td></tr>
+                                    <tr><td><code>bank_ref_num</code></td><td>Bank reference number</td><td>YESB00000...</td></tr>
+                                    <tr><td><code>unmappedstatus</code></td><td>Detailed status &mdash; <code>captured</code> for successful payment</td><td>captured</td></tr>
+                                    <tr><td><code>field9</code></td><td>Payment gateway response message</td><td>Transaction Completed Successfully</td></tr>
+                                </tbody>
+                            </table>
+
                             <div class="sm-step-guide">
                                 <div class="sm-guide-overview">
                                     <h3>Overview</h3>
@@ -13419,9 +13724,9 @@ beneficiarydetail = JSON.stringify({beneficiaryAccountNumber, ifscCode})</code><
 
                         <!-- TPV Bank Code List -->
                         <div class="sm-section-box" style="margin:1.5rem 0; padding:1.25rem; border:1px solid #e2e8f0; border-radius:8px; background:#fff;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
                                 <h3 style="margin:0; color:#10846D;">🏦 TPV Bank Options <span id="smTpvBankCount" style="font-weight:normal; font-size:0.9rem; color:#6b7280;">(Loading...)</span></h3>
-                                <input type="text" id="smTpvBankSearch" placeholder="Search by bank name or code..." oninput="smFilterTpvBanks()" style="padding:0.5rem 1rem; border:1px solid #e2e8f0; border-radius:6px; width:280px;">
+                                <input type="text" id="smTpvBankSearch" placeholder="Search by bank name or code..." oninput="smFilterTpvBanks()" style="padding:0.5rem 1rem; border:1px solid #e2e8f0; border-radius:6px; width:280px; max-width:100%;">
                             </div>
                             <p style="color:#6b7280; font-size:0.875rem; margin-bottom:1rem;">Only showing TPV-enabled banks. Use the <strong>ibibo_code</strong> as bankcode in your payment request.</p>
                             
@@ -13533,9 +13838,24 @@ beneficiarydetail = JSON.stringify({beneficiaryAccountNumber, ifscCode})</code><
                                 <div class="sm-form-group"><label>FURL (Failure URL)  <span class="required">*</span></label><input type="text" id="sm_nb_tpv_furl" value="https://payu.in/integrationlab/callback.php"></div>
                             </div>
                             <div class="sm-form-row">
-                                <div class="sm-form-group"><label>Client IP  <span class="required">*</span></label><input type="text" id="sm_nb_tpv_client_ip" value="10.200.12.12" placeholder="e.g., 10.200.12.12"></div>
-                                <div class="sm-form-group"><label>Device Info  <span class="required">*</span></label><input type="text" id="sm_nb_tpv_device_info" value="Mozilla/5.0" placeholder="User Agent String"></div>
+                                <div class="sm-form-group"><label>Client IP (s2s_client_ip) <span class="required">*</span></label><input type="text" id="sm_nb_tpv_client_ip" value="10.200.12.12" placeholder="e.g., 10.200.12.12"></div>
+                                <div class="sm-form-group"><label>Device Info (s2s_device_info) <span class="required">*</span></label><input type="text" id="sm_nb_tpv_device_info" value="Mozilla/5.0" placeholder="User Agent String"></div>
                             </div>
+
+                            <h4 style="margin:1.25rem 0 0.75rem; color:var(--accent-primary); font-size:0.95rem;">User Defined Fields <span class="sm-badge-optional" style="font-size:0.7rem; vertical-align:middle;">Optional</span></h4>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>udf1</label><input type="text" id="sm_nb_tpv_udf1" placeholder="User-defined field 1"></div>
+                                <div class="sm-form-group"><label>udf2</label><input type="text" id="sm_nb_tpv_udf2" placeholder="User-defined field 2"></div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>udf3</label><input type="text" id="sm_nb_tpv_udf3" placeholder="User-defined field 3"></div>
+                                <div class="sm-form-group"><label>udf4</label><input type="text" id="sm_nb_tpv_udf4" placeholder="User-defined field 4"></div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>udf5</label><input type="text" id="sm_nb_tpv_udf5" placeholder="User-defined field 5"></div>
+                                <div class="sm-form-group">&nbsp;</div>
+                            </div>
+
                             <div class="sm-form-actions">
                                 <button class="button sm-btn-fill-sample" onclick="smNbFillSampleTpv()">&#9889; Fill Sample Data</button>
                                 <button class="button sm-btn-secondary" onclick="smNbPreviewTpvRequest()">Preview Request</button>
@@ -13633,6 +13953,68 @@ bankWindow.document.close();
                     <!-- Section: NB TPV Handle Response -->
                     <div class="seamless-section" id="sm-nb-tpv-redirect">
                         <h2>Step 2: Handle TPV Response</h2>
+
+                        <!-- API Reference -->
+                        <h3>API Reference</h3>
+                        <div class="sm-info-box" style="margin-bottom:1rem; background:#f0fff4; border:1px solid #9ae6b4;">
+                            <strong>Endpoint:</strong> <code>POST https://test.payu.in/_payment</code> (Test) | <code>POST https://secure.payu.in/_payment</code> (Production)
+                        </div>
+
+                        <h4 style="margin-top:1rem;">Request Parameters</h4>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant salt for hash generation (never sent in request)</td><td>hKvGJP28d2...</td></tr>
+                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Unique transaction ID</td><td>TPV_123456</td></tr>
+                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Transaction amount in INR</td><td>100.00</td></tr>
+                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Product/service description</td><td>Mutual Fund SIP</td></tr>
+                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer&rsquo;s first name</td><td>John</td></tr>
+                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer&rsquo;s email address</td><td>john@example.com</td></tr>
+                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer&rsquo;s phone number</td><td>9876543210</td></tr>
+                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Success callback URL</td><td>https://yoursite.com/success</td></tr>
+                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Failure callback URL</td><td>https://yoursite.com/failure</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Payment gateway type &mdash; fixed <code>NB</code></td><td>NB</td></tr>
+                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; TPV-enabled bank code</td><td>SBITPV</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
+                                <tr><td><code>api_version</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; API version for TPV &mdash; fixed <code>6</code></td><td>6</td></tr>
+                                <tr><td><code>beneficiarydetail</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; JSON with beneficiary account details</td><td>{"beneficiaryAccountNumber":"..."}</td></tr>
+                                <tr><td><code>s2s_client_ip</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>String &mdash; Source IP of the customer (required for S2S)</td><td>10.200.12.12</td></tr>
+                                <tr><td><code>s2s_device_info</code></td><td><span class="sm-badge-conditional">Conditional</span></td><td>String &mdash; Customer agent&rsquo;s device information</td><td>Mozilla/5.0</td></tr>
+                                <tr><td><code>udf1-udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined fields</td><td></td></tr>
+                            </tbody>
+                        </table>
+
+                        <h4 style="margin-top:1.5rem;">Response Parameters</h4>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>metaData.txnId</code></td><td>String &mdash; Your original transaction ID</td><td>TPV_1775739737886</td></tr>
+                                <tr><td><code>metaData.txnStatus</code></td><td>String &mdash; Transaction status &mdash; <code>pending</code> means awaiting bank auth</td><td>pending</td></tr>
+                                <tr><td><code>metaData.unmappedStatus</code></td><td>String &mdash; Raw status from payment gateway</td><td>pending</td></tr>
+                                <tr><td><code>metaData.referenceId</code></td><td>String &mdash; PayU internal reference for this transaction</td><td>cb2ccfe8ad1ea77...</td></tr>
+                                <tr><td><code>result.acsTemplate</code></td><td>String &mdash; <strong>Base64-encoded HTML</strong> containing auto-submit form to redirect customer to bank</td><td>PGh0bWw+PGJv...</td></tr>
+                                <tr><td><code>result.otpPostUrl</code></td><td>String &mdash; PayU response handler URL (used internally by bank redirect)</td><td>https://test.payu.in/ResponseHandler.php</td></tr>
+                            </tbody>
+                        </table>
+
+                        <h4 style="margin-top:1.5rem;">Callback Parameters (POST to surl/furl)</h4>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>status</code></td><td>Transaction status &mdash; <code>success</code> or <code>failure</code></td><td>success</td></tr>
+                                <tr><td><code>mihpayid</code></td><td>PayU&rsquo;s unique transaction reference ID</td><td>10731087875</td></tr>
+                                <tr><td><code>mode</code></td><td>Payment mode &mdash; <code>NB</code> for Net Banking TPV</td><td>NB</td></tr>
+                                <tr><td><code>txnid</code></td><td>Your original transaction ID</td><td>TPV_1775739737886</td></tr>
+                                <tr><td><code>amount</code></td><td>Transaction amount</td><td>100.00</td></tr>
+                                <tr><td><code>bankcode</code></td><td>Bank code used for the TPV payment</td><td>AXNBTPV</td></tr>
+                                <tr><td><code>bank_ref_num</code></td><td>Bank reference number</td><td>YESB00000...</td></tr>
+                                <tr><td><code>unmappedstatus</code></td><td>Detailed status &mdash; <code>captured</code> for successful TPV</td><td>captured</td></tr>
+                                <tr><td><code>field9</code></td><td>Payment gateway response message</td><td>Transaction Completed Successfully</td></tr>
+                            </tbody>
+                        </table>
+
                         <div class="sm-step-guide">
                             <div class="sm-guide-overview">
                                 <h3>Overview</h3>
@@ -13752,6 +14134,42 @@ iframe.contentWindow.document.close();</code></pre>
                     <!-- Section: NB TPV Verify -->
                     <div class="seamless-section" id="sm-nb-tpv-verify">
                         <h2>Step 3: Validate TPV Payment</h2>
+
+                        <!-- API Reference -->
+                        <h3>API Reference</h3>
+                        <div class="sm-info-box" style="margin-bottom:1rem; background:#f0fff4; border:1px solid #9ae6b4;">
+                            <strong>Endpoint:</strong> <code>POST https://test.payu.in/merchant/postservice.php?form=2</code>
+                        </div>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant salt used for hash generation (never sent in request)</td><td>mGHSxpD2iB...</td></tr>
+                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; API command &mdash; fixed <code>verify_payment</code></td><td>verify_payment</td></tr>
+                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Transaction ID (<code>txnid</code>) used during TPV payment initiation</td><td>TPV_1775739737886</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; SHA-512 hash &mdash; <code>sha512(key|verify_payment|var1|salt)</code></td><td><em>(computed)</em></td></tr>
+                            </tbody>
+                        </table>
+
+                        <h3 style="margin-top:1.5rem;">Response Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>status</code></td><td>Transaction status &mdash; <code>success</code> or <code>failure</code></td><td>success</td></tr>
+                                <tr><td><code>mihpayid</code></td><td>PayU&rsquo;s unique transaction reference ID</td><td>10731087875</td></tr>
+                                <tr><td><code>mode</code></td><td>Payment mode &mdash; <code>NB</code> for Net Banking TPV</td><td>NB</td></tr>
+                                <tr><td><code>txnid</code></td><td>Your original transaction ID</td><td>TPV_1775739737886</td></tr>
+                                <tr><td><code>amount</code></td><td>Transaction amount</td><td>100.00</td></tr>
+                                <tr><td><code>unmappedstatus</code></td><td>Detailed status &mdash; <code>captured</code> for successful TPV payment</td><td>captured</td></tr>
+                                <tr><td><code>bankcode</code></td><td>Bank code confirms the bank used matches expected bank</td><td>AXNBTPV</td></tr>
+                                <tr><td><code>bank_ref_num</code></td><td>Bank reference number for the transaction</td><td>YESB00000...</td></tr>
+                                <tr><td><code>firstname</code></td><td>Customer first name</td><td>Test</td></tr>
+                                <tr><td><code>email</code></td><td>Customer email</td><td>test@example.com</td></tr>
+                                <tr><td><code>phone</code></td><td>Customer phone number</td><td>9876543210</td></tr>
+                                <tr><td><code>field9</code></td><td>Payment gateway response message</td><td>Transaction Completed Successfully</td></tr>
+                            </tbody>
+                        </table>
+
                         <div class="sm-step-guide">
                             <div class="sm-guide-overview">
                                 <h3>Overview</h3>
@@ -14488,6 +14906,65 @@ sha512(a4vGC2|capture_transaction|403993715537135556|YourSaltHere)</code></pre>
                     <div class="seamless-section" id="sm-nb-subscription">
                         <h2>Step 1: Register Net Banking Mandate (eNACH)</h2>
 
+                        <!-- API Reference -->
+                        <h3>API Reference</h3>
+                        <div class="sm-info-box" style="margin-bottom:1rem; background:#f0fff4; border:1px solid #9ae6b4;">
+                            <strong>Endpoint:</strong> <code>POST https://test.payu.in/_payment</code> (Test) | <code>POST https://secure.payu.in/_payment</code> (Production)
+                        </div>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Unique transaction ID generated by the merchant. PayU rejects duplicates.</td><td>MANDATE_1713200000</td></tr>
+                                <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Transaction amount. For eNACH, use <code>1.00</code> (actual billing amount is in si_details).</td><td>1.00</td></tr>
+                                <tr><td><code>productinfo</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Brief product description (max 100 chars)</td><td>SIP Investment</td></tr>
+                                <tr><td><code>firstname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer first name (max 60 chars)</td><td>Test</td></tr>
+                                <tr><td><code>lastname</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer last name (max 60 chars)</td><td>User</td></tr>
+                                <tr><td><code>email</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer email address (max 50 chars)</td><td>test@example.com</td></tr>
+                                <tr><td><code>phone</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Customer phone number</td><td>9876543210</td></tr>
+                                <tr><td><code>surl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Success callback URL</td><td>https://yoursite.com/callback.php</td></tr>
+                                <tr><td><code>furl</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Failure callback URL</td><td>https://yoursite.com/callback.php</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; SHA-512 payment hash (auto-computed)</td><td><em>(computed)</em></td></tr>
+                                <tr><td><code>pg</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Payment gateway type &mdash; fixed <code>ENACH</code></td><td>ENACH</td></tr>
+                                <tr><td><code>bankcode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; eNACH bank code from getNetbankingStatus API</td><td>ICICENCC</td></tr>
+                                <tr><td><code>si</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Must be <code>1</code> to enable Standing Instruction / Recurring Payment</td><td>1</td></tr>
+                                <tr><td><code>si_details</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; JSON with billing cycle details (see si_details breakdown below)</td><td><em>(see below)</em></td></tr>
+                                <tr><td><code>beneficiarydetail</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; JSON with beneficiary bank account details (see beneficiarydetail breakdown below)</td><td><em>(see below)</em></td></tr>
+                                <tr><td><code>api_version</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; API version. Must be <code>7</code> so si_details is included in hash</td><td>7</td></tr>
+                                <tr><td><code>txn_s2s_flow</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Integer &mdash; S2S flow identifier &mdash; fixed <code>4</code></td><td>4</td></tr>
+                                <tr><td><code>free_trial</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; Enable free trial. When set to <code>1</code>, a zero-value auth is performed to register the mandate without charging the customer.</td><td>1</td></tr>
+                                <tr><td><code>udf1</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 1</td><td></td></tr>
+                                <tr><td><code>udf2</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 2</td><td></td></tr>
+                                <tr><td><code>udf3</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 3</td><td></td></tr>
+                                <tr><td><code>udf4</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 4</td><td></td></tr>
+                                <tr><td><code>udf5</code></td><td><span class="sm-badge-optional">Optional</span></td><td>String &mdash; User-defined field 5</td><td></td></tr>
+                            </tbody>
+                        </table>
+
+                        <h3>si_details JSON Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Field</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>billingAmount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Maximum amount for each recurring debit</td><td>1000.00</td></tr>
+                                <tr><td><code>billingCurrency</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Currency &mdash; must be <code>INR</code></td><td>INR</td></tr>
+                                <tr><td><code>billingCycle</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Billing frequency: <code>DAILY</code>, <code>WEEKLY</code>, <code>MONTHLY</code>, <code>YEARLY</code>, or <code>ADHOC</code></td><td>MONTHLY</td></tr>
+                                <tr><td><code>billingInterval</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Integer &mdash; Coupled with billingCycle. e.g. MONTHLY &amp; 3 = charge every 3 months</td><td>1</td></tr>
+                                <tr><td><code>paymentStartDate</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Mandate start date in <code>YYYY-MM-DD</code>. For eNACH, must be tomorrow or later.</td><td>2026-04-16</td></tr>
+                                <tr><td><code>paymentEndDate</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Mandate end date in <code>YYYY-MM-DD</code></td><td>2027-04-16</td></tr>
+                            </tbody>
+                        </table>
+
+                        <h3>beneficiarydetail JSON Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Field</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>beneficiaryName</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Account holder name as per bank records</td><td>Test User</td></tr>
+                                <tr><td><code>beneficiaryAccountNumber</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Bank account number of the customer</td><td>1234567890123456</td></tr>
+                                <tr><td><code>beneficiaryAccountType</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Account type: <code>SAVINGS</code> or <code>CURRENT</code></td><td>SAVINGS</td></tr>
+                                <tr><td><code>beneficiaryIfscCode</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; 11-digit IFSC code of the customer&rsquo;s bank branch</td><td>ICIC0001234</td></tr>
+                            </tbody>
+                        </table>
+
                         <!-- Documentation Links -->
                         <div class="sm-doc-links" style="margin-bottom:1.5rem; padding:1rem; background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border:1px solid #34d399; border-radius:8px;">
                             <strong style="color:#065f46;">&#128213; Documentation</strong>
@@ -14609,7 +15086,13 @@ sha512(a4vGC2|capture_transaction|403993715537135556|YourSaltHere)</code></pre>
                                         <option value="ADHOC">ADHOC</option>
                                     </select>
                                 </div>
-                                <div class="sm-form-group">&nbsp;</div>
+                                <div class="sm-form-group">
+                                    <label><span style="background:#fefce8; padding:2px 6px; border-radius:3px; font-weight:700; color:#854d0e;">Free</span> <span style="background:#ecfdf5; padding:2px 6px; border-radius:3px; font-weight:700; color:#065f46;">Trial</span> (<code style="font-size:0.85em; background:#f1f5f9; padding:1px 4px; border-radius:3px;">free_trial</code>) <small style="color:#888;">(NB zero-value auth)</small></label>
+                                    <select id="sm_nb_mandate_reg_free_trial" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:4px;">
+                                        <option value="">-- Not Set --</option>
+                                        <option value="1">1 (Enable Free Trial)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
@@ -14624,6 +15107,20 @@ sha512(a4vGC2|capture_transaction|403993715537135556|YourSaltHere)</code></pre>
                             <div class="sm-form-row">
                                 <div class="sm-form-group"><label>SURL (Success URL) <span class="required">*</span></label><input type="text" id="sm_nb_mandate_reg_surl" value="https://payu.in/integrationlab/callback.php"></div>
                                 <div class="sm-form-group"><label>FURL (Failure URL) <span class="required">*</span></label><input type="text" id="sm_nb_mandate_reg_furl" value="https://payu.in/integrationlab/callback.php"></div>
+                            </div>
+
+                            <h4 style="margin:1.25rem 0 0.75rem; color:var(--text-color); font-size:0.95rem;">User Defined Fields <span class="sm-badge-optional" style="font-size:0.7rem; vertical-align:middle;">Optional</span></h4>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>udf1</label><input type="text" id="sm_nb_mandate_reg_udf1" placeholder="User-defined field 1"></div>
+                                <div class="sm-form-group"><label>udf2</label><input type="text" id="sm_nb_mandate_reg_udf2" placeholder="User-defined field 2"></div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>udf3</label><input type="text" id="sm_nb_mandate_reg_udf3" placeholder="User-defined field 3"></div>
+                                <div class="sm-form-group"><label>udf4</label><input type="text" id="sm_nb_mandate_reg_udf4" placeholder="User-defined field 4"></div>
+                            </div>
+                            <div class="sm-form-row">
+                                <div class="sm-form-group"><label>udf5</label><input type="text" id="sm_nb_mandate_reg_udf5" placeholder="User-defined field 5"></div>
+                                <div class="sm-form-group">&nbsp;</div>
                             </div>
                             
                             <div class="sm-form-actions">
@@ -14709,6 +15206,49 @@ bankWindow.document.close();</pre>
                     <!-- Section: NB Mandate Handle Response -->
                     <div class="seamless-section" id="sm-nb-mandate-verify">
                         <h2>Step 2: Handle Mandate Response</h2>
+
+                        <!-- API Reference -->
+                        <h3>API Reference</h3>
+                        <div class="sm-info-box" style="margin-bottom:1rem; background:#f0fff4; border:1px solid #9ae6b4;">
+                            <strong>Endpoint:</strong> <code>POST https://test.payu.in/merchant/postservice.php?form=2</code>
+                        </div>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant salt used for hash generation (never sent in request)</td><td>mGHSxpD2iB...</td></tr>
+                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; API command &mdash; fixed <code>verify_payment</code></td><td>verify_payment</td></tr>
+                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Transaction ID (<code>txnid</code>) used during mandate registration in Step 1</td><td>MANDATE_1713200000</td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; SHA-512 hash &mdash; <code>sha512(key|verify_payment|var1|salt)</code></td><td><em>(computed)</em></td></tr>
+                            </tbody>
+                        </table>
+
+                        <h3 style="margin-top:1.5rem;">Response Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>status</code></td><td>Transaction status &mdash; <code>success</code> or <code>failure</code></td><td>success</td></tr>
+                                <tr><td><code>mihpayid</code></td><td>PayU&rsquo;s unique transaction reference. Use this as <code>authpayuid</code> in subsequent steps (Check Status &amp; Execute Debit).</td><td>10731087875</td></tr>
+                                <tr><td><code>mode</code></td><td>Payment mode used</td><td>ENACH</td></tr>
+                                <tr><td><code>txnid</code></td><td>Your original transaction ID</td><td>MANDATE_1713200000</td></tr>
+                                <tr><td><code>amount</code></td><td>Transaction amount</td><td>1.00</td></tr>
+                                <tr><td><code>net_amount_debit</code></td><td>Actual amount debited from customer</td><td>1.00</td></tr>
+                                <tr><td><code>bank_ref_num</code></td><td>Bank reference number for the transaction</td><td>YESB00000...</td></tr>
+                                <tr><td><code>bankcode</code></td><td>Bank code used for the eNACH mandate</td><td>ICICENCC</td></tr>
+                                <tr><td><code>firstname</code></td><td>Customer first name</td><td>Test</td></tr>
+                                <tr><td><code>email</code></td><td>Customer email</td><td>test@example.com</td></tr>
+                                <tr><td><code>phone</code></td><td>Customer phone number</td><td>9876543210</td></tr>
+                                <tr><td><code>field9</code></td><td>Payment gateway response message</td><td>Transaction Completed Successfully</td></tr>
+                            </tbody>
+                        </table>
+
+                        <h4 style="margin-top:1rem;">Hash Formula</h4>
+                        <div class="sm-code-block">
+                            <div class="sm-code-header"><span>verify_payment Hash</span><button onclick="smCopyCode(this)">Copy</button></div>
+                            <pre><code>sha512(key|verify_payment|txnid|salt)
+// Example: sha512(a4vGC2|verify_payment|MANDATE_1713200000|YourSalt)</code></pre>
+                        </div>
+
                         <div class="sm-step-guide">
                             <div class="sm-guide-overview">
                                 <h3>Overview</h3>
@@ -14770,6 +15310,44 @@ bankWindow.document.close();</pre>
                     <!-- Section: NB Mandate Check Status -->
                     <div class="seamless-section" id="sm-nb-mandate-status">
                         <h2>Step 3: Check Mandate Status</h2>
+
+                        <!-- API Reference -->
+                        <h3>API Reference</h3>
+                        <div class="sm-info-box" style="margin-bottom:1rem; background:#f0fff4; border:1px solid #9ae6b4;">
+                            <strong>Endpoint:</strong> <code>POST https://test.payu.in/merchant/postservice.php?form=2</code>
+                        </div>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
+                                <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; API command &mdash; fixed <code>NB_mandate_status</code></td><td>NB_mandate_status</td></tr>
+                                <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; JSON string containing <code>authpayuid</code> and <code>requestId</code> (see var1 breakdown below)</td><td><em>(see below)</em></td></tr>
+                                <tr><td><code>hash</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; SHA-512 hash &mdash; <code>sha512(key|NB_mandate_status|var1|salt)</code></td><td><em>(computed)</em></td></tr>
+                            </tbody>
+                        </table>
+
+                        <h3 style="margin-top:1.5rem;">var1 JSON Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Field</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>authpayuid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; The <code>mihpayid</code> received from mandate registration (Step 2 &mdash; Handle Response)</td><td>10731087875</td></tr>
+                                <tr><td><code>requestId</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>String &mdash; A unique request identifier for this status check call</td><td>1892432156</td></tr>
+                            </tbody>
+                        </table>
+
+                        <h3 style="margin-top:1.5rem;">Response Parameters</h3>
+                        <table class="sm-table">
+                            <thead><tr><th>Parameter</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>status</code></td><td>String &mdash; Mandate status (see status values below)</td><td>SUCCESS</td></tr>
+                                <tr><td><code>action</code></td><td>String &mdash; API action performed</td><td>NB_mandate_status</td></tr>
+                                <tr><td><code>authpayuid</code></td><td>String &mdash; PayU&rsquo;s unique mandate reference ID</td><td>10731087875</td></tr>
+                                <tr><td><code>amount</code></td><td>String &mdash; Mandate billing amount</td><td>100.00</td></tr>
+                                <tr><td><code>mandateStartDate</code></td><td>String &mdash; Mandate start date</td><td>2026-04-16</td></tr>
+                                <tr><td><code>mandateEndDate</code></td><td>String &mdash; Mandate end date</td><td>2027-04-16</td></tr>
+                            </tbody>
+                        </table>
+
                         <div class="sm-step-guide">
                             <div class="sm-guide-overview">
                                 <h3>Overview</h3>
@@ -15708,6 +16286,6 @@ public class PayUHash {
             </div>
         </div>
     </div>
-    <script src="/js/app.js"></script>
+    <script src="<?php echo htmlspecialchars($assetBase); ?>/js/app.js?v=2.1"></script>
 </body>
 </html>

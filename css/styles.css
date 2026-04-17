@@ -1025,6 +1025,80 @@
             color: var(--text-secondary);
         }
         
+        /* Cross-border LRS/UDF params shared design */
+        .cb-enable-params-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.125rem;
+            font-weight: 600;
+            font-family: var(--font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: var(--accent-primary, #10846D);
+            border-bottom: 2px solid var(--accent-primary, #10846D);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .cb-params-fields,
+        .cb-lrs-params-fields,
+        .cb-udf-params-fields,
+        #cb-udf-params-fields,
+        #cb-sub-udf-params-fields,
+        #cb-lrs-params-fields {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--debug-bg, #f7fafc);
+            border-radius: 8px;
+            border-left: 4px solid var(--color-primary, #10846D);
+            font-family: var(--font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: var(--color-text-default, #1a202c);
+        }
+        .cb-params-title,
+        .cb-lrs-params-title,
+        #cb-udf-params-fields h4,
+        #cb-sub-udf-params-fields h4,
+        #cb-lrs-params-fields h4 {
+            margin: 0 0 1rem 0;
+            padding-bottom: 0.5rem;
+            color: var(--accent-primary, #10846D);
+            border-bottom: 2px solid var(--accent-primary, #10846D);
+            font-size: 1.25rem;
+            font-family: var(--font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-weight: var(--font-weight-bold, 700);
+        }
+        .cb-lrs-params-note {
+            color: var(--text-tertiary, #718096);
+            display: block;
+            margin-bottom: 1rem;
+            font-family: var(--font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 0.875rem;
+        }
+        .cb-params-fields .form-group label,
+        .cb-params-fields .form-group small,
+        .cb-lrs-params-fields .form-group label,
+        .cb-lrs-params-fields .form-group small,
+        .cb-udf-params-fields .form-group label,
+        .cb-udf-params-fields .form-group small,
+        #cb-udf-params-fields .form-group label,
+        #cb-udf-params-fields .form-group small,
+        #cb-sub-udf-params-fields .form-group label,
+        #cb-sub-udf-params-fields .form-group small,
+        #cb-lrs-params-fields .form-group label,
+        #cb-lrs-params-fields .form-group small {
+            font-family: var(--font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .cb-params-fields input,
+        .cb-params-fields select,
+        .cb-lrs-params-fields input,
+        .cb-lrs-params-fields select,
+        .cb-udf-params-fields input,
+        .cb-udf-params-fields select,
+        #cb-udf-params-fields input,
+        #cb-sub-udf-params-fields input,
+        #cb-lrs-params-fields input,
+        #cb-lrs-params-fields select {
+            font-family: var(--font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
         .alert-warning {
             background: #fff3cd;
             border-color: #ffc107;
@@ -1621,6 +1695,140 @@
             box-shadow: 0 4px 12px rgba(16, 132, 109, 0.3);
         }
         
+        /* Integration Steps Guide */
+        .integration-steps-guide {
+            background: linear-gradient(135deg, #f0f9f7 0%, #e8f6f3 100%) !important;
+            border-bottom: 1px solid rgba(16, 132, 109, 0.15) !important;
+            padding: 10px 3rem !important;
+            margin: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 20px !important;
+        }
+        .steps-guide-header {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 8px !important;
+            flex-shrink: 0 !important;
+            color: #10846D !important;
+            font-size: 0.8rem !important;
+            font-weight: 700 !important;
+        }
+        .steps-guide-header i {
+            font-size: 12px !important;
+        }
+        .steps-container {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 16px !important;
+            flex: 1 !important;
+        }
+        .step-item {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 8px !important;
+            padding: 6px 12px !important;
+            background: rgba(16, 132, 109, 0.06) !important;
+            border-radius: 20px !important;
+            border: 1px solid rgba(16, 132, 109, 0.15) !important;
+            transition: all 0.2s ease !important;
+            cursor: default !important;
+        }
+        .step-item:hover {
+            border-color: rgba(16, 132, 109, 0.3) !important;
+            background: rgba(16, 132, 109, 0.1) !important;
+            box-shadow: 0 2px 8px rgba(16, 132, 109, 0.1) !important;
+        }
+        .step-number {
+            width: 22px !important;
+            height: 22px !important;
+            min-width: 22px !important;
+            min-height: 22px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-weight: 600 !important;
+            font-size: 0.7rem !important;
+            flex-shrink: 0 !important;
+            transition: all 0.2s ease !important;
+        }
+        .step-item .step-number {
+            background: rgba(16, 132, 109, 0.1) !important;
+            color: #10846D !important;
+        }
+        .step-item.active {
+            background: rgba(16, 132, 109, 0.12) !important;
+            border-color: #10846D !important;
+        }
+        .step-item.active .step-number {
+            background: #10846D !important;
+            color: white !important;
+            animation: stepPulse 2s ease-in-out infinite;
+        }
+        .step-item.completed {
+            background: rgba(16, 132, 109, 0.06) !important;
+            border-color: #48bb78 !important;
+        }
+        .step-item.completed .step-number {
+            background: #48bb78 !important;
+            color: white !important;
+        }
+        .step-item.completed .step-number::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 0.6rem;
+        }
+        .step-item.completed .step-number span {
+            display: none !important;
+        }
+        .step-item.completed .step-title {
+            color: #48bb78 !important;
+        }
+        .step-item.active .step-title {
+            color: #10846D !important;
+            font-weight: 600 !important;
+        }
+        @keyframes stepPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 132, 109, 0.4); }
+            50% { box-shadow: 0 0 0 4px rgba(16, 132, 109, 0.1); }
+        }
+        .step-content {
+            display: flex !important;
+            flex-direction: column !important;
+            min-width: 0 !important;
+        }
+        .step-title {
+            font-weight: 700 !important;
+            font-size: 0.75rem !important;
+            color: #1a202c !important;
+            line-height: 1.2 !important;
+            white-space: nowrap !important;
+        }
+        .step-description {
+            font-size: 0.65rem !important;
+            color: #718096 !important;
+            line-height: 1.2 !important;
+            white-space: nowrap !important;
+            font-weight: 600 !important;
+        }
+        .step-arrow {
+            color: #10846D !important;
+            opacity: 0.4 !important;
+            font-size: 10px !important;
+            flex-shrink: 0 !important;
+        }
+        .step-item:last-child .step-arrow {
+            display: none !important;
+        }
+
         /* Tablet Responsiveness */
         @media (max-width: 1024px) {
             .main-content {
@@ -1628,6 +1836,23 @@
                 gap: 2rem;
                 padding: 2rem;
                 padding-bottom: 100px;
+            }
+            
+            .integration-steps-guide {
+                padding: 10px 2rem !important;
+                gap: 16px !important;
+            }
+            .steps-guide-header span {
+                display: none !important;
+            }
+            .step-item {
+                padding: 5px 10px !important;
+            }
+            .steps-container {
+                gap: 12px !important;
+            }
+            .step-description {
+                display: none !important;
             }
             
             .pay-button-wrapper {
@@ -1825,6 +2050,38 @@
                 width: 100%;
                 background: linear-gradient(to bottom, #f0f9f7, #e6f5f2) !important;
                 border-bottom: 2px solid var(--accent-primary) !important;
+            }
+
+            .integration-steps-guide {
+                padding: 8px 1.5rem !important;
+                gap: 10px !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+            }
+            .steps-guide-header {
+                width: 100% !important;
+                justify-content: center !important;
+                font-size: 0.75rem !important;
+            }
+            .steps-guide-header span {
+                display: inline !important;
+            }
+            .steps-container {
+                gap: 10px !important;
+                justify-content: center !important;
+            }
+            .step-item {
+                padding: 4px 8px !important;
+            }
+            .step-number {
+                width: 20px !important;
+                height: 20px !important;
+                min-width: 20px !important;
+                min-height: 20px !important;
+                font-size: 0.65rem !important;
+            }
+            .step-title {
+                font-size: 0.7rem !important;
             }
             
             .flow-title h2 {
@@ -2083,6 +2340,30 @@
         
         /* Small Mobile Devices */
         @media (max-width: 480px) {
+            .integration-steps-guide {
+                padding: 8px 1rem !important;
+            }
+            .steps-container {
+                gap: 8px !important;
+            }
+            .step-item {
+                padding: 4px 6px !important;
+                gap: 5px !important;
+            }
+            .step-number {
+                width: 18px !important;
+                height: 18px !important;
+                min-width: 18px !important;
+                min-height: 18px !important;
+                font-size: 0.6rem !important;
+            }
+            .step-title {
+                font-size: 0.65rem !important;
+            }
+            .step-arrow {
+                display: none !important;
+            }
+
             .header {
                 padding: 0.75rem;
             }
@@ -2500,7 +2781,9 @@
         }
         
         .form-group input[maxlength]:focus + .char-counter,
-        .form-group textarea[maxlength]:focus + .char-counter {
+        .form-group textarea[maxlength]:focus + .char-counter,
+        .sm-form-group input[maxlength]:focus + .char-counter,
+        .sm-form-group textarea[maxlength]:focus + .char-counter {
             color: var(--accent-primary);
         }
         
@@ -4218,6 +4501,585 @@
             }
             .sm-flow-arrow {
                 transform: rotate(90deg);
+            }
+
+            /* Seamless interactive forms */
+            .sm-interactive-form {
+                padding: 1rem;
+                border-radius: 10px;
+            }
+            .sm-interactive-form:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            /* Pay sections */
+            .sm-pay-section {
+                padding: 1rem !important;
+                border-radius: 10px !important;
+            }
+
+            /* Form inputs touch-friendly */
+            .sm-form-group input,
+            .sm-form-group select,
+            .sm-form-group textarea {
+                font-size: 16px;
+                padding: 0.65rem 0.75rem;
+            }
+            .sm-form-group label {
+                font-size: 0.8rem;
+            }
+            .sm-field-hint {
+                font-size: 0.72rem;
+            }
+
+            /* Form action buttons */
+            .sm-form-actions {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .sm-form-actions .button {
+                flex: 1 1 auto;
+                min-width: calc(50% - 0.25rem);
+                font-size: 0.85rem;
+                padding: 0.7rem 0.75rem;
+                text-align: center;
+                justify-content: center;
+            }
+
+            /* Tab groups */
+            .sm-tab-group {
+                flex-wrap: wrap;
+                gap: 0.35rem;
+            }
+            .sm-tab {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+                flex: 1 1 auto;
+                text-align: center;
+                min-width: 0;
+            }
+            #sm-upiflow .sm-tab {
+                padding: 0.6rem 0.5rem;
+                font-size: 0.78rem;
+            }
+
+            /* Tables */
+            .sm-table {
+                font-size: 0.78rem;
+            }
+            .sm-table th, .sm-table td {
+                padding: 0.5rem 0.6rem;
+                font-size: 0.75rem;
+            }
+
+            /* Code blocks */
+            .sm-code-block pre {
+                font-size: 0.75rem;
+                padding: 0.75rem;
+            }
+            .sm-code-header {
+                padding: 0.4rem 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            /* Request / Response panels */
+            .sm-req-panel pre,
+            .sm-res-panel pre {
+                font-size: 0.72rem;
+                max-height: 300px;
+            }
+            .sm-curl-section pre {
+                font-size: 0.72rem;
+            }
+
+            /* Response guide */
+            .sm-response-guide {
+                padding: 1rem;
+                border-radius: 10px;
+            }
+
+            /* Timeline */
+            .sm-timeline {
+                padding-left: 2rem;
+            }
+            .sm-timeline-marker {
+                left: -2rem;
+                width: 24px;
+                height: 24px;
+                font-size: 0.65rem;
+            }
+            .sm-timeline-content strong {
+                font-size: 0.9rem;
+            }
+            .sm-timeline-content p {
+                font-size: 0.82rem;
+            }
+
+            /* Info boxes */
+            .sm-info-box {
+                padding: 0.75rem 1rem;
+                font-size: 0.82rem;
+            }
+
+            /* Step guide */
+            .sm-step-guide-toggle {
+                padding: 0.75rem 1rem;
+                font-size: 0.88rem;
+            }
+            .sm-step-guide-body {
+                padding: 0.75rem;
+            }
+            .sm-guide-overview {
+                padding: 1rem;
+            }
+            .sm-guide-prereqs {
+                padding: 1rem;
+            }
+
+            /* Simulation toggle */
+            .sm-sim-toggle {
+                padding: 0.75rem 1rem !important;
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 0.5rem !important;
+            }
+
+            /* Seamless section headings */
+            .seamless-section h2 {
+                font-size: 1.25rem;
+            }
+            .seamless-section h3 {
+                font-size: 1.05rem;
+            }
+
+            /* QR section */
+            .sm-qr-section {
+                padding: 1rem !important;
+            }
+
+            /* Char counters */
+            .char-counter {
+                font-size: 0.68rem;
+            }
+
+            /* Status badges */
+            .sm-status-badge {
+                font-size: 0.72rem;
+                padding: 0.3rem 0.75rem;
+            }
+
+            /* Sidebar header mobile */
+            .seamless-sidebar-header {
+                padding: 0.75rem 1rem;
+            }
+            .seamless-sidebar-title {
+                font-size: 0.9rem;
+            }
+
+            /* Global config bar */
+            .sm-global-config {
+                margin: 0.5rem 0 1rem;
+            }
+
+            /* Section boxes with inline styles */
+            .sm-section-box {
+                padding: 1rem !important;
+                border-radius: 8px !important;
+            }
+
+            /* Accordion */
+            .sm-accordion-header {
+                padding: 0.75rem 1rem;
+                font-size: 0.88rem;
+            }
+            .sm-accordion-body {
+                padding: 0.75rem 1rem;
+            }
+
+            /* Next step button wrapper */
+            .sm-next-btn-wrapper {
+                margin-top: 1.25rem;
+            }
+            .sm-next-btn-wrapper .button {
+                width: 100%;
+                text-align: center;
+                justify-content: center;
+            }
+
+            /* Inline flex groups that may overflow */
+            [style*="display:flex"][style*="gap"] {
+                flex-wrap: wrap;
+            }
+
+            /* Beneficiary / multi-account notes */
+            .sm-form-row small {
+                font-size: 0.72rem;
+            }
+
+            /* Product cards */
+            .sm-product-card {
+                padding: 1.25rem 1rem !important;
+            }
+
+            /* Overview section */
+            .sm-overview-subtitle {
+                font-size: 0.88rem !important;
+            }
+
+            /* OTP method buttons - override inline min-width */
+            .sm-otp-method-btn {
+                min-width: 0 !important;
+                width: 100%;
+            }
+
+            /* PACB tabs and payment cards - override inline min-width */
+            .sm-payment-card {
+                min-width: 0 !important;
+            }
+
+            /* Inline flex containers in seamless sections - wrap on mobile */
+            .seamless-section [style*="display:flex"],
+            .seamless-section [style*="display: flex"] {
+                flex-wrap: wrap !important;
+            }
+
+            /* Txn ID input + button rows */
+            .sm-form-group [style*="display:flex"] {
+                flex-wrap: wrap !important;
+            }
+            .sm-form-group [style*="display:flex"] input {
+                min-width: 0 !important;
+            }
+            .sm-form-group [style*="display:flex"] button {
+                flex-shrink: 0;
+            }
+
+            /* Inline grids in response displays */
+            [style*="grid-template-columns:repeat(auto-fit"] {
+                grid-template-columns: 1fr 1fr !important;
+            }
+
+            /* Wide inline-styled boxes */
+            .sm-section-box,
+            [style*="border-left:4px solid"] {
+                overflow-x: auto;
+            }
+
+            /* Hash formula code blocks */
+            .sm-code-block pre code {
+                word-break: break-all;
+            }
+
+            /* All tables inside seamless sections - scrollable */
+            .seamless-section table:not(.sm-table) {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Split row - collapse 5-column grid */
+            .split-row {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 0.75rem;
+            }
+
+            /* Seamless method tiles - collapse 3 columns */
+            .seamless-method-tiles {
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem;
+            }
+            .seamless-method-selector {
+                padding: 1.25rem 1rem;
+            }
+
+            /* Quick links - wrap */
+            .sm-overview-quick-links,
+            #sm-overview .sm-overview-quick-links,
+            #sm-nb-overview .sm-overview-quick-links {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            /* Docs banner - wrap on mobile */
+            .sm-docs-banner {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+                padding: 0.75rem 1rem;
+            }
+            .sm-docs-banner:hover {
+                transform: none;
+            }
+            .sm-docs-banner-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 1.1rem;
+            }
+
+            /* Credential modal sidebar mock */
+            .cred-sidebar-mock {
+                min-width: 0;
+                width: 100%;
+            }
+            .cred-visual-guide {
+                gap: 0.75rem;
+            }
+
+            /* Phase tabs (card flow ACS decoder) */
+            .sm-phase-tabs {
+                flex-wrap: wrap;
+            }
+            .sm-phase-tab {
+                flex: 1 1 auto;
+                min-width: 0;
+                font-size: 0.78rem;
+                padding: 0.6rem 0.5rem;
+                text-align: center;
+            }
+
+            /* Flow content overflow - allow scroll when needed */
+            .flow-content {
+                overflow-x: auto;
+                overflow-y: visible;
+            }
+
+            /* Flow stepper - allow vertical on mobile */
+            .sm-flow-stepper {
+                padding: 0.75rem;
+                font-size: 0.78rem;
+            }
+            .sm-flow-step-label {
+                font-size: 0.7rem;
+            }
+
+            /* Prereq list fluid grid */
+            .sm-prereq-list {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Cards flow overview cards */
+            #cards-overview .sm-product-card h3 {
+                font-size: 0.95rem;
+            }
+            #cards-overview .sm-product-card p {
+                font-size: 0.8rem;
+            }
+
+            /* UPI flow diagram inline */
+            .sm-upi-flow-diagram,
+            .sm-flow-diagram {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+
+            /* Fixed-width search in TPV bank section */
+            #smTpvBankSearch {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+            /* Hosted flow form groups */
+            .form-group select,
+            .form-group input {
+                max-width: 100%;
+            }
+
+            /* Global body overflow protection */
+            body {
+                overflow-x: hidden;
+            }
+            .container {
+                overflow-x: hidden;
+                max-width: 100vw;
+            }
+        }
+
+        /* Seamless Small Mobile */
+        @media (max-width: 480px) {
+            .seamless-content {
+                padding: 0.75rem;
+            }
+            .seamless-sidebar-header {
+                padding: 0.5rem 0.75rem;
+            }
+            .seamless-nav {
+                padding: 0.25rem;
+                gap: 0.2rem;
+            }
+            .seamless-nav-item {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.7rem;
+            }
+            .seamless-section h2 {
+                font-size: 1.1rem;
+                line-height: 1.4;
+            }
+            .seamless-section h3 {
+                font-size: 0.95rem;
+            }
+            .sm-interactive-form {
+                padding: 0.75rem;
+            }
+            .sm-pay-section {
+                padding: 0.75rem !important;
+            }
+            .sm-form-group input,
+            .sm-form-group select,
+            .sm-form-group textarea {
+                padding: 0.6rem;
+            }
+            .sm-form-actions {
+                flex-direction: column;
+            }
+            .sm-form-actions .button {
+                width: 100%;
+                min-width: unset;
+            }
+            .sm-tab {
+                padding: 0.4rem 0.5rem;
+                font-size: 0.72rem;
+            }
+            #sm-upiflow .sm-tab {
+                padding: 0.5rem 0.35rem;
+                font-size: 0.72rem;
+            }
+            .sm-table th, .sm-table td {
+                padding: 0.35rem 0.4rem;
+                font-size: 0.7rem;
+            }
+            .sm-code-block pre {
+                font-size: 0.7rem;
+                padding: 0.5rem;
+            }
+            .sm-info-box {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.78rem;
+            }
+            .sm-req-panel pre,
+            .sm-res-panel pre {
+                font-size: 0.68rem;
+            }
+            .sm-timeline {
+                padding-left: 1.75rem;
+            }
+            .sm-timeline-marker {
+                left: -1.75rem;
+                width: 22px;
+                height: 22px;
+                font-size: 0.6rem;
+            }
+            .sm-response-guide {
+                padding: 0.75rem;
+            }
+            .sm-step-guide-body {
+                padding: 0.5rem;
+            }
+            .sm-guide-overview,
+            .sm-guide-prereqs {
+                padding: 0.75rem;
+            }
+            .cards-seamless-content {
+                padding: 0.75rem !important;
+            }
+            #cards-overview .sm-product-card {
+                padding: 1.25rem 1rem !important;
+            }
+
+            /* Bank page */
+            .sm-bank-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .sm-bank-search-wrap {
+                max-width: none;
+                flex-basis: 100%;
+            }
+            .sm-bank-search-wrap input {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+            /* OTP buttons stacked */
+            .sm-otp-method-btn {
+                min-width: 0 !important;
+                padding: 0.75rem !important;
+            }
+
+            /* Payment type cards */
+            .sm-payment-card {
+                min-width: 0 !important;
+                padding: 1rem !important;
+            }
+
+            /* Response grid summaries */
+            [style*="grid-template-columns:repeat(auto-fit"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Split row fully stacked */
+            .split-row {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Seamless method selector */
+            .seamless-method-selector {
+                padding: 1rem 0.75rem;
+            }
+            .seamless-method-tile {
+                padding: 0.75rem;
+            }
+
+            /* Phase tabs fully stacked */
+            .sm-phase-tab {
+                font-size: 0.72rem;
+                padding: 0.5rem 0.35rem;
+            }
+            .sm-phase-num {
+                width: 18px;
+                height: 18px;
+                font-size: 0.6rem;
+            }
+
+            /* Docs banner compact */
+            .sm-docs-banner {
+                padding: 0.6rem 0.75rem;
+                font-size: 0.82rem;
+            }
+            .sm-docs-banner-title {
+                font-size: 0.85rem;
+            }
+            .sm-docs-banner-desc {
+                font-size: 0.75rem;
+            }
+
+            /* Quick links very compact */
+            .sm-overview-quick-links,
+            #sm-overview .sm-overview-quick-links,
+            #sm-nb-overview .sm-overview-quick-links {
+                font-size: 0.75rem;
+                gap: 0.35rem;
+            }
+
+            /* Flow stepper compact */
+            .sm-flow-stepper {
+                padding: 0.5rem;
+                gap: 0;
+            }
+
+            /* Product cards compact */
+            #cards-overview .sm-product-card-flow {
+                font-size: 0.65rem;
+            }
+
+            /* Hide hover effects on touch */
+            .sm-interactive-form:hover,
+            .sm-step-guide:hover,
+            .sm-response-guide:hover,
+            .sm-docs-banner:hover,
+            #cards-overview .sm-product-card:hover {
+                transform: none !important;
+                box-shadow: none !important;
             }
         }
 
@@ -8577,4 +9439,40 @@
             height: 1.1em;
             border-radius: 2px;
             background: #6366f1;
+        }
+
+        /* ========================================== */
+        /* Cards section: API reference table styling */
+        /* ========================================== */
+        #sm-cards-normal .sm-table,
+        #sm-cards-preauth .sm-table,
+        #sm-cards-token .sm-table {
+            display: table;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 6px rgba(16, 132, 109, 0.06);
+        }
+        #sm-cards-normal .sm-table th,
+        #sm-cards-preauth .sm-table th,
+        #sm-cards-token .sm-table th {
+            background: #ecfdf5;
+            color: #065f46;
+            border-bottom: 2px solid #a7f3d0;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        #sm-cards-normal .sm-table tbody tr:nth-child(even),
+        #sm-cards-preauth .sm-table tbody tr:nth-child(even),
+        #sm-cards-token .sm-table tbody tr:nth-child(even) {
+            background: #fafffe;
+        }
+        #sm-cards-normal .sm-table tbody tr:hover,
+        #sm-cards-preauth .sm-table tbody tr:hover,
+        #sm-cards-token .sm-table tbody tr:hover {
+            background: #ecfdf5;
         }

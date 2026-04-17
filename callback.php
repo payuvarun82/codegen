@@ -104,6 +104,15 @@ $calculatedHash = hash('sha512', $hashString);
 // Verify hash
 $isHashValid = !empty($hash) && (strtolower($calculatedHash) === strtolower($hash));
 
+// Auto-detect base path for assets (same logic as index.php)
+$envBase = getenv('APP_BASE_PATH');
+if ($envBase !== false && $envBase !== '') {
+    $cbAssetBase = rtrim($envBase, '/');
+} else {
+    $cbScriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+    if ($cbScriptDir === '/' || $cbScriptDir === '\\') $cbScriptDir = '';
+    $cbAssetBase = $cbScriptDir;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -114,7 +123,7 @@ $isHashValid = !empty($hash) && (strtolower($calculatedHash) === strtolower($has
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($cbAssetBase); ?>/css/styles.css">
     <style>
         /* Callback-specific styles */
         body {
@@ -878,7 +887,7 @@ $isHashValid = !empty($hash) && (strtolower($calculatedHash) === strtolower($has
                     Test Callback Simulator
                 </a>
                 <?php endif; ?>
-                <a href="index.php" class="btn btn-primary">
+                <a href="<?php echo htmlspecialchars($cbAssetBase); ?>/" class="btn btn-primary">
                     Back to PayU Integration Lab
                 </a>
             </div>
