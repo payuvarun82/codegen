@@ -1,8 +1,8 @@
         // Global Variables
         let currentFlow = '';
         let currentPaymentType = 'onetime';
-        const DEFAULT_KEY = 'PRiQvJ';
-        const DEFAULT_SALT = 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ';
+        const DEFAULT_KEY = 'a4vGC2';
+        const DEFAULT_SALT = 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli';
 
         /**
          * Integration Steps Progress Tracking
@@ -228,10 +228,6 @@
             return `${protocol}//${host}`;
         };
         const getCallbackUrl = () => {
-            var hostname = window.location.hostname;
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'https://payu.in/integrationlab/callback.php';
-            }
             var base = getBasePath();
             return window.location.origin + (base ? base + '/callback.php' : '/callback.php');
         };
@@ -801,6 +797,20 @@
                 'sc_m3nt_surl', 'sc_m3nt_furl'
             ];
             cardsSurlFurlIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.value = getCallbackUrl();
+            });
+
+            var seamlessSurlFurlIds = [
+                'sm_pay_surl', 'sm_pay_furl',
+                'sm_mand_surl', 'sm_mand_furl',
+                'sm_otm_surl', 'sm_otm_furl',
+                'sm_nb_pay_surl', 'sm_nb_pay_furl',
+                'sm_nb_tpv_surl', 'sm_nb_tpv_furl',
+                'sm_nb_pacb_surl', 'sm_nb_pacb_furl',
+                'sm_nb_mandate_reg_surl', 'sm_nb_mandate_reg_furl'
+            ];
+            seamlessSurlFurlIds.forEach(function(id) {
                 var el = document.getElementById(id);
                 if (el) el.value = getCallbackUrl();
             });
@@ -2356,9 +2366,9 @@
                 udf1: 'Testing UDF 1',
                 udf2: 'Testing UDF2',
                 udf5: 'Sample_Invoice_11',
-                surl: 'https://test.payu.in/admin/test_response',
-                furl: 'https://test.payu.in/admin/test_response',
-                user_token: '1234567890'  // Default user_token for bank offers
+                surl: getCallbackUrl(),
+                furl: getCallbackUrl(),
+                user_token: '1234567890'
             };
             
             // Helper function to set field value and trigger events
@@ -4665,8 +4675,8 @@
                 firstname: document.getElementById(prefix + '_firstname')?.value || '',
                 email: document.getElementById(prefix + '_email')?.value || '',
                 phone: document.getElementById(prefix + '_phone')?.value || '',
-                surl: document.getElementById(prefix + '_surl')?.value || 'https://test.payu.in/admin/test_response',
-                furl: document.getElementById(prefix + '_furl')?.value || 'https://test.payu.in/admin/test_response'
+                surl: document.getElementById(prefix + '_surl')?.value || getCallbackUrl(),
+                furl: document.getElementById(prefix + '_furl')?.value || getCallbackUrl()
             };
             
             console.log('[DEBUG] Initial params extracted:', params);
@@ -7996,7 +8006,7 @@ nodeCartDetailsUsage +
         window.smOtmSyncVerField = smOtmSyncVerField;
 
         function smOtmPrefillVerifyAuth(txnid) {
-            var key = (document.getElementById('sm_otm_key') || {}).value || 'PRiQvJ';
+            var key = (document.getElementById('sm_otm_key') || {}).value || 'a4vGC2';
             var salt = (document.getElementById('sm_otm_salt') || {}).value || '';
             var vaKey = document.getElementById('sm_otm_va_key');
             var vaSalt = document.getElementById('sm_otm_va_salt');
@@ -8010,7 +8020,7 @@ nodeCartDetailsUsage +
         }
 
         function smOtmPrefillVerifyCap(captureOrderId) {
-            var key = (document.getElementById('sm_cap_key') || {}).value || 'PRiQvJ';
+            var key = (document.getElementById('sm_cap_key') || {}).value || 'a4vGC2';
             var salt = (document.getElementById('sm_cap_salt') || {}).value || '';
             var vcKey = document.getElementById('sm_otm_vc_key');
             var vcSalt = document.getElementById('sm_otm_vc_salt');
@@ -8355,8 +8365,8 @@ nodeCartDetailsUsage +
             document.getElementById('sm_nb_pay_firstname').value = 'Test';
             document.getElementById('sm_nb_pay_email').value = 'test@example.com';
             document.getElementById('sm_nb_pay_phone').value = '9876543210';
-            document.getElementById('sm_nb_pay_surl').value = 'https://payu.in/integrationlab/callback.php';
-            document.getElementById('sm_nb_pay_furl').value = 'https://payu.in/integrationlab/callback.php';
+            document.getElementById('sm_nb_pay_surl').value = getCallbackUrl();
+            document.getElementById('sm_nb_pay_furl').value = getCallbackUrl();
         }
         window.smNbFillSamplePayment = smNbFillSamplePayment;
 
@@ -9075,8 +9085,8 @@ nodeCartDetailsUsage +
             document.getElementById('sm_nb_mandate_reg_billingamt').value = '1000.00';
             document.getElementById('sm_nb_mandate_reg_interval').value = '1';
             
-            document.getElementById('sm_nb_mandate_reg_surl').value = 'https://payu.in/integrationlab/callback.php';
-            document.getElementById('sm_nb_mandate_reg_furl').value = 'https://payu.in/integrationlab/callback.php';
+            document.getElementById('sm_nb_mandate_reg_surl').value = getCallbackUrl();
+            document.getElementById('sm_nb_mandate_reg_furl').value = getCallbackUrl();
             
             // Set start date to tomorrow (current date + 1) for eNACH
             var today = new Date();
@@ -10456,8 +10466,8 @@ nodeCartDetailsUsage +
             document.getElementById('sm_nb_tpv_bankcode').value = 'AXNBTPV';
             document.getElementById('sm_nb_tpv_account').value = '919013353419388';
             document.getElementById('sm_nb_tpv_ifsc').value = 'UTIB9992478';
-            document.getElementById('sm_nb_tpv_surl').value = 'https://payu.in/integrationlab/callback.php';
-            document.getElementById('sm_nb_tpv_furl').value = 'https://payu.in/integrationlab/callback.php';
+            document.getElementById('sm_nb_tpv_surl').value = getCallbackUrl();
+            document.getElementById('sm_nb_tpv_furl').value = getCallbackUrl();
             // S2S Parameters
             document.getElementById('sm_nb_tpv_client_ip').value = '10.200.12.12';
             document.getElementById('sm_nb_tpv_device_info').value = navigator.userAgent || 'Mozilla/5.0';
@@ -11063,8 +11073,8 @@ nodeCartDetailsUsage +
                 document.getElementById('sm_nb_pacb_buyer_type').value = '0';
             }
             
-            document.getElementById('sm_nb_pacb_surl').value = 'https://payu.in/integrationlab/callback.php';
-            document.getElementById('sm_nb_pacb_furl').value = 'https://payu.in/integrationlab/callback.php';
+            document.getElementById('sm_nb_pacb_surl').value = getCallbackUrl();
+            document.getElementById('sm_nb_pacb_furl').value = getCallbackUrl();
             document.getElementById('sm_nb_pacb_client_ip').value = '10.200.12.12';
             document.getElementById('sm_nb_pacb_device_info').value = navigator.userAgent || 'Mozilla/5.0';
             
@@ -13500,12 +13510,12 @@ nodeCartDetailsUsage +
             var ts = Date.now();
             var sets = {
                 pay: {
-                    sm_pay_key: 'PRiQvJ', sm_pay_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_pay_key: 'a4vGC2', sm_pay_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_pay_txnid: 'TXN_' + ts, sm_pay_amount: '200.00', sm_pay_productinfo: 'TestProduct',
                     sm_pay_firstname: 'Ashish', sm_pay_lastname: 'Kumar',
                     sm_pay_email: 'test@example.com', sm_pay_phone: '9876543210',
                     sm_pay_zipcode: '122018',
-                    sm_pay_surl: 'https://test.payu.in/admin/test_response', sm_pay_furl: 'https://test.payu.in/admin/test_response',
+                    sm_pay_surl: getCallbackUrl(), sm_pay_furl: getCallbackUrl(),
                     sm_pay_bankcode: 'INTENT', sm_pay_txn_s2s_flow: '4',
                     sm_pay_client_ip: '10.200.12.12', sm_pay_device_info: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PayU-API-Test/1.0',
                     sm_pay_vpa: '',
@@ -13521,13 +13531,13 @@ nodeCartDetailsUsage +
                     endDt.setFullYear(endDt.getFullYear() + 1);
                     var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
                     return {
-                    sm_mand_key: 'PRiQvJ', sm_mand_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_mand_key: 'a4vGC2', sm_mand_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                         sm_mand_txnid: 'my_order_' + ts, sm_mand_amount: '1000.00', sm_mand_productinfo: 'my_order_' + ts,
                     sm_mand_firstname: 'sudhanshu', sm_mand_lastname: 'kumar',
                     sm_mand_email: 'test@test.com', sm_mand_phone: '9999999999',
                     sm_mand_address1: '308 third floor', sm_mand_address2: '34 Saikripa-Estate, Tilak Nagar',
                     sm_mand_city: 'Gurugram', sm_mand_state: 'UP', sm_mand_country: 'India', sm_mand_zipcode: '122018',
-                    sm_mand_surl: 'https://test.payu.in/admin/test_response', sm_mand_furl: 'https://test.payu.in/admin/test_response',
+                    sm_mand_surl: getCallbackUrl(), sm_mand_furl: getCallbackUrl(),
                         sm_mand_billingAmount: '1000.00', sm_mand_billingCycle: 'MONTHLY', sm_mand_billingInterval: '1',
                         sm_mand_paymentStartDate: fmt(today), sm_mand_paymentEndDate: fmt(endDt),
                         sm_mand_remarks: 'Subscription for a year',
@@ -13541,58 +13551,58 @@ nodeCartDetailsUsage +
                     var end = new Date(today); end.setDate(end.getDate() + 14);
                     var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
                     return {
-                        sm_otm_key: 'PRiQvJ', sm_otm_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                        sm_otm_key: 'a4vGC2', sm_otm_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                         sm_otm_txnid: 'OTM_' + ts, sm_otm_amount: '18000', sm_otm_productinfo: 'iPhone',
                         sm_otm_firstname: 'Payu-Admin', sm_otm_lastname: 'Kumar',
                         sm_otm_email: 'test@example.com', sm_otm_phone: '9876543210',
-                        sm_otm_surl: 'https://test.payu.in/admin/test_response', sm_otm_furl: 'https://test.payu.in/admin/test_response',
+                        sm_otm_surl: getCallbackUrl(), sm_otm_furl: getCallbackUrl(),
                         sm_otm_client_ip: '10.200.12.12', sm_otm_device_info: 'Mozilla/5.0',
                         sm_otm_paymentStartDate: fmt(today), sm_otm_paymentEndDate: fmt(end),
                         sm_otm_udf1: 'udf1', sm_otm_udf2: 'udf2', sm_otm_udf3: 'udf3', sm_otm_udf4: 'udf4', sm_otm_udf5: 'udf5'
                     };
                 })(),
                 cap: {
-                    sm_cap_key: 'PRiQvJ', sm_cap_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_cap_key: 'a4vGC2', sm_cap_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_cap_captureAmount: '15000', sm_cap_captureOrderId: 'cap_' + ts
                 },
                 ver: {
-                    sm_ver_key: 'PRiQvJ', sm_ver_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ'
+                    sm_ver_key: 'a4vGC2', sm_ver_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli'
                 },
                 ucnl: {
-                    sm_ucnl_key: 'PRiQvJ', sm_ucnl_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_ucnl_key: 'a4vGC2', sm_ucnl_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_ucnl_amount: '2.00', sm_ucnl_tokenId: 'cnl_' + ts
                 },
                 ucas: {
-                    sm_ucas_key: 'PRiQvJ', sm_ucas_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_ucas_key: 'a4vGC2', sm_ucas_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_ucas_payuid: '139210626'
                 },
                 cnl: {
-                    sm_cnl_key: 'PRiQvJ', sm_cnl_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_cnl_key: 'a4vGC2', sm_cnl_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_cnl_mihpayid: _smLastOtmVaMihpayid || _smLastOtmVcMihpayid || '',
                     sm_cnl_cancelTokenId: 'cnl_' + ts, sm_cnl_cancelAmount: '1000'
                 },
                 hmac: {
-                    sm_hmac_key: 'PRiQvJ', sm_hmac_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_hmac_key: 'a4vGC2', sm_hmac_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_hmac_payuId: _smLastOtmVaMihpayid || ''
                 },
                 mandverify: {
-                    sm_mandverify_key: 'PRiQvJ', sm_mandverify_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_mandverify_key: 'a4vGC2', sm_mandverify_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_mandverify_txnid: _smLastMandateTxnid || document.getElementById('sm_mand_txnid').value.trim() || ''
                 },
                 mandstatus: {
-                    sm_mandstatus_key: 'PRiQvJ', sm_mandstatus_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_mandstatus_key: 'a4vGC2', sm_mandstatus_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_mandstatus_authPayuId: _smLastMihpayid || '',
                     sm_mandstatus_requestId: 'MSTATUS' + Math.random().toString(36).substring(2, 10)
                 },
                 mandmodify: {
-                    sm_mandmodify_key: 'PRiQvJ', sm_mandmodify_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_mandmodify_key: 'a4vGC2', sm_mandmodify_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_mandmodify_authPayuId: _smLastMihpayid || '',
                     sm_mandmodify_requestId: 'MMOD' + Math.random().toString(36).substring(2, 10),
                     sm_mandmodify_amount: '10000',
                     sm_mandmodify_endDate: '2028-11-15'
                 },
                 predebit: {
-                    sm_predebit_key: 'PRiQvJ', sm_predebit_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_predebit_key: 'a4vGC2', sm_predebit_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_predebit_authPayuId: _smLastMihpayid || '',
                     sm_predebit_requestId: (_smLastMihpayid || ts) + '_1',
                     sm_predebit_debitDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
@@ -13600,7 +13610,7 @@ nodeCartDetailsUsage +
                     sm_predebit_invoiceDisplayNumber: ''
                 },
                 si: {
-                    sm_si_key: 'PRiQvJ', sm_si_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_si_key: 'a4vGC2', sm_si_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_si_authpayuid: _smLastMihpayid || '',
                     sm_si_txnid: 'Rec_' + (_smLastMihpayid || ts) + '_1', sm_si_amount: '100',
                     sm_si_firstname: 'Sudhanshu', sm_si_lastname: 'Kr',
@@ -13613,56 +13623,56 @@ nodeCartDetailsUsage +
                     sm_si_invoiceDisplayNumber: 'SI' + Math.floor(Math.random() * 9999)
                 },
                 siverify: {
-                    sm_siverify_key: 'PRiQvJ', sm_siverify_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_siverify_key: 'a4vGC2', sm_siverify_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_siverify_txnid: _smLastSiTxnid || document.getElementById('sm_si_txnid').value.trim() || ''
                 },
                 udfu: {
-                    sm_udfu_key: 'PRiQvJ', sm_udfu_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_udfu_key: 'a4vGC2', sm_udfu_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_udfu_udf1: 'UpdatedUdf1', sm_udfu_udf4: 'INV123456'
                 },
                 cas: {
-                    sm_cas_key: 'PRiQvJ', sm_cas_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ'
+                    sm_cas_key: 'a4vGC2', sm_cas_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli'
                 },
                 hash: {
-                    sm_hash_key: 'PRiQvJ', sm_hash_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_hash_key: 'a4vGC2', sm_hash_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_hash_txnid: 'SM_' + ts, sm_hash_amount: '10.00', sm_hash_productinfo: 'TestProduct',
                     sm_hash_firstname: 'Payu-Admin', sm_hash_email: 'test@example.com'
                 },
                 sim: {
-                    sm_sim_key: 'PRiQvJ', sm_sim_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_sim_key: 'a4vGC2', sm_sim_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_sim_txnid: 'SIM_' + ts, sm_sim_amount: '10.00', sm_sim_productinfo: 'TestProduct',
                     sm_sim_firstname: 'Payu-Admin', sm_sim_email: 'test@example.com', sm_sim_phone: '9876543210',
-                    sm_sim_bankcode: 'INTENT', sm_sim_surl: 'https://test.payu.in/admin/test_response'
+                    sm_sim_bankcode: 'INTENT', sm_sim_surl: getCallbackUrl()
                 }
             ,
                 vpa: {
-                    sm_vpa_key: 'PRiQvJ', sm_vpa_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_vpa_key: 'a4vGC2', sm_vpa_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_vpa_address: '9999999999@upi'
                 },
                 cbs: {
-                    sm_cbs_key: 'PRiQvJ', sm_cbs_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_cbs_key: 'a4vGC2', sm_cbs_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_cbs_txnid: 'CBS_' + ts, sm_cbs_amount: '100.00', sm_cbs_productinfo: 'InternationalService',
                     sm_cbs_firstname: 'John', sm_cbs_email: 'test@example.com', sm_cbs_phone: '9876543210',
-                    sm_cbs_surl: 'https://test.payu.in/admin/test_response', sm_cbs_furl: 'https://test.payu.in/admin/test_response',
+                    sm_cbs_surl: getCallbackUrl(), sm_cbs_furl: getCallbackUrl(),
                     sm_cbs_bankcode: 'INTENT', sm_cbs_txn_s2s_flow: '4',
                     sm_cbs_client_ip: '10.200.12.12', sm_cbs_device_info: 'Mozilla/5.0',
                     sm_cbs_enforce: 'upi', sm_cbs_udf7: 'S0802', sm_cbs_udf8: '100'
                 },
                 cbsub: {
-                    sm_cbsub_key: 'PRiQvJ', sm_cbsub_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_cbsub_key: 'a4vGC2', sm_cbsub_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_cbsub_txnid: 'CBSUB_' + ts, sm_cbsub_amount: '2.00', sm_cbsub_productinfo: 'MonthlyPlanCB',
                     sm_cbsub_firstname: 'John', sm_cbsub_email: 'test@example.com', sm_cbsub_phone: '9876543210',
-                    sm_cbsub_surl: 'https://test.payu.in/admin/test_response', sm_cbsub_furl: 'https://test.payu.in/admin/test_response',
+                    sm_cbsub_surl: getCallbackUrl(), sm_cbsub_furl: getCallbackUrl(),
                     sm_cbsub_billingAmount: '200.00', sm_cbsub_billingCycle: 'MONTHLY', sm_cbsub_billingInterval: '1',
                     sm_cbsub_startDate: '2026-04-01', sm_cbsub_endDate: '2026-12-01',
                     sm_cbsub_txn_s2s_flow: '4', sm_cbsub_client_ip: '10.200.12.12', sm_cbsub_device_info: 'Mozilla/5.0',
                     sm_cbsub_udf7: 'S0802', sm_cbsub_udf8: '100'
                 },
                 spl: {
-                    sm_spl_key: 'PRiQvJ', sm_spl_salt: 'mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ',
+                    sm_spl_key: 'a4vGC2', sm_spl_salt: 'hKvGJP28d2ZUuCRz5BnDag58QBdCxBli',
                     sm_spl_txnid: 'SPL_' + ts, sm_spl_amount: '100.00', sm_spl_productinfo: 'SplitOrder',
                     sm_spl_firstname: 'Test', sm_spl_email: 'test@example.com', sm_spl_phone: '9876543210',
-                    sm_spl_surl: 'https://test.payu.in/admin/test_response', sm_spl_furl: 'https://test.payu.in/admin/test_response',
+                    sm_spl_surl: getCallbackUrl(), sm_spl_furl: getCallbackUrl(),
                     sm_spl_txn_s2s_flow: '4', sm_spl_splitType: 'absolute',
                     sm_spl_client_ip: '10.200.12.12', sm_spl_device_info: 'Mozilla/5.0'
                 }

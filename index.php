@@ -22,6 +22,13 @@ if ($envBase !== false && $envBase !== '') {
     if ($scriptDir === '/' || $scriptDir === '\\') $scriptDir = '';
     $assetBase = $scriptDir;
 }
+
+// Build default callback URL from server variables (JS overrides on page load)
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+       || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+       ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost';
+$defaultCallbackUrl = $scheme . '://' . $host . $assetBase . '/callback.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -3658,11 +3665,11 @@ if ($envBase !== false && $envBase !== '') {
                             <span class="sm-global-config-label">Merchant Config</span>
                             <div class="sm-global-field">
                                 <label>Key</label>
-                                <input type="text" id="sm_global_key" value="PRiQvJ" placeholder="Merchant Key">
+                                <input type="text" id="sm_global_key" value="a4vGC2" placeholder="Merchant Key">
                     </div>
                             <div class="sm-global-field">
                                 <label>Salt</label>
-                                <input type="password" id="sm_global_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Merchant Salt (v1)">
+                                <input type="password" id="sm_global_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Merchant Salt (v1)">
                     </div>
                             <button class="sm-global-apply-btn" onclick="smApplyGlobalConfig()">Apply to All Forms</button>
                     </div>
@@ -4409,7 +4416,7 @@ activity.startActivityForResult(intent, 101)</code></pre></div>
                         <div class="sm-code-block" style="margin-top:1rem;">
                             <div class="sm-code-header"><span>Hash Formula</span><button onclick="smCopyCode(this)">Copy</button></div>
                             <pre><code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt)
-Example: sha512(PRiQvJ|TXN_123|10.00|iPhone|Ashish|test@gmail.com|ABCDE1234F||1990-01-01||INV123456||MerchantName||||||||mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</code></pre>
+Example: sha512(a4vGC2|TXN_123|10.00|iPhone|Ashish|test@gmail.com|ABCDE1234F||1990-01-01||INV123456||MerchantName||||||||hKvGJP28d2ZUuCRz5BnDag58QBdCxBli)</code></pre>
                         </div>
 
                         <!-- INTERACTIVE FORM -->
@@ -4422,11 +4429,11 @@ Example: sha512(PRiQvJ|TXN_123|10.00|iPhone|Ashish|test@gmail.com|ABCDE1234F||19
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_pay_key" value="PRiQvJ">
+                                    <input type="text" id="sm_pay_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_pay_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_pay_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -4475,11 +4482,11 @@ Example: sha512(PRiQvJ|TXN_123|10.00|iPhone|Ashish|test@gmail.com|ABCDE1234F||19
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Success URL (surl) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_pay_surl" value="https://test.payu.in/admin/test_response">
+                                    <input type="text" id="sm_pay_surl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Failure URL (furl) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_pay_furl" value="https://test.payu.in/admin/test_response">
+                                    <input type="text" id="sm_pay_furl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -4936,11 +4943,11 @@ Example: sha512(a4vGC2|MAND_123|2.00|MonthlySubscription|sudhanshu|test@test.com
                                 <div class="sm-form-row">
                                     <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                        <input type="text" id="sm_mand_key" value="PRiQvJ">
+                                        <input type="text" id="sm_mand_key" value="a4vGC2">
                                     </div>
                                     <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                        <input type="password" id="sm_mand_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                        <input type="password" id="sm_mand_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                     </div>
                                 </div>
                                 <div class="sm-form-row">
@@ -4979,11 +4986,11 @@ Example: sha512(a4vGC2|MAND_123|2.00|MonthlySubscription|sudhanshu|test@test.com
                                 <div class="sm-form-row">
                                     <div class="sm-form-group">
                                         <label>Success URL (surl) <span class="sm-required">*</span></label>
-                                        <input type="text" id="sm_mand_surl" value="https://test.payu.in/admin/test_response">
+                                        <input type="text" id="sm_mand_surl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>">
                                     </div>
                                     <div class="sm-form-group">
                                         <label>Failure URL (furl) <span class="sm-required">*</span></label>
-                                        <input type="text" id="sm_mand_furl" value="https://test.payu.in/admin/test_response">
+                                        <input type="text" id="sm_mand_furl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>">
                                     </div>
                                 </div>
                                 <div class="sm-form-row">
@@ -5277,7 +5284,7 @@ Example: sha512(a4vGC2|MAND_123|2.00|MonthlySubscription|sudhanshu|test@test.com
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key from PayU dashboard</td><td>PRiQvJ</td></tr>
+                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key from PayU dashboard</td><td>a4vGC2</td></tr>
                                 <tr><td><code>command</code></td><td>Yes</td><td>API command</td><td><strong>verify_payment</strong></td></tr>
                                 <tr><td><code>var1</code></td><td>Yes</td><td>Transaction ID (txnid) from mandate registration</td><td>txn-4039971553710</td></tr>
                                 <tr><td><code>hash</code></td><td>Yes</td><td>SHA-512 hash</td><td><em>(computed)</em></td></tr>
@@ -5301,11 +5308,11 @@ sha512(merchantKey|verify_payment|txnid|merchantSalt)</code></pre>
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                        <input type="text" id="sm_mandverify_key" value="PRiQvJ">
+                                        <input type="text" id="sm_mandverify_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                        <input type="password" id="sm_mandverify_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                        <input type="password" id="sm_mandverify_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -5454,7 +5461,7 @@ sha512(merchantKey|verify_payment|txnid|merchantSalt)</code></pre>
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key from PayU dashboard</td><td>PRiQvJ</td></tr>
+                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key from PayU dashboard</td><td>a4vGC2</td></tr>
                                 <tr><td><code>command</code></td><td>Yes</td><td>API command</td><td><strong>upi_mandate_status</strong></td></tr>
                                 <tr><td><code>var1</code></td><td>Yes</td><td>JSON with authPayuId and requestId</td><td>{"authPayuId":"...","requestId":"..."}</td></tr>
                                 <tr><td><code>hash</code></td><td>Yes</td><td>SHA-512 hash</td><td><em>(computed)</em></td></tr>
@@ -5482,11 +5489,11 @@ sha512(merchantKey|upi_mandate_status|{"authPayuId":"...","requestId":"..."}|mer
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                        <input type="text" id="sm_mandstatus_key" value="PRiQvJ">
+                                        <input type="text" id="sm_mandstatus_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                        <input type="password" id="sm_mandstatus_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                        <input type="password" id="sm_mandstatus_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -5644,7 +5651,7 @@ sha512(merchantKey|upi_mandate_status|{"authPayuId":"...","requestId":"..."}|mer
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key from PayU dashboard</td><td>PRiQvJ</td></tr>
+                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key from PayU dashboard</td><td>a4vGC2</td></tr>
                                 <tr><td><code>command</code></td><td>Yes</td><td>API command</td><td><strong>upi_mandate_modify</strong></td></tr>
                                 <tr><td><code>var1</code></td><td>Yes</td><td>JSON with modify details</td><td>{"authPayuId":"...","requestId":"...","amount":"...","endDate":"..."}</td></tr>
                                 <tr><td><code>hash</code></td><td>Yes</td><td>SHA-512 hash</td><td><em>(computed)</em></td></tr>
@@ -5674,11 +5681,11 @@ sha512(merchantKey|upi_mandate_modify|{"authPayuId":"...","requestId":"...","amo
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                        <input type="text" id="sm_mandmodify_key" value="PRiQvJ">
+                                        <input type="text" id="sm_mandmodify_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                        <input type="password" id="sm_mandmodify_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                        <input type="password" id="sm_mandmodify_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -5871,7 +5878,7 @@ sha512(merchantKey|upi_mandate_modify|{"authPayuId":"...","requestId":"...","amo
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>PRiQvJ</td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
                                 <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>mGHSxpD2iB&hellip;</td></tr>
                                 <tr><td><code>txnid</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Unique transaction/order ID (auto-generated if empty)</td><td>OTM_17345678</td></tr>
                                 <tr><td><code>amount</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Block amount for the pre-authorization</td><td>18000</td></tr>
@@ -5914,7 +5921,7 @@ sha512(merchantKey|upi_mandate_modify|{"authPayuId":"...","requestId":"...","amo
                         <div class="sm-code-block">
                             <div class="sm-code-header"><span>OTM Transaction Hash (api_version=7)</span><button onclick="smCopyCode(this)">Copy</button></div>
                             <pre><code>sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||si_details_json|salt)
-sha512(PRiQvJ|OTM_123|18000|iPhone|Payu-Admin|test@example.com|udf1|udf2|udf3|udf4|udf5||||||{"paymentStartDate":"2026-03-28","paymentEndDate":"2026-05-27"}|mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</code></pre>
+sha512(a4vGC2|OTM_123|18000|iPhone|Payu-Admin|test@example.com|udf1|udf2|udf3|udf4|udf5||||||{"paymentStartDate":"2026-03-28","paymentEndDate":"2026-05-27"}|hKvGJP28d2ZUuCRz5BnDag58QBdCxBli)</code></pre>
                         </div>
 
                         <!-- Amount Restrictions for Execution or Capture API -->
@@ -6020,11 +6027,11 @@ sha512(PRiQvJ|OTM_123|18000|iPhone|Payu-Admin|test@example.com|udf1|udf2|udf3|ud
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_otm_key" value="PRiQvJ">
+                                    <input type="text" id="sm_otm_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_otm_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_otm_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -6063,11 +6070,11 @@ sha512(PRiQvJ|OTM_123|18000|iPhone|Payu-Admin|test@example.com|udf1|udf2|udf3|ud
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Success URL (surl) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_otm_surl" value="https://test.payu.in/admin/test_response">
+                                    <input type="text" id="sm_otm_surl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Failure URL (furl) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_otm_furl" value="https://test.payu.in/admin/test_response">
+                                    <input type="text" id="sm_otm_furl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -6334,11 +6341,11 @@ sha512(merchantKey|capture_transaction|mihpayid|merchantSalt)</code></pre>
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_cap_key" value="PRiQvJ">
+                                    <input type="text" id="sm_cap_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_cap_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_cap_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -6512,7 +6519,7 @@ sha512(merchantKey|capture_transaction|mihpayid|merchantSalt)</code></pre>
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>PRiQvJ</td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
                                 <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant salt used for hash generation (never sent in request)</td><td>mGHSxpD2iB&hellip;</td></tr>
                                 <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>verify_payment</code></td><td>verify_payment</td></tr>
                                 <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Transaction ID (txnid) used during payment initiation</td><td>TXN_1234567890</td></tr>
@@ -6525,7 +6532,7 @@ sha512(merchantKey|capture_transaction|mihpayid|merchantSalt)</code></pre>
                         <div class="sm-code-block">
                             <div class="sm-code-header"><span>Verify Hash</span><button onclick="smCopyCode(this)">Copy</button></div>
                             <pre><code>sha512(key|command|var1|salt)
-sha512(PRiQvJ|verify_payment|TXN_1234567890|mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</code></pre>
+sha512(a4vGC2|verify_payment|TXN_1234567890|hKvGJP28d2ZUuCRz5BnDag58QBdCxBli)</code></pre>
                         </div>
 
                         <!-- INTERACTIVE FORM -->
@@ -6536,11 +6543,11 @@ sha512(PRiQvJ|verify_payment|TXN_1234567890|mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</c
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_ver_key" value="PRiQvJ">
+                                    <input type="text" id="sm_ver_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_ver_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_ver_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -6614,7 +6621,7 @@ sha512(PRiQvJ|verify_payment|TXN_1234567890|mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</c
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>PRiQvJ</td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
                                 <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>mGHSxpD2iB&hellip;</td></tr>
                                 <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>cancel_refund_transaction</code></td><td>cancel_refund_transaction</td></tr>
                                 <tr><td><code>var1</code> (mihpayid)</td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>PayU transaction ID from Verify Payment response</td><td>403993715537142566</td></tr>
@@ -6628,7 +6635,7 @@ sha512(PRiQvJ|verify_payment|TXN_1234567890|mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</c
                         <div class="sm-code-block">
                             <div class="sm-code-header"><span>Cancel/Refund Hash</span><button onclick="smCopyCode(this)">Copy</button></div>
                             <pre><code>sha512(key|cancel_refund_transaction|mihpayid|salt)
-sha512(PRiQvJ|cancel_refund_transaction|403993715537142566|mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</code></pre>
+sha512(a4vGC2|cancel_refund_transaction|403993715537142566|hKvGJP28d2ZUuCRz5BnDag58QBdCxBli)</code></pre>
                         </div>
 
                         <h3>Try It &mdash; Send Real Request</h3>
@@ -6638,11 +6645,11 @@ sha512(PRiQvJ|cancel_refund_transaction|403993715537142566|mGHSxpD2iBVywParGQrGB
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_ucnl_key" value="PRiQvJ">
+                                    <input type="text" id="sm_ucnl_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_ucnl_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_ucnl_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -6714,7 +6721,7 @@ sha512(PRiQvJ|cancel_refund_transaction|403993715537142566|mGHSxpD2iBVywParGQrGB
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>PRiQvJ</td></tr>
+                                <tr><td><code>key</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant key provided by PayU during onboarding</td><td>a4vGC2</td></tr>
                                 <tr><td><code>salt</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>Merchant salt for hash generation (never sent in request)</td><td>mGHSxpD2iB&hellip;</td></tr>
                                 <tr><td><code>command</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>API command &mdash; fixed <code>check_action_status</code></td><td>check_action_status</td></tr>
                                 <tr><td><code>var1</code></td><td><span class="sm-badge-mandatory">Mandatory</span></td><td>PayU ID (mihpayid) for which action status is to be fetched</td><td>139210626</td></tr>
@@ -6726,7 +6733,7 @@ sha512(PRiQvJ|cancel_refund_transaction|403993715537142566|mGHSxpD2iBVywParGQrGB
                         <div class="sm-code-block">
                             <div class="sm-code-header"><span>Check Action Status Hash</span><button onclick="smCopyCode(this)">Copy</button></div>
                             <pre><code>sha512(key|command|var1|salt)
-sha512(PRiQvJ|check_action_status|139210626|mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</code></pre>
+sha512(a4vGC2|check_action_status|139210626|hKvGJP28d2ZUuCRz5BnDag58QBdCxBli)</code></pre>
                         </div>
 
                         <!-- INTERACTIVE FORM -->
@@ -6737,11 +6744,11 @@ sha512(PRiQvJ|check_action_status|139210626|mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ)</c
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_ucas_key" value="PRiQvJ">
+                                    <input type="text" id="sm_ucas_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_ucas_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_ucas_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -6933,11 +6940,11 @@ sha512(merchantKey|cancel_transaction|mihpayid|merchantSalt)</code></pre>
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_cnl_key" value="PRiQvJ">
+                                    <input type="text" id="sm_cnl_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_cnl_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_cnl_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -7157,11 +7164,11 @@ const auth = `hmac username="${merchant_key}", algorithm="hmac-sha256", ` +
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_hmac_key" value="PRiQvJ">
+                                    <input type="text" id="sm_hmac_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_hmac_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_hmac_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -7243,11 +7250,11 @@ const auth = `hmac username="${merchant_key}", algorithm="hmac-sha256", ` +
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_otm_va_key" value="PRiQvJ" oninput="smOtmSyncVerField('key',this.value)">
+                                    <input type="text" id="sm_otm_va_key" value="a4vGC2" oninput="smOtmSyncVerField('key',this.value)">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_otm_va_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" oninput="smOtmSyncVerField('salt',this.value)">
+                                    <input type="password" id="sm_otm_va_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" oninput="smOtmSyncVerField('salt',this.value)">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -7338,11 +7345,11 @@ const auth = `hmac username="${merchant_key}", algorithm="hmac-sha256", ` +
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_otm_vc_key" value="PRiQvJ" oninput="smOtmSyncVerField('key',this.value)">
+                                    <input type="text" id="sm_otm_vc_key" value="a4vGC2" oninput="smOtmSyncVerField('key',this.value)">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_otm_vc_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" oninput="smOtmSyncVerField('salt',this.value)">
+                                    <input type="password" id="sm_otm_vc_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" oninput="smOtmSyncVerField('salt',this.value)">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -7539,11 +7546,11 @@ sha512(merchantKey|pre_debit_SI|{"authPayuId":"...","requestId":"...","debitDate
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_predebit_key" value="PRiQvJ">
+                                    <input type="text" id="sm_predebit_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_predebit_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_predebit_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -7809,11 +7816,11 @@ sha512(merchantKey|si_transaction|{"authpayuid":"...","amount":"...","txnid":"..
                             <div class="sm-form-row">
                                 <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                    <input type="text" id="sm_si_key" value="PRiQvJ">
+                                    <input type="text" id="sm_si_key" value="a4vGC2">
                                 </div>
                                 <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                    <input type="password" id="sm_si_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                    <input type="password" id="sm_si_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                 </div>
                             </div>
                             <div class="sm-form-row">
@@ -8054,7 +8061,7 @@ sha512(merchantKey|si_transaction|{"authpayuid":"...","amount":"...","txnid":"..
                         <table class="sm-table">
                             <thead><tr><th>Parameter</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
                             <tbody>
-                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key from PayU dashboard</td><td>PRiQvJ</td></tr>
+                                <tr><td><code>key</code></td><td>Yes</td><td>Merchant key from PayU dashboard</td><td>a4vGC2</td></tr>
                                 <tr><td><code>command</code></td><td>Yes</td><td>API command</td><td><strong>verify_payment</strong></td></tr>
                                 <tr><td><code>var1</code></td><td>Yes</td><td>Transaction ID (txnid) from SI Transaction</td><td>Rec_40399715537_1</td></tr>
                                 <tr><td><code>hash</code></td><td>Yes</td><td>SHA-512 hash</td><td><em>(computed)</em></td></tr>
@@ -8074,11 +8081,11 @@ sha512(merchantKey|verify_payment|si_txnid|merchantSalt)</code></pre>
                                 <div class="sm-form-row">
                                     <div class="sm-form-group">
                                         <label>Merchant Key (key) <span class="sm-required">*</span></label>
-                                        <input type="text" id="sm_siverify_key" value="PRiQvJ">
+                                        <input type="text" id="sm_siverify_key" value="a4vGC2">
                                     </div>
                                     <div class="sm-form-group">
                                         <label>Merchant Salt <span class="sm-required">*</span></label>
-                                        <input type="password" id="sm_siverify_salt" value="mGHSxpD2iBVywParGQrGBlaXjnwkGJMQ" placeholder="Enter your salt">
+                                        <input type="password" id="sm_siverify_salt" value="hKvGJP28d2ZUuCRz5BnDag58QBdCxBli" placeholder="Enter your salt">
                                     </div>
                                 </div>
                                 <div class="sm-form-row">
@@ -12998,10 +13005,10 @@ sha512(a4vGC2|NB_123456|100.00|Test Product|John|john@example.com|||||||||||Your
                             </div>
                             <div class="sm-form-row">
                                 <div class="sm-form-group"><label>Phone  <span class="required">*</span></label><input type="text" id="sm_nb_pay_phone" value="9876543210"></div>
-                                <div class="sm-form-group"><label>SURL (Success URL)  <span class="required">*</span></label><input type="text" id="sm_nb_pay_surl" value="https://payu.in/integrationlab/callback.php"></div>
+                                <div class="sm-form-group"><label>SURL (Success URL)  <span class="required">*</span></label><input type="text" id="sm_nb_pay_surl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>"></div>
                             </div>
                             <div class="sm-form-row">
-                                <div class="sm-form-group"><label>FURL (Failure URL)  <span class="required">*</span></label><input type="text" id="sm_nb_pay_furl" value="https://payu.in/integrationlab/callback.php"></div>
+                                <div class="sm-form-group"><label>FURL (Failure URL)  <span class="required">*</span></label><input type="text" id="sm_nb_pay_furl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>"></div>
                                 <div class="sm-form-group">&nbsp;</div>
                             </div>
                             <div class="sm-info-box" style="background:#f0fff4; border:1px solid #9ae6b4; margin-bottom:1rem; padding:0.75rem 1rem; font-size:0.85rem;">
@@ -13834,8 +13841,8 @@ beneficiarydetail = JSON.stringify({beneficiaryAccountNumber, ifscCode})</code><
                                 </div>
                             </div>
                             <div class="sm-form-row">
-                                <div class="sm-form-group"><label>SURL (Success URL)  <span class="required">*</span></label><input type="text" id="sm_nb_tpv_surl" value="https://payu.in/integrationlab/callback.php"></div>
-                                <div class="sm-form-group"><label>FURL (Failure URL)  <span class="required">*</span></label><input type="text" id="sm_nb_tpv_furl" value="https://payu.in/integrationlab/callback.php"></div>
+                                <div class="sm-form-group"><label>SURL (Success URL)  <span class="required">*</span></label><input type="text" id="sm_nb_tpv_surl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>"></div>
+                                <div class="sm-form-group"><label>FURL (Failure URL)  <span class="required">*</span></label><input type="text" id="sm_nb_tpv_furl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>"></div>
                             </div>
                             <div class="sm-form-row">
                                 <div class="sm-form-group"><label>Client IP (s2s_client_ip) <span class="required">*</span></label><input type="text" id="sm_nb_tpv_client_ip" value="10.200.12.12" placeholder="e.g., 10.200.12.12"></div>
@@ -14587,12 +14594,12 @@ pre_authorize=1        // Enable pre-authorization mode</code></pre>
                                 <div class="sm-form-row">
                                     <div class="sm-form-group">
                                         <label>Success URL <span class="required">*</span></label>
-                                        <input type="text" id="sm_nb_pacb_surl" value="https://payu.in/integrationlab/callback.php" placeholder="https://payu.in/integrationlab/callback.php" maxlength="255" oninput="smNbUpdateCharCount(this, 'sm_nb_pacb_surl_count')">
+                                        <input type="text" id="sm_nb_pacb_surl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>" placeholder="<?php echo htmlspecialchars($defaultCallbackUrl); ?>" maxlength="255" oninput="smNbUpdateCharCount(this, 'sm_nb_pacb_surl_count')">
                                         <div style="text-align:right; font-size:0.75rem; color:#9ca3af;"><span id="sm_nb_pacb_surl_count">43</span>/255</div>
                                     </div>
                                     <div class="sm-form-group">
                                         <label>Failure URL <span class="required">*</span></label>
-                                        <input type="text" id="sm_nb_pacb_furl" value="https://payu.in/integrationlab/callback.php" placeholder="https://payu.in/integrationlab/callback.php" maxlength="255" oninput="smNbUpdateCharCount(this, 'sm_nb_pacb_furl_count')">
+                                        <input type="text" id="sm_nb_pacb_furl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>" placeholder="<?php echo htmlspecialchars($defaultCallbackUrl); ?>" maxlength="255" oninput="smNbUpdateCharCount(this, 'sm_nb_pacb_furl_count')">
                                         <div style="text-align:right; font-size:0.75rem; color:#9ca3af;"><span id="sm_nb_pacb_furl_count">43</span>/255</div>
                                     </div>
                                 </div>
@@ -15105,8 +15112,8 @@ sha512(a4vGC2|capture_transaction|403993715537135556|YourSaltHere)</code></pre>
 
                             <h4 style="margin:1.25rem 0 0.75rem; color:var(--text-color); font-size:0.95rem;">Callback URLs</h4>
                             <div class="sm-form-row">
-                                <div class="sm-form-group"><label>SURL (Success URL) <span class="required">*</span></label><input type="text" id="sm_nb_mandate_reg_surl" value="https://payu.in/integrationlab/callback.php"></div>
-                                <div class="sm-form-group"><label>FURL (Failure URL) <span class="required">*</span></label><input type="text" id="sm_nb_mandate_reg_furl" value="https://payu.in/integrationlab/callback.php"></div>
+                                <div class="sm-form-group"><label>SURL (Success URL) <span class="required">*</span></label><input type="text" id="sm_nb_mandate_reg_surl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>"></div>
+                                <div class="sm-form-group"><label>FURL (Failure URL) <span class="required">*</span></label><input type="text" id="sm_nb_mandate_reg_furl" value="<?php echo htmlspecialchars($defaultCallbackUrl); ?>"></div>
                             </div>
 
                             <h4 style="margin:1.25rem 0 0.75rem; color:var(--text-color); font-size:0.95rem;">User Defined Fields <span class="sm-badge-optional" style="font-size:0.7rem; vertical-align:middle;">Optional</span></h4>
