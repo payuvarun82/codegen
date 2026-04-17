@@ -141,10 +141,29 @@ $cbAssetBase = detectBasePath();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PayU Payment Callback - Status</title>
+    <script>
+    (function(){
+        var R=['crossborder','payu-hosted','subscription','tpv','upiotm','preauth',
+               'checkoutplus','split','bankoffer','seamless','callback.php','proxy.php',
+               'health.php','index.php','hash-utility.php','index-session.php'];
+        var p=window.location.pathname.replace(/\/+$/,'');
+        var s=p.split('/').filter(function(x){return x!=='';});
+        while(s.length>0){
+            var l=s[s.length-1].toLowerCase();
+            var f=false;
+            for(var i=0;i<R.length;i++){if(l===R[i]){f=true;break;}}
+            if(!f&&l.indexOf('sm-')===0)f=true;
+            if(f){s.pop();}else{break;}
+        }
+        var base=s.length>0?'/'+s.join('/')+'/':'/';
+        document.write('<base href="'+base+'">');
+        window.SERVER_BASE_PATH=base.replace(/\/$/,'');
+    })();
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo htmlspecialchars($cbAssetBase); ?>/css/styles.css">
+    <link rel="stylesheet" href="css/styles.css">
     <style>
         /* Callback-specific styles */
         body {
@@ -908,7 +927,7 @@ $cbAssetBase = detectBasePath();
                     Test Callback Simulator
                 </a>
                 <?php endif; ?>
-                <a href="<?php echo htmlspecialchars($cbAssetBase); ?>/" class="btn btn-primary">
+                <a href="./" class="btn btn-primary">
                     Back to PayU Integration Lab
                 </a>
             </div>

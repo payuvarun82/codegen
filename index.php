@@ -65,6 +65,26 @@ $defaultCallbackUrl = $scheme . '://' . $host . $assetBase . '/callback.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PayU Integration Lab</title>
+    <!-- Auto-detect base path from browser URL and set <base> tag for asset resolution -->
+    <script>
+    (function(){
+        var R=['crossborder','payu-hosted','subscription','tpv','upiotm','preauth',
+               'checkoutplus','split','bankoffer','seamless','callback.php','proxy.php',
+               'health.php','index.php','hash-utility.php','index-session.php'];
+        var p=window.location.pathname.replace(/\/+$/,'');
+        var s=p.split('/').filter(function(x){return x!=='';});
+        while(s.length>0){
+            var l=s[s.length-1].toLowerCase();
+            var f=false;
+            for(var i=0;i<R.length;i++){if(l===R[i]){f=true;break;}}
+            if(!f&&l.indexOf('sm-')===0)f=true;
+            if(f){s.pop();}else{break;}
+        }
+        var base=s.length>0?'/'+s.join('/')+'/':'/';
+        document.write('<base href="'+base+'">');
+        window.SERVER_BASE_PATH=base.replace(/\/$/,'');
+    })();
+    </script>
     <!-- Google Analytics (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7CG3P7JYWT"></script>
     <script>
@@ -73,11 +93,10 @@ $defaultCallbackUrl = $scheme . '://' . $host . $assetBase . '/callback.php';
         gtag('js', new Date());
         gtag('config', 'G-7CG3P7JYWT');
     </script>
-    <script>window.SERVER_BASE_PATH = <?php echo json_encode($assetBase); ?>;</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
-    <link rel="stylesheet" href="<?php echo htmlspecialchars($assetBase); ?>/css/styles.css?v=2.1">
+    <link rel="stylesheet" href="css/styles.css?v=2.2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- LRS/UDF toggles: work before app.js; delegated listener so LRS/UDF always respond to checkbox -->
     <script>
@@ -16322,6 +16341,6 @@ public class PayUHash {
             </div>
         </div>
     </div>
-    <script src="<?php echo htmlspecialchars($assetBase); ?>/js/app.js?v=2.1"></script>
+    <script src="js/app.js?v=2.2"></script>
 </body>
 </html>

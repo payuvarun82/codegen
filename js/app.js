@@ -109,35 +109,9 @@
         window._toggleLrsParams = toggleLrsParams;
 
         function getBasePath() {
-            if (typeof window._resolvedBasePath === 'string') return window._resolvedBasePath;
-
-            // If PHP already detected the correct prefix, use it
-            if (window.SERVER_BASE_PATH) {
-                window._resolvedBasePath = window.SERVER_BASE_PATH;
-                return window._resolvedBasePath;
-            }
-
-            // Auto-detect from browser URL: strip known route segments to find the mount prefix
-            var knownRoutes = ['crossborder','payu-hosted','subscription','tpv','upiotm','preauth',
-                               'checkoutplus','split','bankoffer','seamless','callback.php','proxy.php',
-                               'health.php','index.php','hash-utility.php'];
-            var pathname = window.location.pathname.replace(/\/+$/, '');
-            var segs = pathname.split('/').filter(function(s) { return s !== ''; });
-
-            // Walk backwards removing known route segments (and their sub-segments)
-            while (segs.length > 0) {
-                var last = segs[segs.length - 1].toLowerCase();
-                var found = false;
-                for (var i = 0; i < knownRoutes.length; i++) {
-                    if (last === knownRoutes[i]) { found = true; break; }
-                }
-                // Also strip seamless sub-sections like sm-overview, sm-nb-payment, etc.
-                if (!found && last.indexOf('sm-') === 0) found = true;
-                if (found) { segs.pop(); } else { break; }
-            }
-
-            window._resolvedBasePath = segs.length > 0 ? '/' + segs.join('/') : '';
-            return window._resolvedBasePath;
+            // SERVER_BASE_PATH is set by the inline <base>-detection script in <head>
+            if (typeof window.SERVER_BASE_PATH === 'string') return window.SERVER_BASE_PATH;
+            return '';
         }
         window.getBasePath = getBasePath;
 
