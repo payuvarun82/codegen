@@ -105,14 +105,35 @@ $calculatedHash = hash('sha512', $hashString);
 $isHashValid = !empty($hash) && (strtolower($calculatedHash) === strtolower($hash));
 
 // Auto-detect base path for assets (same logic as index.php)
-$envBase = getenv('APP_BASE_PATH');
-if ($envBase !== false && $envBase !== '') {
-    $cbAssetBase = rtrim($envBase, '/');
-} else {
-    $cbScriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
-    if ($cbScriptDir === '/' || $cbScriptDir === '\\') $cbScriptDir = '';
-    $cbAssetBase = $cbScriptDir;
+function detectBasePath() {
+    $envBase = getenv('APP_BASE_PATH');
+    if ($envBase !== false && $envBase !== '') {
+        return rtrim($envBase, '/');
+    }
+    $hostMap = getenv('APP_HOST_BASE_MAP');
+    if ($hostMap !== false && $hostMap !== '') {
+        $currentHost = strtolower($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '');
+        $currentHostNoPort = preg_replace('/:\d+$/', '', $currentHost);
+        foreach (explode(',', $hostMap) as $entry) {
+            $entry = trim($entry);
+            $eqPos = strpos($entry, '=');
+            if ($eqPos !== false) {
+                $mapHost = strtolower(trim(substr($entry, 0, $eqPos)));
+                $mapPath = trim(substr($entry, $eqPos + 1));
+                if ($mapHost === $currentHost || $mapHost === $currentHostNoPort) {
+                    return rtrim($mapPath, '/');
+                }
+            }
+        }
+    }
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PREFIX'])) {
+        return rtrim($_SERVER['HTTP_X_FORWARDED_PREFIX'], '/');
+    }
+    $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+    if ($scriptDir === '/' || $scriptDir === '\\') $scriptDir = '';
+    return $scriptDir;
 }
+$cbAssetBase = detectBasePath();
 ?>
 <!DOCTYPE html>
 <html lang="en">

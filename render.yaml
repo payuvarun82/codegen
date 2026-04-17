@@ -10,3 +10,5 @@ services:
     envVars:
       - key: PHP_DISPLAY_ERRORS
         value: "Off"
+      - key: APP_HOST_BASE_MAP
+        value: "payu.in=/integrationlab"

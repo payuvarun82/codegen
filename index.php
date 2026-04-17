@@ -12,16 +12,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Auto-detect base path for CSS/JS so the app works on any deployment URL.
-// Priority: APP_BASE_PATH env var > SCRIPT_NAME dirname > empty (root).
-$envBase = getenv('APP_BASE_PATH');
-if ($envBase !== false && $envBase !== '') {
-    $assetBase = rtrim($envBase, '/');
-} else {
+// Auto-detect base path for CSS/JS so the app works behind reverse proxies.
+// Priority: APP_BASE_PATH env > APP_HOST_BASE_MAP per-host > X-Forwarded-Prefix > SCRIPT_NAME dirname.
+function detectBasePath() {
+    // 1. Explicit env var — single fixed base for all hosts
+    $envBase = getenv('APP_BASE_PATH');
+    if ($envBase !== false && $envBase !== '') {
+        return rtrim($envBase, '/');
+    }
+
+    // 2. Host-based mapping — lets the same deployment serve different prefixes per domain
+    //    Format: "host1=/path1,host2=/path2"  e.g. "payu.in=/integrationlab"
+    $hostMap = getenv('APP_HOST_BASE_MAP');
+    if ($hostMap !== false && $hostMap !== '') {
+        $currentHost = strtolower($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '');
+        $currentHostNoPort = preg_replace('/:\d+$/', '', $currentHost);
+        foreach (explode(',', $hostMap) as $entry) {
+            $entry = trim($entry);
+            $eqPos = strpos($entry, '=');
+            if ($eqPos !== false) {
+                $mapHost = strtolower(trim(substr($entry, 0, $eqPos)));
+                $mapPath = trim(substr($entry, $eqPos + 1));
+                if ($mapHost === $currentHost || $mapHost === $currentHostNoPort) {
+                    return rtrim($mapPath, '/');
+                }
+            }
+        }
+    }
+
+    // 3. Standard reverse-proxy header
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PREFIX'])) {
+        return rtrim($_SERVER['HTTP_X_FORWARDED_PREFIX'], '/');
+    }
+
+    // 4. Fallback: derive from SCRIPT_NAME (works when app is in a real sub-directory)
     $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
     if ($scriptDir === '/' || $scriptDir === '\\') $scriptDir = '';
-    $assetBase = $scriptDir;
+    return $scriptDir;
 }
+$assetBase = detectBasePath();
 
 // Build default callback URL from server variables (JS overrides on page load)
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
