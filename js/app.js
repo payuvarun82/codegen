@@ -2957,6 +2957,16 @@
                 
                 if (currentPaymentType === 'onetime') {
                     requiredFields.push('udf5_input');
+
+                    var lrsValCb = document.getElementById('cb_enable_lrs_params');
+                    if (lrsValCb && lrsValCb.checked) {
+                        var lrsValField = document.getElementById('cb_lrs_service_type');
+                        if (!lrsValField || !(lrsValField.value || '').trim()) {
+                            alert('When "Enable LRS Params" is checked, lrs_service_type is required. Please select a value.');
+                            if (lrsValField) lrsValField.focus();
+                            return false;
+                        }
+                    }
                 } else {
                     // Cross border subscription
                     requiredFields.push('billing_amount', 'payment_start_date', 'payment_end_date', 'billing_cycle', 'billing_interval');
@@ -3128,8 +3138,6 @@
                     if (lrsValCb && lrsValCb.checked) {
                         var lrsValField = document.getElementById('cb_lrs_service_type');
                         if (!lrsValField || !(lrsValField.value || '').trim()) {
-                            alert('When "Enable LRS Params" is checked, lrs_service_type is required. Please select a value.');
-                            if (lrsValField) lrsValField.focus();
                             return false;
                         }
                     }
