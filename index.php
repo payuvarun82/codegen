@@ -69,7 +69,7 @@ $defaultCallbackUrl = $scheme . '://' . $host . $assetBase . '/callback.php';
     <script>
     (function(){
         var R=['crossborder','payu-hosted','subscription','tpv','upiotm','preauth',
-               'checkoutplus','split','bankoffer','seamless','callback.php','proxy.php',
+               'checkoutplus','split','bankoffer','seamless','cards','callback.php','proxy.php',
                'health.php','index.php','hash-utility.php','index-session.php'];
         var p=window.location.pathname.replace(/\/+$/,'');
         var s=p.split('/').filter(function(x){return x!=='';});

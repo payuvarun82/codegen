@@ -282,7 +282,11 @@
                 const firstSeg = pathSegments.length > 0 ? pathSegments[0].toLowerCase() : null;
                 const secondSeg = pathSegments.length > 1 ? pathSegments[1].toLowerCase() : null;
                 
-                if (firstSeg === 'seamless' && secondSeg && seamlessSectionIds.includes(secondSeg)) {
+                if (firstSeg === 'seamless' && secondSeg === 'cards') {
+                    showFlow('seamless', true);
+                    _smShowCardsMode();
+                    cardsNavTo(document.querySelector('#cardsNav .cards-nav-item.active') || document.querySelector('#cardsNav .cards-nav-item'), 'cards-overview');
+                } else if (firstSeg === 'seamless' && secondSeg && seamlessSectionIds.includes(secondSeg)) {
                     showFlow('seamless', true);
                     _smNavSilent = true;
                     if (isNbSection(secondSeg)) {
@@ -537,13 +541,16 @@
             const secondSegment = pathSegments.length > 1 ? pathSegments[1].toLowerCase() : null;
             const routeFromURL = validRoutes.includes(firstSegment) ? firstSegment : null;
             const flowFromURL = routeFromURL ? (routeToFlowMap[routeFromURL] || routeFromURL) : null;
-            const seamlessSection = (flowFromURL === 'seamless' && secondSegment && seamlessSectionIds.includes(secondSegment)) ? secondSegment : null;
+            const isCardsMode = flowFromURL === 'seamless' && secondSegment === 'cards';
+            const seamlessSection = (flowFromURL === 'seamless' && secondSegment && !isCardsMode && seamlessSectionIds.includes(secondSegment)) ? secondSegment : null;
             
             if (flowFromURL) {
-                console.log('Flow from URL:', flowFromURL, seamlessSection ? '/ section: ' + seamlessSection : '');
+                console.log('Flow from URL:', flowFromURL, seamlessSection ? '/ section: ' + seamlessSection : (isCardsMode ? '/ mode: cards' : ''));
                 showFlow(flowFromURL, true);
                 var historyState = { flow: flowFromURL, section: seamlessSection || null };
-                if (seamlessSection && seamlessSection.startsWith('sm-nb-')) {
+                if (isCardsMode) {
+                    historyState.smMode = 'cards';
+                } else if (seamlessSection && seamlessSection.startsWith('sm-nb-')) {
                     historyState.smMode = 'netbanking';
                 }
                 window.history.replaceState(historyState, '', pathname);
@@ -2147,7 +2154,10 @@
                 if (_smBase && _smRelPath.indexOf(_smBase) === 0) _smRelPath = _smRelPath.substring(_smBase.length);
                 var segs = _smRelPath.split('/').filter(function(s) { return s !== ''; });
                 var subSection = segs.length > 1 ? segs[1].toLowerCase() : null;
-                if (subSection && seamlessSectionIds.includes(subSection) && document.getElementById(subSection)) {
+                if (subSection === 'cards') {
+                    _smShowCardsMode();
+                    cardsNavTo(document.querySelector('#cardsNav .cards-nav-item.active') || document.querySelector('#cardsNav .cards-nav-item'), 'cards-overview');
+                } else if (subSection && seamlessSectionIds.includes(subSection) && document.getElementById(subSection)) {
                     _smNavSilent = true;
                     if (subSection.startsWith('sm-nb-')) {
                         _smShowNbMode();
@@ -11682,7 +11692,11 @@ nodeCartDetailsUsage +
             var segs = relPath.split('/').filter(function(s) { return s !== ''; });
             if (segs.length > 1 && segs[0].toLowerCase() === 'seamless') {
                 var section = segs[1].toLowerCase();
-                if (seamlessSectionIds.includes(section) && document.getElementById(section)) {
+                if (section === 'cards') {
+                    _smShowCardsMode();
+                    cardsNavTo(document.querySelector('#cardsNav .cards-nav-item.active') || document.querySelector('#cardsNav .cards-nav-item'), 'cards-overview');
+                    history.replaceState({ flow: 'seamless', smMode: 'cards' }, '', basePath + '/seamless/cards');
+                } else if (seamlessSectionIds.includes(section) && document.getElementById(section)) {
                     _smNavSilent = true;
                     if (section.startsWith('sm-nb-')) {
                         openNbSeamlessFlow(section);
