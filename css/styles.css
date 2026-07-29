@@ -248,6 +248,244 @@
             flex-shrink: 0;
         }
 
+        /* Ask AI header button — PayU Theme */
+        .header-askai-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+            background: linear-gradient(135deg, #0fa080 0%, #08846d 50%, #066850 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(15, 160, 128, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .header-askai-btn:hover {
+            background: linear-gradient(135deg, #12b393 0%, #0d956f 50%, #07754e 100%);
+            border-color: rgba(255, 255, 255, 0.9);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(15, 160, 128, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+
+        .header-askai-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(15, 160, 128, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .header-askai-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.05;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            color: #fff;
+        }
+
+        .header-askai-beta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.18rem 0.55rem;
+            border-radius: 999px;
+            background: #f3eefc;
+            color: #7c3aed;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            line-height: 1;
+        }
+
+        /* Ask AI Modal */
+        .askai-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            animation: askaiFadeIn 0.2s ease;
+        }
+
+        @keyframes askaiFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .askai-modal {
+            background: #fff;
+            border-radius: 16px;
+            width: min(720px, 96vw);
+            height: min(820px, 92vh);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: askaiSlideIn 0.25s ease;
+        }
+
+        @keyframes askaiSlideIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .askai-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.85rem 1.1rem;
+            border-bottom: 1px solid #ececec;
+            flex-shrink: 0;
+            background: #fff;
+        }
+
+        .askai-modal-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .askai-modal-title-text {
+            color: #7c3aed;
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .askai-modal-beta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            background: #e9d5ff;
+            color: #6d28d9;
+            font-size: 0.7rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .askai-modal-header-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .askai-open-tab {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .askai-open-tab:hover {
+            color: #7c3aed;
+        }
+
+        .askai-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.75rem;
+            line-height: 1;
+            color: #9ca3af;
+            cursor: pointer;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .askai-modal-close:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .askai-modal-body {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            background: #fafafa;
+        }
+
+        .askai-frame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: #fff;
+        }
+
+        .askai-fallback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+            background: #fff;
+            color: #4b5563;
+        }
+
+        .askai-fallback-icon {
+            margin-bottom: 0.25rem;
+        }
+
+        .askai-fallback h3 {
+            margin: 0;
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #7c3aed;
+        }
+
+        .askai-fallback p {
+            margin: 0;
+            font-size: 0.95rem;
+            max-width: 320px;
+            line-height: 1.45;
+        }
+
+        .askai-fallback-hint {
+            font-size: 0.8rem !important;
+            color: #9ca3af;
+        }
+
+        .askai-fallback-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.35rem;
+            padding: 0.75rem 1.4rem;
+            border-radius: 999px;
+            background: #7c3aed;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+
+        .askai-fallback-btn:hover {
+            background: #6d28d9;
+        }
+
         /* Credential Guide Modal */
         .cred-modal-overlay {
             position: fixed;
@@ -1321,57 +1559,64 @@
         }
         
         .button {
-            background: var(--gradient-primary);
-            color: white;
+            background: linear-gradient(135deg, #0fa080 0%, #08846d 50%, #066850 100%);
+            color: #ffffff;
             border: none;
-            padding: 1rem 2rem;
-            border-radius: 10px;
-            font-size: 1rem;
+            padding: 0.85rem 2rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
             text-align: center;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 12px rgba(15, 160, 128, 0.2);
         }
-        
+
         .button:hover {
+            background: linear-gradient(135deg, #12b393 0%, #0d956f 50%, #07754e 100%);
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(16, 132, 109, 0.4);
+            box-shadow: 0 6px 20px rgba(15, 160, 128, 0.35);
         }
-        
+
         .button:active {
             transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(15, 160, 128, 0.25);
         }
-        
+
         .button:disabled {
-            opacity: 0.5;
+            opacity: 0.55;
             cursor: not-allowed;
-            background: #94a3b8;
+            background: linear-gradient(135deg, #cbd5e1 0%, #a8b5c2 100%);
             transform: none;
+            box-shadow: none;
         }
-        
+
         .button:disabled:hover {
             transform: none;
             box-shadow: none;
         }
         
         .debug-button {
-            background: linear-gradient(135deg, #10846D 0%, #024538 100%);
-            color: white;
+            background: linear-gradient(135deg, #0fa080 0%, #08846d 50%, #066850 100%);
+            color: #ffffff;
             border: none;
-            padding: 1rem 2rem;
-            border-radius: 10px;
-            font-size: 1rem;
+            padding: 0.85rem 2rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: center;
+            box-shadow: 0 4px 12px rgba(15, 160, 128, 0.2);
         }
-        
+
         .debug-button:hover {
+            background: linear-gradient(135deg, #12b393 0%, #0d956f 50%, #07754e 100%);
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(16, 132, 109, 0.4);
+            box-shadow: 0 6px 20px rgba(15, 160, 128, 0.35);
         }
         
         .pay-button-wrapper {
@@ -1413,24 +1658,25 @@
             justify-content: center;
             width: 40px;
             height: 40px;
-            background: var(--accent-primary);
-            color: white;
-            border-radius: 50%;
+            background: linear-gradient(135deg, #0fa080 0%, #08846d 100%);
+            color: #ffffff;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(15, 160, 128, 0.2);
         }
-        
+
         .doc-button {
-            background: linear-gradient(135deg, #10846D 0%, #024538 100%);
-            color: white;
+            background: linear-gradient(135deg, #0fa080 0%, #08846d 50%, #066850 100%);
+            color: #ffffff;
             border: none;
-            padding: 1rem 1rem;
-            border-radius: 10px;
-            font-size: 1rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1439,41 +1685,43 @@
             text-align: center;
             height: auto;
             flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(15, 160, 128, 0.2);
         }
-        
+
         .doc-button:hover {
+            background: linear-gradient(135deg, #12b393 0%, #0d956f 50%, #07754e 100%);
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(16, 132, 109, 0.4);
+            box-shadow: 0 6px 20px rgba(15, 160, 128, 0.35);
         }
-        
+
         .doc-button i {
             font-size: 1rem;
         }
-        
+
         /* Ensure doc button is never disabled */
         .doc-button:disabled {
             opacity: 1 !important;
             cursor: pointer !important;
             pointer-events: auto !important;
-            background: linear-gradient(135deg, #10846D 0%, #024538 100%) !important;
+            background: linear-gradient(135deg, #0fa080 0%, #08846d 50%, #066850 100%) !important;
             transform: none;
         }
-        
+
         .doc-button:disabled:hover {
             transform: translateY(-2px) !important;
-            box-shadow: 0 8px 20px rgba(16, 132, 109, 0.4) !important;
+            box-shadow: 0 6px 20px rgba(15, 160, 128, 0.35) !important;
         }
         
         .test-card-button {
-            background: linear-gradient(135deg, #10846D 0%, #024538 100%);
-            color: white;
+            background: linear-gradient(135deg, #0fa080 0%, #08846d 50%, #066850 100%);
+            color: #ffffff;
             border: none;
-            padding: 1rem 1rem;
-            border-radius: 10px;
-            font-size: 1rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1484,41 +1732,43 @@
             opacity: 1;
             margin: 0;
             flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(15, 160, 128, 0.2);
         }
-        
+
         .test-card-button:hover {
+            background: linear-gradient(135deg, #12b393 0%, #0d956f 50%, #07754e 100%);
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(16, 132, 109, 0.4);
+            box-shadow: 0 6px 20px rgba(15, 160, 128, 0.35);
         }
-        
+
         .test-card-button i {
             font-size: 1rem;
         }
-        
+
         /* Ensure test card button is never disabled */
         .test-card-button:disabled {
             opacity: 1 !important;
             cursor: pointer !important;
             pointer-events: auto !important;
-            background: linear-gradient(135deg, #10846D 0%, #024538 100%) !important;
+            background: linear-gradient(135deg, #0fa080 0%, #08846d 50%, #066850 100%) !important;
             transform: none;
         }
-        
+
         .test-card-button:disabled:hover {
             transform: translateY(-2px) !important;
-            box-shadow: 0 8px 20px rgba(16, 132, 109, 0.4) !important;
+            box-shadow: 0 6px 20px rgba(15, 160, 128, 0.35) !important;
         }
         
         .back-arrow:hover {
-            background: var(--color-primary-darken-10);
+            background: linear-gradient(135deg, #12b393 0%, #0d956f 100%);
             transform: translateX(-3px);
-            box-shadow: 0 4px 12px rgba(16, 132, 109, 0.3);
+            box-shadow: 0 6px 16px rgba(15, 160, 128, 0.3);
         }
-        
+
         .back-arrow svg {
             width: 20px;
             height: 20px;
-            fill: white;
+            fill: #ffffff;
         }
         
         .button-group {
@@ -1991,6 +2241,34 @@
             .header-cred-btn,
             .header-login-btn {
                 padding: 0.5rem;
+            }
+
+            .header-askai-btn {
+                padding: 0.3rem 0.55rem;
+            }
+
+            .header-askai-text {
+                font-size: 0.65rem;
+            }
+
+            .header-askai-beta {
+                font-size: 0.58rem;
+                padding: 0.15rem 0.45rem;
+            }
+
+            .askai-modal {
+                width: 100%;
+                height: 100%;
+                max-height: none;
+                border-radius: 0;
+            }
+
+            .askai-modal-overlay {
+                padding: 0;
+            }
+
+            .askai-open-tab {
+                display: none;
             }
 
             .cred-modal {
