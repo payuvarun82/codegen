@@ -14405,6 +14405,22 @@ nodeCartDetailsUsage +
         window.smSimulatePayment = smSimulatePayment;
         window.smSwitchOtmTab = smSwitchOtmTab;
 
+        /* ── Ask AI (native chat — see js/askai.js) ── */
+        function openAskAiModal() {
+            if (window.AskAI && typeof window.AskAI.open === 'function') {
+                window.AskAI.open();
+            }
+        }
+
+        function closeAskAiModal() {
+            if (window.AskAI && typeof window.AskAI.close === 'function') {
+                window.AskAI.close();
+            }
+        }
+
+        window.openAskAiModal = openAskAiModal;
+        window.closeAskAiModal = closeAskAiModal;
+
         /* ── Credential Guide Modal ── */
         var credCurrentStep = 1;
         var credTotalSteps = 4;

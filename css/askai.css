@@ -129,7 +129,7 @@
     font-size: 1.15rem;
     font-weight: 700;
     line-height: 1.1;
-    color: var(--askai-purple);
+    color: #9E25C9;
     letter-spacing: -0.01em;
 }
 
@@ -137,14 +137,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.2rem 0.55rem;
+    padding: 2px 8px;
     border-radius: 999px;
-    background: var(--askai-purple-light);
-    color: var(--askai-purple-dark);
-    font-size: 0.7rem;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.02em;
+    border: 1px solid #EAD8F3;
+    background: linear-gradient(271.41deg, #FEF6FA 1%, #FBF0FE 98.65%);
+    color: #9E25C9;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
     white-space: nowrap;
 }
 
@@ -785,9 +786,9 @@
     box-sizing: border-box;
     flex: 1;
     width: 100%;
-    min-height: 37px;
+    min-height: 44px;
     max-height: 150px;
-    padding: 0.5rem 2.75rem 0.5rem 0.75rem;
+    padding: 0.65rem 2.9rem 0.65rem 0.85rem;
     border: 1px solid var(--askai-border-input);
     border-radius: var(--askai-radius-xs);
     background: var(--askai-bg);
@@ -823,37 +824,48 @@
 
 .send-btn {
     position: absolute;
-    right: 0.35rem;
-    bottom: 0.3rem;
+    right: 6px;
+    bottom: 50%;
+    transform: translateY(50%);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
+    width: 32px;
+    height: 32px;
     padding: 0;
+    margin: 0;
     border: none;
-    border-radius: 6px;
-    background: linear-gradient(135deg, #0fa080 0%, #08846d 100%);
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: none;
     cursor: pointer;
-    transition: all 0.22s ease;
-    box-shadow: 0 2px 8px rgba(15, 160, 128, 0.25);
+    line-height: 0;
+    overflow: hidden;
+    transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .send-btn:hover {
-    background: linear-gradient(135deg, #12b393 0%, #0d956f 100%);
-    transform: scale(1.08);
-    box-shadow: 0 4px 12px rgba(15, 160, 128, 0.35);
+    background: transparent;
+    box-shadow: none;
+    transform: translateY(50%) scale(1.06);
 }
 
 .send-btn:active {
-    transform: scale(0.96);
-    box-shadow: 0 2px 6px rgba(15, 160, 128, 0.2);
+    background: transparent;
+    box-shadow: none;
+    transform: translateY(50%) scale(0.96);
+}
+
+.send-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 .send-btn svg {
     display: block;
     width: 32px;
     height: 32px;
+    flex-shrink: 0;
 }
 
 .ai-declaration-text {
