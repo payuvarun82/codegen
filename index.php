@@ -96,8 +96,11 @@ $defaultCallbackUrl = $scheme . '://' . $host . $assetBase . '/callback.php';
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script id="checkoutPlusScript" src="https://jssdk-uat.payu.in/bolt/bolt.min.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=2.3">
-    <link rel="stylesheet" href="css/askai.css?v=1.2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=2.6">
+    <link rel="stylesheet" href="css/askai.css?v=1.4">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- LRS/UDF toggles: work before app.js; delegated listener so LRS/UDF always respond to checkbox -->
@@ -164,9 +167,9 @@ $defaultCallbackUrl = $scheme . '://' . $host . $assetBase . '/callback.php';
                     </select>
                 </div>
                 <div class="header-actions">
-                    <button class="header-askai-btn" onclick="openAskAiModal()" title="Ask AI — Integration Assistant" type="button">
-                        <span class="header-askai-label">Ask AI</span>
-                        <span class="header-askai-beta">Beta</span>
+                    <button class="header-askai-btn" onclick="openAskAiModal()" title="Edge — Integration Assistant" type="button">
+                        <img src="assets/edge-icon.png" alt="" class="header-edge-icon" width="18" height="18">
+                        <span class="header-askai-label">Edge</span>
                     </button>
                     <button class="header-cred-btn" onclick="openCredentialGuide()" title="Where to find your Key &amp; Salt" type="button">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -178,11 +181,12 @@ $defaultCallbackUrl = $scheme . '://' . $host . $assetBase . '/callback.php';
 
         <!-- Start of AI ChatButton related changes -->
         <div class="chat-overlay"></div>
-        <div class="chat-container" role="dialog" aria-modal="true" aria-label="Ask AI Integration Assistant">
+        <div class="chat-container" role="dialog" aria-modal="true" aria-label="Edge Integration Assistant">
             <div class="chat-header">
                 <div class="header-title">
                     <div class="header-logo">
-                        <span class="logo-text">Ask AI</span>
+                        <img src="assets/edge-icon.png" alt="" class="header-edge-icon" width="26" height="26">
+                        <span class="logo-text">Edge</span>
                     </div>
                     <span class="beta-pill-chat">Beta</span>
                 </div>
