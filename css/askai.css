@@ -125,12 +125,23 @@
     gap: 0.4rem;
 }
 
+.chat-container .header-logo .header-edge-icon {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+}
+
 .chat-container .header-logo .logo-text {
-    font-size: 1.15rem;
-    font-weight: 700;
+    font-family: Inter, sans-serif;
+    font-size: 18px;
+    font-weight: 600;
     line-height: 1.1;
-    color: #9E25C9;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
+    background: linear-gradient(118.16deg, #9E25C9 -4.25%, #D22777 50.48%, #D28E27 115.58%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
 }
 
 .beta-pill-chat {
